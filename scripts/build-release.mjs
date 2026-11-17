@@ -3,7 +3,7 @@
  * @shard TOOLING
  * @branch-id RELEASE-PACKAGER
  * @state-contract reads(all workspace artifacts) mutates(ev-release-bundle.zip, ev-private-server-bundle.zip, RELEASE_SHA256.txt)
- * @invariant Strictly separates public client Shards (ev-release-bundle.zip) from private server authority code (ev-private-server-bundle.zip); never emits a bundle >= 25 MB.
+ * @invariant Strictly separates public client Shards (ev-release-bundle.zip) from private Cloudflare Worker + D1 server authority code (ev-private-server-bundle.zip); never emits a bundle >= 25 MB.
  */
 
 import fs from 'node:fs';
@@ -14,9 +14,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
-const versionTag = process.argv[2] || 'v0.4.0';
+const versionTag = process.argv[2] || 'v0.4.1';
 
-// 1. Run structural, wording, HTML safety, & resolution audit first
+// 1. Run structural, wording, HTML safety, zero-dev-leak, & resolution audit first
 execFileSync('node', [path.join(__dirname, 'audit-graph.mjs')], { cwd: rootDir, stdio: 'inherit' });
 
 const outPublicZip = path.join(rootDir, 'ev-release-bundle.zip');
@@ -27,7 +27,7 @@ for (const z of [outPublicZip, outPrivateZip]) {
   if (fs.existsSync(z)) fs.unlinkSync(z);
 }
 
-// 2A. Collect PUBLIC GitHub Pages repo targets (NEVER include scripts/auth-relay-server.mjs!)
+// 2A. Collect PUBLIC GitHub Pages repo targets (NEVER include worker/ or scripts/auth-relay-server.mjs!)
 const publicTargets = [
   'index.html',
   'README.md',
@@ -51,14 +51,23 @@ execFileSync('zip', ['-r', '-q', 'ev-release-bundle.zip', ...publicTargets, '-x'
   cwd: rootDir
 });
 
-// 2B. Collect PRIVATE Authority Server repo targets (holds auth-relay, secrets template, & runtime inventory ledger)
-const privateTargets = [
+// 2B. Collect PRIVATE Authority Worker + D1 repo targets (placed cleanly at Private repo root)
+const workerDir = path.join(rootDir, 'worker');
+const workerTargets = ['src', 'migrations', 'wrangler.example.jsonc', 'package.json'].filter((item) =>
+  fs.existsSync(path.join(workerDir, item))
+);
+if (workerTargets.length) {
+  execFileSync('zip', ['-r', '-q', outPrivateZip, ...workerTargets, '-x', '*.DS_Store', '*/node_modules/*'], {
+    cwd: workerDir
+  });
+}
+
+const rootPrivateTargets = [
   'scripts/auth-relay-server.mjs',
   'scripts/termux-push.sh',
   'data/state-envelope.schema.json'
 ].filter((item) => fs.existsSync(path.join(rootDir, item)));
-
-execFileSync('zip', ['-r', '-q', 'ev-private-server-bundle.zip', ...privateTargets, '-x', '*.DS_Store', '*/node_modules/*'], {
+execFileSync('zip', ['-r', '-q', outPrivateZip, ...rootPrivateTargets, '-x', '*.DS_Store', '*/node_modules/*'], {
   cwd: rootDir
 });
 

@@ -154,6 +154,9 @@ const monitorHtml = htmlContents.get('continuum-monitor.html') ?? checkHtmlSafet
 if (indexHtml && !indexHtml.includes('CONDUIT UNVERIFIED // ZERO TELEMETRY RETURNED')) {
   htmlSecurityErrors.push('index.html: missing zero-oracle rejection message');
 }
+if (indexHtml && /(VIGIL-ALPHA-77|VIGIL-BETA-42|ADMIN-VIGIL-09|loadDevLedger)/.test(indexHtml)) {
+  htmlSecurityErrors.push('index.html: detected leaked Phase-1 dev credentials or client bypass ledger inside public HTML');
+}
 if (flowchartHtml) {
   for (const s of ledger.meta.shards) {
     if (!flowchartHtml.includes(`"${s.id}"`)) htmlDrift.push(`Missing shard ${s.id} in conglomerate-flowchart.html`);

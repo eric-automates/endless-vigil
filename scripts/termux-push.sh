@@ -12,7 +12,7 @@ if [[ ! -f "$DEFAULT_ZIP" && -f "$HOME/storage/shared/Download/ev-release-bundle
 fi
 
 ZIP_PATH="${1:-$DEFAULT_ZIP}"
-TAG="${2:-v0.4.0}"
+TAG="${2:-v0.4.1}"
 MSG="${3:-Release $TAG}"
 
 if [[ ! -f "$ZIP_PATH" ]]; then
@@ -46,15 +46,19 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 echo "Extracting bundle into $REPO_ROOT..."
-unzip -oq "$ZIP_PATH" -d "$REPO_ROOT"
+if [[ -f "$REPO_ROOT/wrangler.jsonc" ]]; then
+  unzip -oq "$ZIP_PATH" -x "wrangler.jsonc" -d "$REPO_ROOT"
+else
+  unzip -oq "$ZIP_PATH" -d "$REPO_ROOT"
+fi
 
 if command -v node >/dev/null 2>&1; then
   if [[ -f "scripts/audit-graph.mjs" ]]; then
     echo "Running pre-push Public repo graph & HTML audit..."
     node scripts/audit-graph.mjs
-  elif [[ -f "scripts/auth-relay-server.mjs" ]]; then
-    echo "Running pre-push Private server syntax check..."
-    node --check scripts/auth-relay-server.mjs
+  else
+    [[ -f "src/worker.mjs" ]] && echo "Checking Private Worker syntax..." && node --check src/worker.mjs
+    [[ -f "scripts/auth-relay-server.mjs" ]] && node --check scripts/auth-relay-server.mjs
   fi
 fi
 
