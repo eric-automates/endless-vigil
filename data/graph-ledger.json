@@ -1,7 +1,7 @@
 {
   "meta": {
     "project": "Endless Vigil",
-    "ledgerVersion": "0.4.0",
+    "ledgerVersion": "0.5.0",
     "coAuthors": ["Creator", "Ironscribe of the Endless Vigil"],
     "shards": [
       {
@@ -178,11 +178,11 @@
       "id": "HUB-004",
       "shard": "HUB",
       "phase": "BOOT",
-      "title": "Seed New Continuum Manifest",
-      "summary": "Generate 64-bit worldSeed, stranded asteroid zone, suit breach venting O2, worn Wrist-PDA unseen.",
+      "title": "Procedural Origin & Co-Op Squad Link",
+      "summary": "Roll fresh randomized Origin Crisis (Slum Amnesia Diary, Patrol Cruiser Rescue, Asteroid Leak) with optional Squad City Link & ORIGIN_BOUND anti-reroll gear.",
       "type": "action",
       "expectedOutcomes": ["enter_eva_act0"],
-      "stateMutations": ["manifestId:init", "worldSeed:init", "suit.leakRatePerSec=1.2"],
+      "stateMutations": ["manifestId:init", "originScenario:roll", "suit.leakRatePerSec:init"],
       "commentTag": "@branch-id HUB-004"
     },
     {
@@ -368,40 +368,40 @@
       "title": "Hub Markets & PING Insurance Desk",
       "summary": "Sell 80% salvage on Open/Black Exchange or Equities; Bulk-PING or Bulk-unPING kept gear (hourly rent ticker).",
       "type": "decision",
-      "expectedOutcomes": ["bulk_ping_manage", "trade_open_black_stock", "wealth_balance_gap", "trial_drop_balance_gap", "exit_markets"],
+      "expectedOutcomes": ["bulk_ping_manage", "trade_open_black_stock", "wealth_gravity_calc", "pilot_standing_drop", "exit_markets"],
       "stateMutations": ["credits:delta", "pingInsurance.rentPerHourCredits:recalc"],
       "commentTag": "@branch-id MKT-001"
     },
     {
-      "id": "GAP-005",
+      "id": "MKT-002",
       "shard": "MKT",
       "phase": "BALANCE",
-      "title": "PARKING LOT: Anti-Snowball Wealth Balance",
-      "summary": "Tune telemetry signature detectability & progressive PING rent scaling so mega-rich actors stay vulnerable.",
-      "type": "gap",
-      "expectedOutcomes": [],
-      "stateMutations": [],
-      "commentTag": "@branch-id GAP-005"
+      "title": "Wealth-Gravity Threat & NPC/Syndicate Hunts",
+      "summary": "Wealth x Concentration calculates sector threat; lone rich operators radiate loud targets drawing Syndicate & NPC hunters so money circulates naturally.",
+      "type": "action",
+      "expectedOutcomes": ["threat_updated"],
+      "stateMutations": ["telemetrySignatureScore:recalc"],
+      "commentTag": "@branch-id MKT-002"
     },
     {
-      "id": "GAP-006",
+      "id": "MKT-003",
       "shard": "MKT",
       "phase": "BALANCE",
-      "title": "PARKING LOT: Trial Physical Drops & Anti-RMT Audit",
-      "summary": "Weigh pros/cons of trial ground drops vs. zero-value starter kits and wash-trade/RMT credit-spike alerts.",
-      "type": "gap",
-      "expectedOutcomes": [],
-      "stateMutations": [],
-      "commentTag": "@branch-id GAP-006"
+      "title": "Pilot Standing Drops & Origin-Bound Anti-Farm",
+      "summary": "Friends drop items freely within transparent flight-hour Pilot Standing limits; ORIGIN_BOUND starter gear blocks reroll farming.",
+      "type": "action",
+      "expectedOutcomes": ["standing_checked"],
+      "stateMutations": ["pilotStanding.droppedTodayCr:+"],
+      "commentTag": "@branch-id MKT-003"
     },
     {
       "id": "TECH-001",
       "shard": "TECH",
       "phase": "ACT_1_SALVAGE",
       "title": "Tech & Reverse-Engineering Lab",
-      "summary": "Separate Tech Shard hydrates salvage inventory and blueprint unlocks.",
+      "summary": "Separate Tech Shard hydrates salvage inventory, skill training queue, and blueprint unlocks.",
       "type": "shard_jump",
-      "expectedOutcomes": ["unlock_arc_cutter", "unlock_pulse_decoder", "unlock_polymer_seal", "tier2_unplanned", "exit_to_eva"],
+      "expectedOutcomes": ["unlock_arc_cutter", "unlock_pulse_decoder", "unlock_polymer_seal", "offline_skill_juryrig", "exit_to_eva"],
       "stateMutations": [],
       "commentTag": "@branch-id TECH-001"
     },
@@ -417,15 +417,15 @@
       "commentTag": "@branch-id TECH-002"
     },
     {
-      "id": "GAP-002",
+      "id": "TECH-003",
       "shard": "TECH",
       "phase": "ACT_2_EXPANSION",
-      "title": "UNPLANNED: Tier-2 Orbital Tech Tree",
-      "summary": "Need blueprint dependencies for planetary core drills, jammer arrays, and demolition payloads.",
-      "type": "gap",
-      "expectedOutcomes": [],
-      "stateMutations": [],
-      "commentTag": "@branch-id GAP-002"
+      "title": "Offline Skill Training, Espionage & 2% Jury-Rigging",
+      "summary": "EVE-style offline skill training unlocks high-tech operation; untrained pilots can jury-rig cheap 2% scrap gear or acquire tools via corporate espionage/mechanics.",
+      "type": "action",
+      "expectedOutcomes": ["skill_ready"],
+      "stateMutations": ["skills.activeTraining:set", "skills.juryRigYieldRatio=0.02"],
+      "commentTag": "@branch-id TECH-003"
     },
     {
       "id": "SEC-001",
@@ -483,15 +483,26 @@
       "commentTag": "@branch-id SEC-005"
     },
     {
-      "id": "GAP-003",
+      "id": "SEC-006",
       "shard": "SEC",
       "phase": "MULTIPLAYER",
-      "title": "UNPLANNED: Breached-Box Owner Alert",
-      "summary": "Need design for how offline/remote box owners get pinged on Cuff-Slate when a hack trips an alarm.",
+      "title": "Beacon Heartbeat Loss & 2-5m Theft Deduction",
+      "summary": "Installed Alarm Beacon stops pulsing on breach; PING refund signals destruction, whereas 'Policy Reassigned' after 2-5m lockout proves theft.",
+      "type": "decision",
+      "expectedOutcomes": ["heartbeat_logged", "companion_app_future"],
+      "stateMutations": ["heartbeatBeacons[id].status='SIGNAL_LOST'"],
+      "commentTag": "@branch-id SEC-006"
+    },
+    {
+      "id": "GAP-007",
+      "shard": "PDA",
+      "phase": "FUTURE_V06",
+      "title": "UNPLANNED: Offline Companion App & Sleep Proximity Alerts",
+      "summary": "Optional mobile companion/watch feed for ship stats, beacon heartbeat loss, and proximity alerts while sleeping.",
       "type": "gap",
       "expectedOutcomes": [],
       "stateMutations": [],
-      "commentTag": "@branch-id GAP-003"
+      "commentTag": "@branch-id GAP-007"
     },
     {
       "id": "SHIP-001",
@@ -500,7 +511,7 @@
       "title": "Airlock Entry: Board Derelict / Ship",
       "summary": "Diegetic airlock cycle loads Shipwright Shard, preserving inventory, PING status, and world state.",
       "type": "shard_jump",
-      "expectedOutcomes": ["restore_aux_power", "switch_owned_ship", "undock_to_world", "boarding_event_unplanned", "exit_airlock"],
+      "expectedOutcomes": ["restore_aux_power", "switch_owned_ship", "undock_to_world", "boarding_event", "voxel_mesh_future", "exit_airlock"],
       "stateMutations": ["operator.suit.o2Seconds:refill"],
       "commentTag": "@branch-id SHIP-001"
     },
@@ -527,15 +538,26 @@
       "commentTag": "@branch-id SHIP-003"
     },
     {
-      "id": "GAP-004",
+      "id": "SHIP-004",
       "shard": "SHIP",
       "phase": "MULTIPLAYER",
-      "title": "UNPLANNED: Multi-Player Ship Boarding Conflict",
-      "summary": "Define helm permissions vs. physical bulkhead cutting when two operators inhabit one vessel.",
+      "title": "Open Boarding, Cargo Extraction & Disguise Leaks",
+      "summary": "Boarders can haul crates out (risking hidden trackers) or hack bridge locks to hijack vessels; Syndicates sell rich pirates' disguises.",
+      "type": "action",
+      "expectedOutcomes": ["board_outcome_resolved"],
+      "stateMutations": ["ships[active].ownershipState:contested"],
+      "commentTag": "@branch-id SHIP-004"
+    },
+    {
+      "id": "GAP-008",
+      "shard": "SHIP",
+      "phase": "FUTURE_V06",
+      "title": "UNPLANNED: 3D Greedy-Meshed Voxel Chunk Hull Rebaking",
+      "summary": "v0.6+ WebGL architecture: assemble voxel ship parts, bake into unified solid mesh, and dynamically re-bake holes when cut.",
       "type": "gap",
       "expectedOutcomes": [],
       "stateMutations": [],
-      "commentTag": "@branch-id GAP-004"
+      "commentTag": "@branch-id GAP-008"
     },
     {
       "id": "WORLD-001",
@@ -672,16 +694,19 @@
 
     { "id": "E-47", "from": "MKT-001", "to": "MKT-001", "label": "Bulk PING / Un-PING", "branchType": "left", "outcomeKey": "bulk_ping_manage" },
     { "id": "E-48", "from": "MKT-001", "to": "MKT-001", "label": "Open / Black / Stock Trade", "branchType": "multi", "outcomeKey": "trade_open_black_stock" },
-    { "id": "E-49", "from": "MKT-001", "to": "GAP-005", "label": "Anti-Snowball Balance", "branchType": "unplanned", "outcomeKey": "wealth_balance_gap" },
-    { "id": "E-50", "from": "MKT-001", "to": "GAP-006", "label": "Trial Drops & RMT Rules", "branchType": "unplanned", "outcomeKey": "trial_drop_balance_gap" },
+    { "id": "E-49", "from": "MKT-001", "to": "MKT-002", "label": "Wealth-Gravity Threat Calc", "branchType": "left", "outcomeKey": "wealth_gravity_calc" },
+    { "id": "E-50", "from": "MKT-001", "to": "MKT-003", "label": "Pilot Standing & Drops", "branchType": "multi", "outcomeKey": "pilot_standing_drop" },
     { "id": "E-51", "from": "MKT-001", "to": "EVA-006", "label": "Undock to Sector", "branchType": "shard_jump", "outcomeKey": "exit_markets" },
+    { "id": "E-87", "from": "MKT-002", "to": "MKT-001", "label": "NPC Threat Radiated", "branchType": "left", "outcomeKey": "threat_updated" },
+    { "id": "E-88", "from": "MKT-003", "to": "MKT-001", "label": "Drop Ledger Verified", "branchType": "left", "outcomeKey": "standing_checked" },
 
     { "id": "E-52", "from": "TECH-001", "to": "TECH-002", "label": "Unlock Arc Lance", "branchType": "left", "outcomeKey": "unlock_arc_cutter" },
     { "id": "E-53", "from": "TECH-001", "to": "TECH-002", "label": "Unlock Pulse Decoder", "branchType": "multi", "outcomeKey": "unlock_pulse_decoder" },
     { "id": "E-54", "from": "TECH-001", "to": "TECH-002", "label": "Unlock Polymer Seal", "branchType": "multi", "outcomeKey": "unlock_polymer_seal" },
-    { "id": "E-55", "from": "TECH-001", "to": "GAP-002", "label": "Tier-2 Tech Unplanned", "branchType": "unplanned", "outcomeKey": "tier2_unplanned" },
+    { "id": "E-55", "from": "TECH-001", "to": "TECH-003", "label": "Skill Queue / 2% Jury-Rig", "branchType": "left", "outcomeKey": "offline_skill_juryrig" },
     { "id": "E-56", "from": "TECH-001", "to": "EVA-006", "label": "Return to EVA", "branchType": "shard_jump", "outcomeKey": "exit_to_eva" },
     { "id": "E-57", "from": "TECH-002", "to": "EVA-006", "label": "Equip New Tool", "branchType": "shard_jump", "outcomeKey": "return_eva_tooled" },
+    { "id": "E-89", "from": "TECH-003", "to": "TECH-001", "label": "Skill Sync / Scrap Ready", "branchType": "left", "outcomeKey": "skill_ready" },
 
     { "id": "E-58", "from": "SEC-001", "to": "SEC-002", "label": "Enter 4-Digit PIN", "branchType": "left", "outcomeKey": "enter_pin" },
     { "id": "E-59", "from": "SEC-001", "to": "SEC-003", "label": "Cut w/ Arc Lance", "branchType": "multi", "outcomeKey": "use_arc_cutter" },
@@ -692,16 +717,20 @@
     { "id": "E-64", "from": "SEC-003", "to": "SEC-005", "label": "Cut 100% -> Open", "branchType": "left", "outcomeKey": "cut_complete" },
     { "id": "E-65", "from": "SEC-003", "to": "EVA-006", "label": "Stop Early (Saves %)", "branchType": "right", "outcomeKey": "cut_aborted_partial" },
     { "id": "E-66", "from": "SEC-004", "to": "SEC-005", "label": "Cipher Bypassed", "branchType": "left", "outcomeKey": "hack_success" },
-    { "id": "E-67", "from": "SEC-004", "to": "GAP-003", "label": "Alarm Tripped", "branchType": "unplanned", "outcomeKey": "hack_trip_alarm" },
+    { "id": "E-67", "from": "SEC-004", "to": "SEC-006", "label": "Beacon Heartbeat Lost", "branchType": "right", "outcomeKey": "hack_trip_alarm" },
     { "id": "E-68", "from": "SEC-005", "to": "EVA-006", "label": "Claim / Carry Items", "branchType": "shard_jump", "outcomeKey": "back_to_eva_looted" },
+    { "id": "E-90", "from": "SEC-006", "to": "PDA-001", "label": "Pulse Loss -> PDA Alert", "branchType": "shard_jump", "outcomeKey": "heartbeat_logged" },
+    { "id": "E-91", "from": "SEC-006", "to": "GAP-007", "label": "Watch / Sleep Alerts (v0.6+)", "branchType": "unplanned", "outcomeKey": "companion_app_future" },
 
     { "id": "E-69", "from": "SHIP-001", "to": "SHIP-002", "label": "Restore Aux Power", "branchType": "left", "outcomeKey": "restore_aux_power" },
     { "id": "E-70", "from": "SHIP-001", "to": "SHIP-003", "label": "Switch Owned Ship", "branchType": "multi", "outcomeKey": "switch_owned_ship" },
     { "id": "E-71", "from": "SHIP-001", "to": "WORLD-001", "label": "Undock -> World Map", "branchType": "shard_jump", "outcomeKey": "undock_to_world" },
-    { "id": "E-72", "from": "SHIP-001", "to": "GAP-004", "label": "Hostile Boarding", "branchType": "unplanned", "outcomeKey": "boarding_event_unplanned" },
+    { "id": "E-72", "from": "SHIP-001", "to": "SHIP-004", "label": "Boarding & Disguise Leak", "branchType": "multi", "outcomeKey": "boarding_event" },
     { "id": "E-73", "from": "SHIP-001", "to": "EVA-006", "label": "EVA Spacewalk", "branchType": "shard_jump", "outcomeKey": "exit_airlock" },
     { "id": "E-74", "from": "SHIP-002", "to": "SHIP-001", "label": "Systems Online", "branchType": "left", "outcomeKey": "ship_operational" },
     { "id": "E-75", "from": "SHIP-003", "to": "SHIP-001", "label": "Vessel Active", "branchType": "left", "outcomeKey": "ship_selected" },
+    { "id": "E-92", "from": "SHIP-001", "to": "GAP-008", "label": "Baked Voxel Hull (v0.6+)", "branchType": "unplanned", "outcomeKey": "voxel_mesh_future" },
+    { "id": "E-93", "from": "SHIP-004", "to": "EVA-006", "label": "Loot / Hijack / Tracker", "branchType": "shard_jump", "outcomeKey": "board_outcome_resolved" },
 
     { "id": "E-76", "from": "WORLD-001", "to": "WORLD-002", "label": "Mine Asteroid", "branchType": "left", "outcomeKey": "mine_asteroid" },
     { "id": "E-77", "from": "WORLD-001", "to": "JAM-001", "label": "Deploy Privacy Jammer", "branchType": "multi", "outcomeKey": "deploy_jammer" },

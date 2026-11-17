@@ -16,7 +16,7 @@
   ],
   "properties": {
     "magic": { "const": "EVIGIL" },
-    "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "examples": ["1.2.0"] },
+    "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "examples": ["1.3.0"] },
     "rev": { "type": "integer", "minimum": 1 },
     "timestampUtc": { "type": "string", "format": "date-time" },
     "originShard": {
@@ -148,6 +148,60 @@
             "researchProgressPct": { "type": "number", "minimum": 0, "maximum": 100 }
           }
         },
+        "originScenario": {
+          "type": "object",
+          "description": "Procedural opening crisis roll with co-op Squad City Link and Origin-Bound anti-reroll custody.",
+          "properties": {
+            "scenarioId": { "type": "string" },
+            "archetype": { "type": "string" },
+            "originCityZone": { "type": "string" },
+            "squadAnchorCode": { "type": ["string", "null"] },
+            "originBoundUntilUtc": { "type": "string", "format": "date-time" },
+            "valueBudgetTier": { "type": "string", "enum": ["scrap", "standard", "windfall_damaged"] }
+          }
+        },
+        "skills": {
+          "type": "object",
+          "description": "EVE-style real-time offline skill queue & 2% scrap jury-rigging allowance.",
+          "properties": {
+            "levels": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 5 } },
+            "activeTraining": {
+              "type": ["object", "null"],
+              "properties": {
+                "skillId": { "type": "string" },
+                "targetLevel": { "type": "integer", "minimum": 1, "maximum": 5 },
+                "startedAtUtc": { "type": "string", "format": "date-time" },
+                "completesAtUtc": { "type": "string", "format": "date-time" }
+              }
+            },
+            "juryRigYieldRatio": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "pilotStanding": {
+          "type": "object",
+          "description": "Transparent flight-time standing governing unbrokered ground drops for Trial/new friends.",
+          "properties": {
+            "flightHours": { "type": "number", "minimum": 0 },
+            "dailyDropAllowanceCr": { "type": "number", "minimum": 0 },
+            "droppedTodayCr": { "type": "number", "minimum": 0 }
+          }
+        },
+        "heartbeatBeacons": {
+          "type": "array",
+          "description": "Container/ship heartbeat pulses + 2-5 minute theft re-insurance clue deduction.",
+          "items": {
+            "type": "object",
+            "required": ["entityId", "beaconChipInstalled", "status"],
+            "properties": {
+              "entityId": { "type": "string" },
+              "beaconChipInstalled": { "type": "boolean" },
+              "proximitySleepSensor": { "type": "boolean" },
+              "status": { "type": "string", "enum": ["HEARTBEAT_OK", "SIGNAL_LOST", "REFUNDED_DESTROYED", "POLICY_REASSIGNED_THEFT"] },
+              "signalLostAtUtc": { "type": ["string", "null"], "format": "date-time" },
+              "reinsureUnlockUtc": { "type": ["string", "null"], "format": "date-time" }
+            }
+          }
+        },
         "ships": {
           "type": "array",
           "items": {
@@ -160,7 +214,16 @@
               "hullPct": { "type": "number", "minimum": 0, "maximum": 100 },
               "powerAvailableKw": { "type": "number", "minimum": 0 },
               "pingInsured": { "type": "boolean" },
-              "cargoContainerIds": { "type": "array", "items": { "type": "string" } }
+              "cargoContainerIds": { "type": "array", "items": { "type": "string" } },
+              "bakedChunkManifest": {
+                "type": "object",
+                "description": "v0.6+ greedy-meshed voxel hull bake hash & damage re-bake revision.",
+                "properties": {
+                  "meshRev": { "type": "integer", "minimum": 1 },
+                  "voxelCount": { "type": "integer", "minimum": 1 },
+                  "breachHoles": { "type": "integer", "minimum": 0 }
+                }
+              }
             }
           }
         },

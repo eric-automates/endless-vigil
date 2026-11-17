@@ -12,7 +12,7 @@ if [[ ! -f "$DEFAULT_ZIP" && -f "$HOME/storage/shared/Download/ev-release-bundle
 fi
 
 ZIP_PATH="${1:-$DEFAULT_ZIP}"
-TAG="${2:-v0.4.1}"
+TAG="${2:-v0.5.0}"
 MSG="${3:-Release $TAG}"
 
 if [[ ! -f "$ZIP_PATH" ]]; then

@@ -157,6 +157,16 @@ if (indexHtml && !indexHtml.includes('CONDUIT UNVERIFIED // ZERO TELEMETRY RETUR
 if (indexHtml && /(VIGIL-ALPHA-77|VIGIL-BETA-42|ADMIN-VIGIL-09|loadDevLedger)/.test(indexHtml)) {
   htmlSecurityErrors.push('index.html: detected leaked Phase-1 dev credentials or client bypass ledger inside public HTML');
 }
+for (const [fname, raw] of htmlContents.entries()) {
+  if (!raw) continue;
+  const cleaned = raw
+    .replace(/const LEDGER = [\s\S]*?;\n/, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
+  if (/\b(game|gaming|simulation|simulator)\b/i.test(cleaned)) {
+    htmlSecurityErrors.push(`${fname}: detected forbidden public entertainment/simulation terminology`);
+  }
+}
 if (flowchartHtml) {
   for (const s of ledger.meta.shards) {
     if (!flowchartHtml.includes(`"${s.id}"`)) htmlDrift.push(`Missing shard ${s.id} in conglomerate-flowchart.html`);
@@ -186,7 +196,7 @@ function dirBytes(dir) {
 const totalBytes = dirBytes(rootDir);
 const totalKb = (totalBytes / 1024).toFixed(1);
 
-console.log('=== ENDLESS VIGIL // v0.4 AUDIT ===');
+console.log('=== ENDLESS VIGIL // v0.5.0 AUDIT ===');
 console.log(`Schema Title         : ${schema.title}`);
 console.log(`Shards Defined       : ${ledger.meta.shards.length}`);
 console.log(`Total Nodes          : ${ledger.nodes.length}`);

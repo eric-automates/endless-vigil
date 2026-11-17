@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
-const versionTag = process.argv[2] || 'v0.4.1';
+const versionTag = process.argv[2] || 'v0.5.0';
 
 // 1. Run structural, wording, HTML safety, zero-dev-leak, & resolution audit first
 execFileSync('node', [path.join(__dirname, 'audit-graph.mjs')], { cwd: rootDir, stdio: 'inherit' });
@@ -30,6 +30,8 @@ for (const z of [outPublicZip, outPrivateZip]) {
 // 2A. Collect PUBLIC GitHub Pages repo targets (NEVER include worker/ or scripts/auth-relay-server.mjs!)
 const publicTargets = [
   'index.html',
+  'cuff-slate.html',
+  'temporal-lab.html',
   'README.md',
   'PROJECT_CHARTER.md',
   'ARCHITECTURE_STANDARDS.md',

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Endless Vigil // Continuum Shard Map &amp; Decision Flowchart (v0.4)</title>
+  <title>Endless Vigil // Continuum Shard Map &amp; Decision Flowchart (v0.5)</title>
   <!--
     @shard HUB-WORKBENCH
     @branch-id VISUAL-003
@@ -625,7 +625,7 @@
         <div class="brand-mark">EV</div>
         <div class="brand-text">
           <div class="brand-title">Endless Vigil // Continuum Shard Blueprint</div>
-          <div class="brand-sub">v0.4 · Creator × Ironscribe of the Endless Vigil</div>
+          <div class="brand-sub">v0.5.0 · Creator × Ironscribe of the Endless Vigil</div>
         </div>
       </div>
 
@@ -643,11 +643,12 @@
       </div>
 
       <div class="stats-strip">
-        <span class="pill" id="statSummary">10S · 47N · 86E</span>
-        <button class="pill warn" id="gapJumpPill" onclick="jumpToGaps()">⚠ 5 Gaps</button>
+        <span class="pill" id="statSummary">10S · 49N · 93E</span>
+        <button class="pill warn" id="gapJumpPill" onclick="jumpToGaps()">⚠ 2 Gaps</button>
         <a class="pill" href="./index.html" style="color:#34d399;border-color:rgba(16,185,129,0.45)">Hub Gate ↗</a>
+        <a class="pill" href="./cuff-slate.html" style="color:#4ade80;border-color:rgba(34,197,94,0.45)">Cuff-Slate ↗</a>
         <a class="pill" href="./continuum-monitor.html" target="_blank" style="color:#7dd3fc;border-color:rgba(56,189,248,0.45)">Overwatch ↗</a>
-        <span class="pill credit">Ironscribe v0.4</span>
+        <span class="pill credit">Ironscribe v0.5</span>
       </div>
     </div>
   </header>
@@ -875,12 +876,12 @@
 
   <script>
     /* =========================================================================
-       EMBEDDED CANONICAL GRAPH LEDGER (Mirrors data/graph-ledger.json v0.4.0)
+       EMBEDDED CANONICAL GRAPH LEDGER (Mirrors data/graph-ledger.json v0.5.0)
        ========================================================================= */
     const LEDGER = {
           "meta": {
                 "project": "Endless Vigil",
-                "ledgerVersion": "0.4.0",
+                "ledgerVersion": "0.5.0",
                 "coAuthors": [
                       "Creator",
                       "Ironscribe of the Endless Vigil"
@@ -1128,16 +1129,16 @@
                       "id": "HUB-004",
                       "shard": "HUB",
                       "phase": "BOOT",
-                      "title": "Seed New Continuum Manifest",
-                      "summary": "Generate 64-bit worldSeed, stranded asteroid zone, suit breach venting O2, worn Wrist-PDA unseen.",
+                      "title": "Procedural Origin & Co-Op Squad Link",
+                      "summary": "Roll fresh randomized Origin Crisis (Slum Amnesia Diary, Patrol Cruiser Rescue, Asteroid Leak) with optional Squad City Link & ORIGIN_BOUND anti-reroll gear.",
                       "type": "action",
                       "expectedOutcomes": [
                             "enter_eva_act0"
                       ],
                       "stateMutations": [
                             "manifestId:init",
-                            "worldSeed:init",
-                            "suit.leakRatePerSec=1.2"
+                            "originScenario:roll",
+                            "suit.leakRatePerSec:init"
                       ],
                       "commentTag": "@branch-id HUB-004"
                 },
@@ -1405,8 +1406,8 @@
                       "expectedOutcomes": [
                             "bulk_ping_manage",
                             "trade_open_black_stock",
-                            "wealth_balance_gap",
-                            "trial_drop_balance_gap",
+                            "wealth_gravity_calc",
+                            "pilot_standing_drop",
                             "exit_markets"
                       ],
                       "stateMutations": [
@@ -1416,39 +1417,47 @@
                       "commentTag": "@branch-id MKT-001"
                 },
                 {
-                      "id": "GAP-005",
+                      "id": "MKT-002",
                       "shard": "MKT",
                       "phase": "BALANCE",
-                      "title": "PARKING LOT: Anti-Snowball Wealth Balance",
-                      "summary": "Tune telemetry signature detectability & progressive PING rent scaling so mega-rich actors stay vulnerable.",
-                      "type": "gap",
-                      "expectedOutcomes": [],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id GAP-005"
+                      "title": "Wealth-Gravity Threat & NPC/Syndicate Hunts",
+                      "summary": "Wealth x Concentration calculates sector threat; lone rich operators radiate loud targets drawing Syndicate & NPC hunters so money circulates naturally.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "threat_updated"
+                      ],
+                      "stateMutations": [
+                            "telemetrySignatureScore:recalc"
+                      ],
+                      "commentTag": "@branch-id MKT-002"
                 },
                 {
-                      "id": "GAP-006",
+                      "id": "MKT-003",
                       "shard": "MKT",
                       "phase": "BALANCE",
-                      "title": "PARKING LOT: Trial Physical Drops & Anti-RMT Audit",
-                      "summary": "Weigh pros/cons of trial ground drops vs. zero-value starter kits and wash-trade/RMT credit-spike alerts.",
-                      "type": "gap",
-                      "expectedOutcomes": [],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id GAP-006"
+                      "title": "Pilot Standing Drops & Origin-Bound Anti-Farm",
+                      "summary": "Friends drop items freely within transparent flight-hour Pilot Standing limits; ORIGIN_BOUND starter gear blocks reroll farming.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "standing_checked"
+                      ],
+                      "stateMutations": [
+                            "pilotStanding.droppedTodayCr:+"
+                      ],
+                      "commentTag": "@branch-id MKT-003"
                 },
                 {
                       "id": "TECH-001",
                       "shard": "TECH",
                       "phase": "ACT_1_SALVAGE",
                       "title": "Tech & Reverse-Engineering Lab",
-                      "summary": "Separate Tech Shard hydrates salvage inventory and blueprint unlocks.",
+                      "summary": "Separate Tech Shard hydrates salvage inventory, skill training queue, and blueprint unlocks.",
                       "type": "shard_jump",
                       "expectedOutcomes": [
                             "unlock_arc_cutter",
                             "unlock_pulse_decoder",
                             "unlock_polymer_seal",
-                            "tier2_unplanned",
+                            "offline_skill_juryrig",
                             "exit_to_eva"
                       ],
                       "stateMutations": [],
@@ -1471,15 +1480,20 @@
                       "commentTag": "@branch-id TECH-002"
                 },
                 {
-                      "id": "GAP-002",
+                      "id": "TECH-003",
                       "shard": "TECH",
                       "phase": "ACT_2_EXPANSION",
-                      "title": "UNPLANNED: Tier-2 Orbital Tech Tree",
-                      "summary": "Need blueprint dependencies for planetary core drills, jammer arrays, and demolition payloads.",
-                      "type": "gap",
-                      "expectedOutcomes": [],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id GAP-002"
+                      "title": "Offline Skill Training, Espionage & 2% Jury-Rigging",
+                      "summary": "EVE-style offline skill training unlocks high-tech operation; untrained pilots can jury-rig cheap 2% scrap gear or acquire tools via corporate espionage/mechanics.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "skill_ready"
+                      ],
+                      "stateMutations": [
+                            "skills.activeTraining:set",
+                            "skills.juryRigYieldRatio=0.02"
+                      ],
+                      "commentTag": "@branch-id TECH-003"
                 },
                 {
                       "id": "SEC-001",
@@ -1561,15 +1575,31 @@
                       "commentTag": "@branch-id SEC-005"
                 },
                 {
-                      "id": "GAP-003",
+                      "id": "SEC-006",
                       "shard": "SEC",
                       "phase": "MULTIPLAYER",
-                      "title": "UNPLANNED: Breached-Box Owner Alert",
-                      "summary": "Need design for how offline/remote box owners get pinged on Cuff-Slate when a hack trips an alarm.",
+                      "title": "Beacon Heartbeat Loss & 2-5m Theft Deduction",
+                      "summary": "Installed Alarm Beacon stops pulsing on breach; PING refund signals destruction, whereas 'Policy Reassigned' after 2-5m lockout proves theft.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "heartbeat_logged",
+                            "companion_app_future"
+                      ],
+                      "stateMutations": [
+                            "heartbeatBeacons[id].status='SIGNAL_LOST'"
+                      ],
+                      "commentTag": "@branch-id SEC-006"
+                },
+                {
+                      "id": "GAP-007",
+                      "shard": "PDA",
+                      "phase": "FUTURE_V06",
+                      "title": "UNPLANNED: Offline Companion App & Sleep Proximity Alerts",
+                      "summary": "Optional mobile companion/watch feed for ship stats, beacon heartbeat loss, and proximity alerts while sleeping.",
                       "type": "gap",
                       "expectedOutcomes": [],
                       "stateMutations": [],
-                      "commentTag": "@branch-id GAP-003"
+                      "commentTag": "@branch-id GAP-007"
                 },
                 {
                       "id": "SHIP-001",
@@ -1582,7 +1612,8 @@
                             "restore_aux_power",
                             "switch_owned_ship",
                             "undock_to_world",
-                            "boarding_event_unplanned",
+                            "boarding_event",
+                            "voxel_mesh_future",
                             "exit_airlock"
                       ],
                       "stateMutations": [
@@ -1621,15 +1652,30 @@
                       "commentTag": "@branch-id SHIP-003"
                 },
                 {
-                      "id": "GAP-004",
+                      "id": "SHIP-004",
                       "shard": "SHIP",
                       "phase": "MULTIPLAYER",
-                      "title": "UNPLANNED: Multi-Player Ship Boarding Conflict",
-                      "summary": "Define helm permissions vs. physical bulkhead cutting when two operators inhabit one vessel.",
+                      "title": "Open Boarding, Cargo Extraction & Disguise Leaks",
+                      "summary": "Boarders can haul crates out (risking hidden trackers) or hack bridge locks to hijack vessels; Syndicates sell rich pirates' disguises.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "board_outcome_resolved"
+                      ],
+                      "stateMutations": [
+                            "ships[active].ownershipState:contested"
+                      ],
+                      "commentTag": "@branch-id SHIP-004"
+                },
+                {
+                      "id": "GAP-008",
+                      "shard": "SHIP",
+                      "phase": "FUTURE_V06",
+                      "title": "UNPLANNED: 3D Greedy-Meshed Voxel Chunk Hull Rebaking",
+                      "summary": "v0.6+ WebGL architecture: assemble voxel ship parts, bake into unified solid mesh, and dynamically re-bake holes when cut.",
                       "type": "gap",
                       "expectedOutcomes": [],
                       "stateMutations": [],
-                      "commentTag": "@branch-id GAP-004"
+                      "commentTag": "@branch-id GAP-008"
                 },
                 {
                       "id": "WORLD-001",
@@ -2131,18 +2177,18 @@
                 {
                       "id": "E-49",
                       "from": "MKT-001",
-                      "to": "GAP-005",
-                      "label": "Anti-Snowball Balance",
-                      "branchType": "unplanned",
-                      "outcomeKey": "wealth_balance_gap"
+                      "to": "MKT-002",
+                      "label": "Wealth-Gravity Threat Calc",
+                      "branchType": "left",
+                      "outcomeKey": "wealth_gravity_calc"
                 },
                 {
                       "id": "E-50",
                       "from": "MKT-001",
-                      "to": "GAP-006",
-                      "label": "Trial Drops & RMT Rules",
-                      "branchType": "unplanned",
-                      "outcomeKey": "trial_drop_balance_gap"
+                      "to": "MKT-003",
+                      "label": "Pilot Standing & Drops",
+                      "branchType": "multi",
+                      "outcomeKey": "pilot_standing_drop"
                 },
                 {
                       "id": "E-51",
@@ -2151,6 +2197,22 @@
                       "label": "Undock to Sector",
                       "branchType": "shard_jump",
                       "outcomeKey": "exit_markets"
+                },
+                {
+                      "id": "E-87",
+                      "from": "MKT-002",
+                      "to": "MKT-001",
+                      "label": "NPC Threat Radiated",
+                      "branchType": "left",
+                      "outcomeKey": "threat_updated"
+                },
+                {
+                      "id": "E-88",
+                      "from": "MKT-003",
+                      "to": "MKT-001",
+                      "label": "Drop Ledger Verified",
+                      "branchType": "left",
+                      "outcomeKey": "standing_checked"
                 },
                 {
                       "id": "E-52",
@@ -2179,10 +2241,10 @@
                 {
                       "id": "E-55",
                       "from": "TECH-001",
-                      "to": "GAP-002",
-                      "label": "Tier-2 Tech Unplanned",
-                      "branchType": "unplanned",
-                      "outcomeKey": "tier2_unplanned"
+                      "to": "TECH-003",
+                      "label": "Skill Queue / 2% Jury-Rig",
+                      "branchType": "left",
+                      "outcomeKey": "offline_skill_juryrig"
                 },
                 {
                       "id": "E-56",
@@ -2199,6 +2261,14 @@
                       "label": "Equip New Tool",
                       "branchType": "shard_jump",
                       "outcomeKey": "return_eva_tooled"
+                },
+                {
+                      "id": "E-89",
+                      "from": "TECH-003",
+                      "to": "TECH-001",
+                      "label": "Skill Sync / Scrap Ready",
+                      "branchType": "left",
+                      "outcomeKey": "skill_ready"
                 },
                 {
                       "id": "E-58",
@@ -2275,9 +2345,9 @@
                 {
                       "id": "E-67",
                       "from": "SEC-004",
-                      "to": "GAP-003",
-                      "label": "Alarm Tripped",
-                      "branchType": "unplanned",
+                      "to": "SEC-006",
+                      "label": "Beacon Heartbeat Lost",
+                      "branchType": "right",
                       "outcomeKey": "hack_trip_alarm"
                 },
                 {
@@ -2287,6 +2357,22 @@
                       "label": "Claim / Carry Items",
                       "branchType": "shard_jump",
                       "outcomeKey": "back_to_eva_looted"
+                },
+                {
+                      "id": "E-90",
+                      "from": "SEC-006",
+                      "to": "PDA-001",
+                      "label": "Pulse Loss -> PDA Alert",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "heartbeat_logged"
+                },
+                {
+                      "id": "E-91",
+                      "from": "SEC-006",
+                      "to": "GAP-007",
+                      "label": "Watch / Sleep Alerts (v0.6+)",
+                      "branchType": "unplanned",
+                      "outcomeKey": "companion_app_future"
                 },
                 {
                       "id": "E-69",
@@ -2315,10 +2401,10 @@
                 {
                       "id": "E-72",
                       "from": "SHIP-001",
-                      "to": "GAP-004",
-                      "label": "Hostile Boarding",
-                      "branchType": "unplanned",
-                      "outcomeKey": "boarding_event_unplanned"
+                      "to": "SHIP-004",
+                      "label": "Boarding & Disguise Leak",
+                      "branchType": "multi",
+                      "outcomeKey": "boarding_event"
                 },
                 {
                       "id": "E-73",
@@ -2343,6 +2429,22 @@
                       "label": "Vessel Active",
                       "branchType": "left",
                       "outcomeKey": "ship_selected"
+                },
+                {
+                      "id": "E-92",
+                      "from": "SHIP-001",
+                      "to": "GAP-008",
+                      "label": "Baked Voxel Hull (v0.6+)",
+                      "branchType": "unplanned",
+                      "outcomeKey": "voxel_mesh_future"
+                },
+                {
+                      "id": "E-93",
+                      "from": "SHIP-004",
+                      "to": "EVA-006",
+                      "label": "Loot / Hijack / Tracker",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "board_outcome_resolved"
                 },
                 {
                       "id": "E-76",
@@ -2542,7 +2644,7 @@
       switchView('branches');
       document.getElementById('shardFilter').value = 'ALL';
       document.getElementById('modeFilter').value = 'GAPS';
-      selectedNodeId = 'GAP-005';
+      selectedNodeId = 'GAP-007';
       resetFlowPanZoom();
       renderDecisionGraph();
     }
@@ -3102,7 +3204,7 @@
         const rawBytes = new TextEncoder().encode(JSON.stringify(parsed));
         const { bytes: compBytes, encoding } = await compressBytes(rawBytes);
         const hash = await sha256Hex(compBytes);
-        currentEnvelope = { magic: 'EVIGIL', schemaVersion: '1.2.0', rev: (currentEnvelope ? currentEnvelope.rev : 41) + 1, timestampUtc: new Date().toISOString(), originShard: 'EVA', parentSha256: currentEnvelope ? currentEnvelope.payloadSha256 : null, payloadSha256: hash, encoding, payload: toBase64Url(compBytes) };
+        currentEnvelope = { magic: 'EVIGIL', schemaVersion: '1.3.0', rev: (currentEnvelope ? currentEnvelope.rev : 41) + 1, timestampUtc: new Date().toISOString(), originShard: 'EVA', parentSha256: currentEnvelope ? currentEnvelope.payloadSha256 : null, payloadSha256: hash, encoding, payload: toBase64Url(compBytes) };
         lastGoodEnvelope = JSON.parse(JSON.stringify(currentEnvelope));
         const savingsPct = Math.round((1 - compBytes.length / rawBytes.length) * 100);
         document.getElementById('mRawBytes').textContent = `${rawBytes.length} B`;

@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Endless Vigil // Vigil Cuff-Slate PDA (v0.5.0)</title>
+  <!--
+    @shard PDA / HUB / TECH / SEC / SHIP / MKT
+    @branch-id PDA-001 / HUB-004 / TECH-003 / SEC-006 / SHIP-004 / MKT-002 / MKT-003
+    @state-contract Hydrates live D1 state via Bearer Seal (when launched from index.html) or offline Sandbox Fixture for UI/flow preview.
+    @invariant Zero hardcoded credentials; zero script-close literals; zero horizontal overflow >=320px; strictly diegetic public framing.
+    @credits Creator & Ironscribe of the Endless Vigil
+  -->
+  <style>
+    :root {
+      --bg-0: #04080e;
+      --bg-1: #09121e;
+      --bg-2: #0f1b2d;
+      --bg-3: #162844;
+      --border: #233858;
+      --border-strong: #395b8d;
+      --text-0: #edf5ff;
+      --text-1: #a7bad6;
+      --text-2: #768eb0;
+      --accent: #38bdf8;
+      --cuff: #22c55e;
+      --warn: #f59e0b;
+      --crit: #ef4444;
+      --purple: #a855f7;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; height: 100dvh; width: 100%; max-width: 100vw; overflow-x: hidden;
+      background: var(--bg-0); color: var(--text-0); font-family: var(--sans); font-size: 13px; line-height: 1.45;
+    }
+    body {
+      display: flex; flex-direction: column; overflow-y: auto;
+      background-image:
+        radial-gradient(circle at 18% 8%, rgba(34, 197, 94, 0.08), transparent 40%),
+        radial-gradient(circle at 82% 88%, rgba(56, 189, 248, 0.08), transparent 45%);
+    }
+
+    .topbar {
+      display: flex; flex-direction: column; gap: 7px; padding: 9px 12px;
+      background: var(--bg-1); border-bottom: 1px solid var(--border); width: 100%; max-width: 100vw;
+    }
+    .top-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; min-width: 0;
+    }
+    .brand { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1 1 200px; max-width: 100%; }
+    .brand-mark {
+      width: 30px; height: 30px; flex-shrink: 0; border-radius: 7px;
+      background: linear-gradient(135deg, #0b2c1d, #0f263e); border: 1px solid var(--cuff);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-weight: 700; color: var(--cuff); font-size: 11px;
+    }
+    .brand-text { min-width: 0; flex: 1; }
+    .brand-title { font-weight: 700; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-sub { font-size: 10.5px; color: var(--text-1); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; max-width: 100%; }
+    .pill {
+      padding: 3px 8px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--border);
+      color: var(--text-1); font-family: var(--mono); font-size: 10.5px; white-space: nowrap; text-decoration: none;
+    }
+    .pill.ok { border-color: rgba(34, 197, 94, 0.55); color: #4ade80; }
+    .pill.warn { border-color: rgba(245, 158, 11, 0.55); color: #fbbf24; }
+    .pill.crit { border-color: rgba(239, 68, 68, 0.6); color: #f87171; }
+
+    .tabs { display: flex; gap: 5px; flex-wrap: wrap; min-width: 0; max-width: 100%; }
+    .tab-btn {
+      border: 1px solid var(--border); background: var(--bg-2); color: var(--text-1);
+      padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    }
+    .tab-btn.active { border-color: var(--cuff); color: #4ade80; background: rgba(34, 197, 94, 0.14); }
+
+    .workspace {
+      flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 12px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .view-pane { display: none; flex-direction: column; gap: 12px; width: 100%; }
+    .view-pane.active { display: flex; }
+
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+      gap: 12px; width: 100%;
+    }
+    .panel {
+      background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px;
+      padding: 13px; display: flex; flex-direction: column; gap: 9px; min-width: 0; max-width: 100%;
+    }
+    .panel h2 {
+      margin: 0; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cuff);
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-family: var(--mono);
+      font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid currentColor; white-space: nowrap;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .field label { font-family: var(--mono); font-size: 10.5px; color: var(--text-2); text-transform: uppercase; }
+    input[type="text"], input[type="number"], select {
+      width: 100%; max-width: 100%; background: var(--bg-0); color: var(--text-0);
+      border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; font-family: var(--mono); font-size: 12px;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--cuff); }
+
+    .btn {
+      background: var(--bg-2); color: var(--text-0); border: 1px solid var(--border); border-radius: 6px;
+      padding: 7px 10px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      white-space: normal; text-decoration: none; max-width: 100%;
+    }
+    .btn:hover { border-color: var(--border-strong); background: var(--bg-3); }
+    .btn.ok { border-color: rgba(34, 197, 94, 0.55); color: #4ade80; }
+    .btn.primary { border-color: rgba(56, 189, 248, 0.55); color: var(--accent); }
+    .btn.warn { border-color: rgba(245, 158, 11, 0.55); color: #fbbf24; }
+    .btn.crit { border-color: rgba(239, 68, 68, 0.55); color: #f87171; }
+
+    .mono-box {
+      font-family: var(--mono); font-size: 11px; background: var(--bg-0); border: 1px solid var(--border);
+      border-radius: 6px; padding: 9px; word-break: break-word; overflow-wrap: anywhere;
+      color: #cbd5e1; white-space: pre-wrap; max-height: 240px; overflow-y: auto; max-width: 100%;
+    }
+    .item-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+      background: var(--bg-0); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; min-width: 0;
+    }
+    .meter-track {
+      width: 100%; height: 8px; border-radius: 999px; background: var(--bg-0); border: 1px solid var(--border); overflow: hidden;
+    }
+    .meter-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444); transition: width 0.25s ease; }
+
+    .toast-bar {
+      font-family: var(--mono); font-size: 11px; padding: 8px 10px; border-radius: 6px;
+      border: 1px solid var(--border-strong); background: var(--bg-1); color: var(--text-1); word-break: break-word;
+    }
+    .toast-bar.ok { border-color: rgba(34, 197, 94, 0.6); color: #86efac; }
+    .toast-bar.warn { border-color: rgba(245, 158, 11, 0.6); color: #fde68a; }
+    .toast-bar.crit { border-color: rgba(239, 68, 68, 0.65); color: #fecaca; }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="top-row">
+      <div class="brand">
+        <div class="brand-mark">PDA</div>
+        <div class="brand-text">
+          <div class="brand-title">Vigil Cuff-Slate // Shard Deck (v0.5.0)</div>
+          <div class="brand-sub" id="operatorBanner">Initializing Cuff-OS BIOS...</div>
+        </div>
+      </div>
+
+      <div class="strip">
+        <span class="pill warn" id="syncModePill">CHECKING CONDUIT...</span>
+        <span class="pill" id="suitO2Pill">O2: 47.5s</span>
+        <a class="pill" href="./index.html" style="color:#38bdf8;border-color:rgba(56,189,248,0.45)">Hub Gate ↗</a>
+        <a class="pill" href="./temporal-lab.html" style="color:#a855f7;border-color:rgba(168,85,247,0.45)">Temporal Lab ↗</a>
+        <a class="pill" href="./conglomerate-flowchart.html" style="color:#4ade80;border-color:rgba(34,197,94,0.45)">Flowchart ↗</a>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab-btn active" data-tab="origin" onclick="openTab('origin')">1. Origin &amp; Squad</button>
+      <button class="tab-btn" data-tab="skills" onclick="openTab('skills')">2. Skills &amp; 2% Rig</button>
+      <button class="tab-btn" data-tab="beacons" onclick="openTab('beacons')">3. Beacons &amp; 2–5m Clue</button>
+      <button class="tab-btn" data-tab="boarding" onclick="openTab('boarding')">4. Boarding &amp; Leaks</button>
+      <button class="tab-btn" data-tab="standing" onclick="openTab('standing')">5. Standing &amp; Threat</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <div class="toast-bar" id="cuffToast">CUFF-OS READY. Launch via Vigil Hub Gate for live Cloudflare D1 sync, or inspect mechanics offline in Sandbox Fixture mode.</div>
+
+    <!-- TAB 1: PROCEDURAL ORIGIN GENERATOR + CO-OP SQUAD LINK -->
+    <section class="view-pane active" id="tab-origin">
+      <div class="grid-cards">
+        <div class="panel">
+          <h2><span>Procedural Origin &amp; Co-Op Squad Link</span><span class="badge" style="color:var(--cuff)">HUB-004</span></h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Friends enter an identical <strong>Squad Link Code</strong> to spawn in the same city/district immediately (zero forced tutorial gates), even while rolling distinct starter crises. Starter items are tagged <strong>ORIGIN_BOUND</strong> to block reroll farming.
+          </p>
+          <div class="field">
+            <label>Co-Op Squad Link Code (Optional)</label>
+            <input type="text" id="squadCodeInput" placeholder="e.g. FALCON-7 (Leave blank for solo random district)" />
+          </div>
+          <div class="field">
+            <label>Archetype Roll Mode</label>
+            <select id="archetypeSelect">
+              <option value="">Procedural Random Crisis</option>
+              <option value="SLUM_AMNESIA_DIARY">Slum Alley Awakening + Data Diary</option>
+              <option value="PATROL_CRUISER_WRECK">Patrol Chief Cruiser Wreck</option>
+              <option value="ASTEROID_BREACH_EVA">Drifting Asteroid Suit Breach</option>
+              <option value="BLACKSITE_COURIER">Black-Site Lab Defector</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn ok" onclick="rollOrigin()">Roll Procedural Origin →</button>
+            <button class="btn primary" onclick="testSameCitySquad()">Verify 2-Friend Same-City Link</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2><span>Active Origin Manifest</span><span class="badge" id="originZoneBadge" style="color:var(--accent)">DISTRICT</span></h2>
+          <div class="mono-box" id="originSummaryBox"></div>
+          <div style="font-family:var(--mono);font-size:10.5px;color:var(--text-2)">CARRIED &amp; ORIGIN_BOUND GEAR</div>
+          <div id="originGearList" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: EVE-STYLE OFFLINE SKILLS & 2% SCRAP JURY-RIGGING -->
+    <section class="view-pane" id="tab-skills">
+      <div class="grid-cards">
+        <div class="panel">
+          <h2><span>Real-Time Offline Skill Queue</span><span class="badge" style="color:var(--accent)">TECH-003</span></h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Acquiring advanced gear (via market purchase or corporate espionage) does not grant mastery. Offline training timers advance continuously against server UTC.
+          </p>
+          <div class="mono-box" id="activeSkillBox">No active offline skill timer queued.</div>
+          <div id="skillList" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+
+        <div class="panel">
+          <h2><span>2% Scrap Jury-Rigging &amp; Gear Check</span><span class="badge" style="color:var(--warn)">EARLY RISK</span></h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Untrained operators can weld cheap scrap into <strong>~2% efficiency jury-rigged tools</strong> to sample deep-water contracts immediately—without bypassing genuine skill progression.
+          </p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn warn" onclick="craftJuryRig('cutting', 'Scrap Arc Welder (2%)')">Weld 2% Arc Rig</button>
+            <button class="btn warn" onclick="craftJuryRig('hacking', 'Scrap Cipher Wire (2%)')">Splice 2% Decoder Rig</button>
+            <button class="btn primary" onclick="checkSkillCompletion()">↻ Sync UTC Skill Timer</button>
+          </div>
+          <div class="mono-box" id="gearMasteryBox"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: BEACON HEARTBEATS & 2-5M RE-INSURANCE THEFT CLUE -->
+    <section class="view-pane" id="tab-beacons">
+      <div class="grid-cards">
+        <div class="panel">
+          <h2><span>Container &amp; Ship Heartbeat Monitor</span><span class="badge" style="color:var(--cuff)">SEC-006</span></h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Lost pulse + instant PING payout = <strong>Destroyed</strong>. Lost pulse + <strong>2–5m lockout &rarr; "Policy Reassigned"</strong> = Stolen alive!
+          </p>
+          <div id="beaconList" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+
+        <div class="panel">
+          <h2><span>Forensic Verdict &amp; Sleep Alerts</span><span class="badge" style="color:var(--purple)">GAP-007 READY</span></h2>
+          <div class="mono-box" id="beaconVerdictBox">Heartbeat telemetry nominal. Trigger a Destruction vs. Theft check on the left to observe the 2-5m forensic verdict split.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn primary" onclick="beaconAction('crate_774', 'CHECK_HEARTBEAT')">↻ Poll Heartbeat Status</button>
+            <button class="btn ok" onclick="beaconAction('crate_774', 'RESET_RESTORE')">Restore Test Beacons</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: SANDBOX SHIP BOARDING, SYNDICATE LEAKS & v0.6 VOXEL -->
+    <section class="view-pane" id="tab-boarding">
+      <div class="grid-cards">
+        <div class="panel">
+          <h2><span>Open Boarding &amp; Syndicate Intel</span><span class="badge" style="color:var(--warn)">SHIP-004</span></h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Boarders can extract physical crates right away (risking hidden trackers) OR cut/hack bridge helm locks to seize the vessel. Massive visible wealth compromises disguised identities via Syndicate leaks.
+          </p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn warn" onclick="boardingAction('LOOT_CARGO')">1. Haul Cargo Crate Immediately</button>
+            <button class="btn primary" onclick="boardingAction('HACK_BRIDGE')">2. Hack Bridge Helm Lock</button>
+            <button class="btn crit" onclick="boardingAction('CHECK_DISGUISE_LEAK')">3. Test Syndicate Disguise Leak</button>
+          </div>
+          <div class="mono-box" id="boardingOutcomeBox">Awaiting airlock entry or boarding action...</div>
+        </div>
+
+        <div class="panel">
+          <h2><span>v0.6+ Baked Voxel-Chunk Hull Spec</span><span class="badge" style="color:var(--accent)">GAP-008</span></h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Upcoming 3D ship architecture combines voxel parts via <strong>Greedy Meshing / CSG Chunk Rebaking</strong> so ships render as unified hulls with clean physical holes when cut.
+          </p>
+          <div class="mono-box" id="voxelSpecBox">HULL REVISION : meshRev #3 (Greedy-Meshed Unified Chunk)
+VOXEL BLOCKS  : 1,420 Structural Cells (14% Draw Calls vs Unbaked)
+BREACH HOLES  : 1 Active Airlock Cut (Re-baked in 4.2 ms)
+PRIVACY       : Clean Clean-Room WebGL Spec (Zero IP Overlap)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: WEALTH x CONCENTRATION THREAT & PILOT STANDING DROPS -->
+    <section class="view-pane" id="tab-standing">
+      <div class="grid-cards">
+        <div class="panel">
+          <h2><span>Wealth &times; Concentration Threat</span><span class="badge" style="color:var(--crit)">MKT-002</span></h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Zero hard caps on wealth. Solo concentration scales your Telemetry Signature score, naturally drawing NPC pirates, Syndicate brokers, and player hunters toward loud targets.
+          </p>
+          <div class="meter-track"><div class="meter-fill" id="threatMeterFill" style="width:15%"></div></div>
+          <div class="mono-box" id="threatSummaryBox"></div>
+        </div>
+
+        <div class="panel">
+          <h2><span>Pilot Standing Friend Drop Desk</span><span class="badge" style="color:var(--cuff)">MKT-003</span></h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Share credits or un-bound gear freely with squadmates within your transparent flight-hour <strong>Pilot Credit Standing</strong>. <code>ORIGIN_BOUND</code> starter gear stays locked.
+          </p>
+          <div class="mono-box" id="standingSummaryBox"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <div class="field" style="flex:1 1 130px">
+              <label>Friend Drop Amount (cr)</label>
+              <input type="number" id="dropCreditsInput" value="50" min="1" max="500000" />
+            </div>
+            <button class="btn ok" onclick="dropFriendCredits()">Drop Credits to Ground</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /* Zero script-close literals anywhere in JS */
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    const PROD_AUTHORITY_URL = 'https://ev-authority.ericautomates.workers.dev';
+    const SKILL_DEFS = [
+      { id: 'cutting', name: 'Thermal Seam Cutting', baseSec: 45 },
+      { id: 'hacking', name: 'Pulse Cipher Intrusion', baseSec: 60 },
+      { id: 'rigging', name: 'Scrap Jury-Rigging & Patching', baseSec: 30 },
+      { id: 'navigation', name: 'Helm & Subspace Routing', baseSec: 50 },
+      { id: 'trading', name: 'Syndicate Broker & Markets', baseSec: 40 }
+    ];
+    const DISTRICTS = ['CINDER-WARD-07', 'PORT-VELDT-12', 'ORBITAL-SPINE-03', 'ASH-FOUNDRY-09', 'BASALT-DOCK-04'];
+    const ARCHETYPES = [
+      { archetype: 'SLUM_AMNESIA_DIARY', title: 'Slum Alley Awakening + Data Diary', storyHook: 'Woke in a rain-slicked conduit alley holding a scarred Cuff-Slate and encrypted data diary.', valueBudgetTier: 'scrap', starterShip: 'None (Foot / Public Lift Only)' },
+      { archetype: 'PATROL_CRUISER_WRECK', title: 'Patrol Chief Cruiser Wreck', storyHook: 'Emergency eject landed outside a fractured Patrol Chief hull with high Syndicate interest.', valueBudgetTier: 'windfall_damaged', starterShip: 'Battered Patrol Hull (34% Structural Integrity, ORIGIN_BOUND)' },
+      { archetype: 'ASTEROID_BREACH_EVA', title: 'Drifting Asteroid Suit Breach', storyHook: 'Abandoned on Asteroid-00 with a venting torso seam and 47.5s atmospheric margin.', valueBudgetTier: 'standard', starterShip: 'Vigil Skiff-IV (Bare Hull, ORIGIN_BOUND)' },
+      { archetype: 'BLACKSITE_COURIER', title: 'Black-Site Lab Defector', storyHook: 'Escaped orbital bio-foundry carrying uncalibrated decoder hardware.', valueBudgetTier: 'standard', starterShip: 'Courier Pod-09 (ORIGIN_BOUND)' }
+    ];
+
+    let SEAL_CTX = null;
+    let LIVE_MODE = false;
+    let STATE = null;
+
+    function buildSandboxFixture() {
+      const now = Date.now();
+      return {
+        schemaVersion: '1.3.0',
+        rev: 1,
+        operator: { id: 'SANDBOX-LOCAL', tier: 'chartered', status: 'ACTIVE', credits: 4820, rev: 1 },
+        originScenario: {
+          scenarioId: 'orig_sandbox_01',
+          archetype: 'ASTEROID_BREACH_EVA',
+          title: 'Drifting Asteroid Suit Breach',
+          storyHook: ARCHETYPES[2].storyHook,
+          originCityZone: 'CINDER-WARD-07',
+          squadAnchorCode: 'FALCON-7',
+          valueBudgetTier: 'standard',
+          starterShip: 'Vigil Skiff-IV (Bare Hull, ORIGIN_BOUND)',
+          rollCount: 1
+        },
+        skills: {
+          levels: { cutting: 1, hacking: 0, rigging: 1, navigation: 1, trading: 0 },
+          activeTraining: null,
+          juryRigYieldRatio: 0.02
+        },
+        heartbeatBeacons: [
+          { entityId: 'crate_774', label: 'Strongbox #774 (Asteroid-00)', beaconChipInstalled: true, proximitySleepSensor: true, pingInsured: true, status: 'HEARTBEAT_OK', reinsureDelayMs: 180000 },
+          { entityId: 'skiff_iv', label: 'Vigil Skiff-IV Hull', beaconChipInstalled: true, proximitySleepSensor: false, pingInsured: true, status: 'HEARTBEAT_OK', reinsureDelayMs: 240000 }
+        ],
+        pilotStanding: { flightHours: 14.5, dailyDropAllowanceCr: 6125, droppedTodayCr: 0 },
+        inventory: [
+          { itemId: 'polymer_patch_kit', name: 'Emergency Seal Tape', originBound: true, salvageValue: 0, requiresSkill: 'rigging', requiredLevel: 0, juryRigged: false },
+          { itemId: 'arc_lance_mk1', name: 'Thermal Arc Lance Mk-I', originBound: false, salvageValue: 450, requiresSkill: 'cutting', requiredLevel: 2, juryRigged: false }
+        ],
+        wealthThreat: { heldWealthCr: 5270, concentrationFactor: 1.35, telemetrySignatureScore: 71, threatLabel: 'QUIET SCRAPPER', disguiseCompromised: false }
+      };
+    }
+
+    function makeNonce() {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+      return 'ev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+    }
+
+    function hashDet(str) {
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return h >>> 0;
+    }
+
+    function setToast(msg, cls) {
+      const el = document.getElementById('cuffToast');
+      if (!el) return;
+      el.textContent = msg;
+      el.className = 'toast-bar' + (cls ? ' ' + cls : '');
+    }
+
+    function openTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tabName));
+      document.querySelectorAll('.view-pane').forEach((p) => p.classList.toggle('active', p.id === 'tab-' + tabName));
+    }
+
+    async function callAuthority(path, body) {
+      if (!LIVE_MODE || !SEAL_CTX) return null;
+      const res = await fetch(SEAL_CTX.authorityUrl + path, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + SEAL_CTX.token,
+          'X-Request-Nonce': makeNonce()
+        },
+        body: JSON.stringify(Object.assign({ expectedRev: STATE && STATE.operator ? STATE.operator.rev : 1 }, body || {}))
+      });
+      let data = {};
+      try { data = await res.json(); } catch (_) {}
+      if (!res.ok) {
+        setToast((data && data.message) || ('Authority rejected action (' + res.status + ').'), res.status === 403 ? 'crit' : 'warn');
+        return null;
+      }
+      if (data.worldState) STATE = data.worldState;
+      renderAll();
+      return data;
+    }
+
+    async function initCuffSlate() {
+      try {
+        const raw = sessionStorage.getItem('ev_active_seal');
+        if (raw) SEAL_CTX = JSON.parse(raw);
+      } catch (_) {}
+
+      if (SEAL_CTX && SEAL_CTX.token) {
+        try {
+          const url = SEAL_CTX.authorityUrl || PROD_AUTHORITY_URL;
+          const res = await fetch(url + '/api/world/bootstrap', {
+            headers: { 'Authorization': 'Bearer ' + SEAL_CTX.token }
+          });
+          const data = await res.json();
+          if (res.ok && data.ok && data.worldState) {
+            LIVE_MODE = true;
+            STATE = data.worldState;
+            setToast('Live Cloudflare D1 Authority seal active. Every mutation persists to SQLite.', 'ok');
+            renderAll();
+            return;
+          }
+        } catch (_) {}
+      }
+
+      LIVE_MODE = false;
+      STATE = buildSandboxFixture();
+      renderAll();
+    }
+
+    async function rollOrigin() {
+      const squadAnchorCode = document.getElementById('squadCodeInput').value.trim().toUpperCase();
+      const archetypeHint = document.getElementById('archetypeSelect').value;
+      if (LIVE_MODE) {
+        const res = await callAuthority('/api/v05/origin/roll', { squadAnchorCode, archetypeHint });
+        if (res && res.ok) setToast('Procedural Origin rolled & saved to Cloudflare D1 (' + STATE.originScenario.originCityZone + ').', 'ok');
+        return;
+      }
+      const seed = hashDet(Date.now() + ':' + squadAnchorCode);
+      const picked = ARCHETYPES.find((a) => a.archetype === archetypeHint) || ARCHETYPES[seed % ARCHETYPES.length];
+      const city = squadAnchorCode ? DISTRICTS[hashDet(squadAnchorCode) % DISTRICTS.length] : DISTRICTS[(seed >>> 4) % DISTRICTS.length];
+      STATE.originScenario = {
+        scenarioId: 'orig_' + (seed & 0xfffffff).toString(16),
+        archetype: picked.archetype,
+        title: picked.title,
+        storyHook: picked.storyHook,
+        originCityZone: city,
+        squadAnchorCode: squadAnchorCode || null,
+        valueBudgetTier: picked.valueBudgetTier,
+        starterShip: picked.starterShip,
+        rollCount: (STATE.originScenario.rollCount || 1) + 1
+      };
+      setToast('Sandbox Origin rolled: ' + picked.title + ' @ ' + city, 'ok');
+      renderAll();
+    }
+
+    function testSameCitySquad() {
+      const code = (document.getElementById('squadCodeInput').value.trim() || 'FALCON-7').toUpperCase();
+      document.getElementById('squadCodeInput').value = code;
+      const city = DISTRICTS[hashDet(code) % DISTRICTS.length];
+      setToast('SQUAD CITY LINK VERIFIED: Any friend entering "' + code + '" lands in ' + city + ' together immediately—zero tutorial lockout.', 'ok');
+    }
+
+    async function startSkillTraining(skillId) {
+      if (LIVE_MODE) {
+        const res = await callAuthority('/api/v05/skills/train', { action: 'START', skillId });
+        if (res && res.ok) setToast('Offline skill training started against server UTC.', 'ok');
+        return;
+      }
+      const def = SKILL_DEFS.find((s) => s.id === skillId);
+      const nextLvl = Math.min(5, (STATE.skills.levels[skillId] || 0) + 1);
+      const now = Date.now();
+      STATE.skills.activeTraining = {
+        skillId, skillName: def.name, targetLevel: nextLvl,
+        startedAtMs: now, completesAtMs: now + def.baseSec * nextLvl * 1000,
+        completesAtUtc: new Date(now + def.baseSec * nextLvl * 1000).toISOString()
+      };
+      setToast('Queued ' + def.name + ' Lv' + nextLvl + ' (continues offline via UTC).', 'ok');
+      renderAll();
+    }
+
+    async function craftJuryRig(requiresSkill, toolName) {
+      if (LIVE_MODE) {
+        const res = await callAuthority('/api/v05/skills/train', { action: 'JURY_RIG', requiresSkill, toolName });
+        if (res && res.ok) setToast(res.note, 'warn');
+        return;
+      }
+      STATE.inventory = STATE.inventory.filter((i) => !i.juryRigged).concat({
+        itemId: 'jury_' + Date.now().toString(36), name: toolName, originBound: false, salvageValue: 5,
+        requiresSkill, requiredLevel: 0, juryRigged: true, yieldRatio: 0.02
+      });
+      setToast('Assembled ' + toolName + ' operating at 2% yield without full skill training.', 'warn');
+      renderAll();
+    }
+
+    async function checkSkillCompletion() {
+      if (LIVE_MODE) {
+        await callAuthority('/api/v05/skills/train', { action: 'CHECK_COMPLETE' });
+        setToast('Skill timer checked against server UTC.', 'ok');
+        return;
+      }
+      const act = STATE.skills.activeTraining;
+      if (act && Date.now() >= act.completesAtMs) {
+        STATE.skills.levels[act.skillId] = act.targetLevel;
+        STATE.skills.activeTraining = null;
+        setToast('Offline skill training completed!', 'ok');
+      } else {
+        setToast('Skill timer still active (use Temporal Lab to simulate days/weeks ahead).', '');
+      }
+      renderAll();
+    }
+
+    async function beaconAction(entityId, action, extra) {
+      if (LIVE_MODE) {
+        const res = await callAuthority('/api/v05/beacon/action', Object.assign({ entityId, action }, extra || {}));
+        if (res && res.clueMessage) {
+          document.getElementById('beaconVerdictBox').textContent = res.clueMessage;
+          setToast(res.clueMessage, action === 'SIMULATE_THEFT' ? 'warn' : 'ok');
+        }
+        return;
+      }
+      const b = STATE.heartbeatBeacons.find((x) => x.entityId === entityId) || STATE.heartbeatBeacons[0];
+      const now = Date.now();
+      let msg = 'Beacon heartbeats nominal.';
+      if (action === 'RESET_RESTORE') {
+        STATE.heartbeatBeacons.forEach((x) => { x.status = 'HEARTBEAT_OK'; x.reinsureUnlockMs = null; });
+        msg = 'All Alarm Beacons restored to HEARTBEAT_OK.';
+      } else if (action === 'TOGGLE_SLEEP_SENSOR') {
+        b.proximitySleepSensor = !b.proximitySleepSensor;
+        msg = b.label + ': Bunk proximity sleep alert ' + (b.proximitySleepSensor ? 'ARMED' : 'OFF') + '.';
+      } else if (action === 'SIMULATE_DESTROY') {
+        b.status = 'REFUNDED_DESTROYED'; b.reinsureUnlockMs = null;
+        msg = 'PING INSTANT PAYOUT: Destroyed asset verified—refund issued immediately.';
+      } else if (action === 'SIMULATE_THEFT') {
+        const delayMs = (extra && extra.lockoutMs) || 3500; // 3.5s quick preview in sandbox; 2-5m (120-300s) in production D1
+        b.status = 'SIGNAL_LOST'; b.reinsureUnlockMs = now + delayMs;
+        msg = 'HEARTBEAT LOST! Thief lockout ticking (' + Math.round(delayMs / 1000) + 's sandbox / 2-5m live)... Watch for "Policy Reassigned"!';
+      } else if (action === 'CHECK_HEARTBEAT') {
+        if (b.status === 'SIGNAL_LOST' && b.reinsureUnlockMs && now >= b.reinsureUnlockMs) {
+          b.status = 'POLICY_REASSIGNED_THEFT';
+          msg = 'FORENSIC VERDICT: "Policy Reassigned" — ' + b.label + ' was NOT destroyed; a thief still holds it alive!';
+        } else if (b.status === 'POLICY_REASSIGNED_THEFT') {
+          msg = 'FORENSIC VERDICT: "Policy Reassigned" — ' + b.label + ' confirmed stolen alive!';
+        }
+      }
+      document.getElementById('beaconVerdictBox').textContent = msg;
+      setToast(msg, action === 'SIMULATE_THEFT' ? 'warn' : 'ok');
+      renderAll();
+    }
+
+    async function boardingAction(mode) {
+      if (LIVE_MODE) {
+        const res = await callAuthority('/api/v05/boarding/action', { mode });
+        if (res && res.outcome) {
+          document.getElementById('boardingOutcomeBox').textContent = res.outcome;
+          setToast(res.outcome, mode === 'CHECK_DISGUISE_LEAK' && STATE.wealthThreat.disguiseCompromised ? 'crit' : 'ok');
+        }
+        return;
+      }
+      let out = '';
+      if (mode === 'LOOT_CARGO') {
+        const hasTracker = (Date.now() % 3) === 0;
+        STATE.inventory.push({
+          itemId: 'cargo_' + Date.now().toString(36),
+          name: hasTracker ? 'High-Value Cargo Crate [HIDDEN TRACKER]' : 'High-Value Titanium Crate',
+          originBound: false, salvageValue: 680, requiresSkill: 'rigging', requiredLevel: 0, juryRigged: false
+        });
+        out = hasTracker ? 'Extracted crate immediately! Warning: hidden Syndicate tracker detected inside cargo!' : 'Extracted Titanium Crate cleanly.';
+      } else if (mode === 'HACK_BRIDGE') {
+        const hl = STATE.skills.levels.hacking || 0;
+        out = hl >= 2 ? 'Bridge helm cipher bypassed (Hacking Lv' + hl + '). Vessel hijacked!' : 'Bridge lock resisted (requires Hacking Lv2; you have Lv' + hl + '). Train offline or splice a 2% wire!';
+      } else {
+        const w = STATE.wealthThreat.heldWealthCr;
+        out = w >= 15000 ? 'SYNDICATE DISGUISE LEAKED: High wealth drew Syndicate intel leaks!' : 'Disguise intact (Wealth signature below Syndicate leak threshold).';
+      }
+      document.getElementById('boardingOutcomeBox').textContent = out;
+      recalcSandboxThreat();
+      renderAll();
+    }
+
+    async function dropFriendCredits() {
+      const amountCr = Math.floor(Number(document.getElementById('dropCreditsInput').value) || 0);
+      if (LIVE_MODE) {
+        const res = await callAuthority('/api/v05/standing/drop', { dropType: 'CREDITS', amountCr });
+        if (res && res.ok) setToast('Dropped ' + res.droppedCredits + ' cr cleanly under Pilot Standing.', 'ok');
+        return;
+      }
+      const rem = STATE.pilotStanding.dailyDropAllowanceCr - STATE.pilotStanding.droppedTodayCr;
+      if (amountCr < 1 || amountCr > rem) {
+        setToast('Blocked: Exceeds Pilot Standing allowance (' + rem + ' cr remaining).', 'crit');
+        return;
+      }
+      STATE.operator.credits = Math.max(0, STATE.operator.credits - amountCr);
+      STATE.pilotStanding.droppedTodayCr += amountCr;
+      recalcSandboxThreat();
+      setToast('Dropped ' + amountCr + ' cr at current coordinates for squadmate pickup.', 'ok');
+      renderAll();
+    }
+
+    async function attemptDropItem(itemId) {
+      if (LIVE_MODE) {
+        const res = await callAuthority('/api/v05/standing/drop', { dropType: 'ITEM', itemId });
+        if (res && res.ok) setToast('Dropped ' + res.droppedItem + ' at current coordinates.', 'ok');
+        return;
+      }
+      const it = STATE.inventory.find((x) => x.itemId === itemId);
+      if (!it) return;
+      if (it.originBound) {
+        setToast('BLOCKED (ORIGIN_BOUND): ' + it.name + ' cannot be dropped/salvaged to prevent infinite character-reroll farming.', 'crit');
+        return;
+      }
+      STATE.inventory = STATE.inventory.filter((x) => x.itemId !== itemId);
+      recalcSandboxThreat();
+      setToast('Dropped ' + it.name + ' cleanly.', 'ok');
+      renderAll();
+    }
+
+    function recalcSandboxThreat() {
+      const gearVal = STATE.inventory.reduce((s, i) => s + (i.salvageValue || 0), 0);
+      const wealth = STATE.operator.credits + gearVal;
+      const score = Math.round((wealth / 100) * 1.35);
+      STATE.wealthThreat = {
+        heldWealthCr: wealth,
+        concentrationFactor: 1.35,
+        telemetrySignatureScore: score,
+        threatLabel: score >= 250 ? 'HIGH-PROFILE MOGUL (SYNDICATE HUNTS ACTIVE)' : score >= 80 ? 'ELEVATED SIGNAL (PIRATE SCOUTS PROBING)' : 'QUIET SCRAPPER',
+        disguiseCompromised: score >= 200
+      };
+    }
+
+    function renderAll() {
+      if (!STATE) return;
+      document.getElementById('operatorBanner').textContent =
+        `${STATE.operator.id} · ${STATE.operator.tier.toUpperCase()} · ${STATE.operator.credits} cr · rev ${STATE.operator.rev || 1}`;
+      const syncPill = document.getElementById('syncModePill');
+      syncPill.textContent = LIVE_MODE ? '● D1 AUTHORITY LIVE' : '● SANDBOX FIXTURE';
+      syncPill.className = 'pill ' + (LIVE_MODE ? 'ok' : 'warn');
+
+      // Tab 1: Origin
+      const o = STATE.originScenario;
+      document.getElementById('originZoneBadge').textContent = o.originCityZone;
+      document.getElementById('originSummaryBox').textContent =
+`ARCHETYPE   : ${o.title} (${o.archetype})
+SPAWN CITY  : ${o.originCityZone} ${o.squadAnchorCode ? ('(Linked via Squad Code: ' + o.squadAnchorCode + ')') : '(Solo Roll)'}
+BUDGET TIER : ${o.valueBudgetTier.toUpperCase()}
+STARTER SHIP: ${o.starterShip}
+ROLL COUNT  : #${o.rollCount || 1}
+STORY HOOK  : ${o.storyHook}`;
+
+      document.getElementById('originGearList').innerHTML = (STATE.inventory || []).map((it) => `
+        <div class="item-row">
+          <div style="min-width:0;flex:1">
+            <strong>${esc(it.name)}</strong>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text-2)">
+              ${it.originBound ? 'ORIGIN_BOUND (0 cr salvage · Drop Locked)' : ('Tradable (' + it.salvageValue + ' cr)')}
+              ${it.juryRigged ? ' · 2% SCRAP JURY-RIG' : ''}
+            </div>
+          </div>
+          <button class="btn ${it.originBound ? 'crit' : 'ok'}" onclick="attemptDropItem('${esc(it.itemId)}')">
+            ${it.originBound ? 'Test Farm Block' : 'Drop Item'}
+          </button>
+        </div>
+      `).join('');
+
+      // Tab 2: Skills
+      const act = STATE.skills.activeTraining;
+      if (act && typeof act.completesAtMs === 'number') {
+        const rem = Math.max(0, Math.ceil((act.completesAtMs - Date.now()) / 1000));
+        document.getElementById('activeSkillBox').textContent =
+          `TRAINING: ${act.skillName || act.skillId} -> Lv${act.targetLevel}\nCOMPLETES: ${act.completesAtUtc}\nREMAINING: ${rem}s`;
+      } else {
+        document.getElementById('activeSkillBox').textContent = 'No active offline training timer. Queue any skill below—timers run while logged out.';
+      }
+      document.getElementById('skillList').innerHTML = SKILL_DEFS.map((sd) => {
+        const lvl = Number(STATE.skills.levels[sd.id] || 0);
+        return `
+          <div class="item-row">
+            <div>
+              <strong>${esc(sd.name)}</strong>
+              <div style="font-family:var(--mono);font-size:10.5px;color:var(--cuff)">Mastery Lv ${lvl} / 5</div>
+            </div>
+            <button class="btn primary" onclick="startSkillTraining('${sd.id}')" ${lvl >= 5 ? 'disabled' : ''}>
+              ${lvl >= 5 ? 'Maxed' : ('Train Lv' + (lvl + 1))}
+            </button>
+          </div>`;
+      }).join('');
+      document.getElementById('gearMasteryBox').textContent = (STATE.inventory || []).map((it) => {
+        const have = Number(STATE.skills.levels[it.requiresSkill] || 0);
+        const ready = have >= it.requiredLevel;
+        return `${it.name}: Requires ${it.requiresSkill} Lv${it.requiredLevel} (You: Lv${have}) -> ${it.juryRigged ? 'ACTIVE AT 2% YIELD' : (ready ? 'FULL EFFICIENCY' : 'LOCKED UNTIL TRAINED / JURY-RIG')}`;
+      }).join('\n');
+
+      // Tab 3: Beacons
+      document.getElementById('beaconList').innerHTML = (STATE.heartbeatBeacons || []).map((b) => {
+        const now = Date.now();
+        if (!LIVE_MODE && b.status === 'SIGNAL_LOST' && b.reinsureUnlockMs && now >= b.reinsureUnlockMs) {
+          b.status = 'POLICY_REASSIGNED_THEFT';
+        }
+        const remSec = b.reinsureUnlockMs ? Math.max(0, Math.ceil((b.reinsureUnlockMs - now) / 1000)) : 0;
+        const stColor = b.status === 'HEARTBEAT_OK' ? '#4ade80' : b.status === 'REFUNDED_DESTROYED' ? '#38bdf8' : b.status === 'POLICY_REASSIGNED_THEFT' ? '#f59e0b' : '#ef4444';
+        return `
+          <div class="item-row" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
+              <strong>${esc(b.label)}</strong>
+              <span class="badge" style="color:${stColor}">${esc(b.status)}${b.status === 'SIGNAL_LOST' ? (' (' + remSec + 's)') : ''}</span>
+            </div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text-2)">
+              PING: ${b.pingInsured ? 'INSURED' : 'UNINSURED'} · Bunk Proximity Sensor: ${b.proximitySleepSensor ? 'ARMED' : 'OFF'}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn" onclick="beaconAction('${esc(b.entityId)}', 'TOGGLE_SLEEP_SENSOR')">Toggle Sleep Sensor</button>
+              <button class="btn primary" onclick="beaconAction('${esc(b.entityId)}', 'SIMULATE_DESTROY')">Destroy (Instant Refund)</button>
+              <button class="btn warn" onclick="beaconAction('${esc(b.entityId)}', 'SIMULATE_THEFT', { lockoutMs: 120000 })">Steal (2m Lockout)</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Tab 5: Threat & Standing
+      const th = STATE.wealthThreat;
+      document.getElementById('threatMeterFill').style.width = Math.min(100, Math.max(6, Math.round((th.telemetrySignatureScore / 300) * 100))) + '%';
+      document.getElementById('threatSummaryBox').textContent =
+`HELD WEALTH + CARGO  : ${th.heldWealthCr} cr
+SOLO CONCENTRATION   : x${th.concentrationFactor}
+TELEMETRY SIGNATURE  : ${th.telemetrySignatureScore}
+THREAT RATING        : ${th.threatLabel}
+SYNDICATE LEAK RISK  : ${th.disguiseCompromised ? 'COMPROMISED (Disguises Leak)' : 'BELOW LEAK THRESHOLD'}`;
+
+      const ps = STATE.pilotStanding;
+      document.getElementById('standingSummaryBox').textContent =
+`FLIGHT HOURS         : ${ps.flightHours} hrs
+DAILY DROP ALLOWANCE : ${ps.dailyDropAllowanceCr} cr / day
+DROPPED TODAY        : ${ps.droppedTodayCr} cr
+REMAINING TODAY      : ${Math.max(0, ps.dailyDropAllowanceCr - ps.droppedTodayCr)} cr`;
+    }
+
+    setInterval(() => {
+      if (STATE && (STATE.skills.activeTraining || (STATE.heartbeatBeacons || []).some((b) => b.status === 'SIGNAL_LOST'))) {
+        renderAll();
+      }
+    }, 1000);
+
+    initCuffSlate();
+  </script>
+</body>
+</html>

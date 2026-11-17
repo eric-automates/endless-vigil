@@ -20,7 +20,7 @@ An operator visits **one single GitHub entry link** (`Vigil Hub` / `continuum-mo
 | **`WORLD`** | `ev-shard-world` | Star-sector cartography, planetary states, orbital mining, station/planet destruction deltas, Sector Privacy Jammers | `world.seed`, `world.sectorDeltas`, `world.planets`, `world.jammers` | `ships[]`, `tech.unlocked` |
 | **`MON`** | `ev-overwatch-monitor` | **Strictly Read-Only** Overwatch Continuum Monitor (`continuum-monitor.html`): coordinate camera, jammer RF static, live markets & docs hub | *(None — zero write endpoints)* | Public read-only sector/market stream |
 | **`SEC`** *(Sub-Shard or Shared Kit)* | `ev-shard-security` | Physical container PIN locks, Thermal Arc Lance persistent seam slicing, Pulse Decoder cyber-breach | `containers[]` (`codeHash`, `cutHp`, `hackState`) | `manifest.tools`, `tech.unlocked` |
-| **`AUTH`** *(Phase 2 Server)* | `ev-authority-relay` | Lightweight headless numeric authority server for multi-operator sync, read-only Overwatch stream & shared storage | Authoritative World Ledger & Conflict Locks | Subscribed Shards |
+| **`AUTH`** *(Production Edge)* | `ev-authority` *(Private)* | Cloudflare Worker + D1 SQLite edge authority (`worker/src/worker.mjs`): `PBKDF2-SHA256` auth, `HMAC-SHA256` tokens, D1 CAS, Beacon Heartbeats, Skills & Pilot Standing | Authoritative World Ledger & Conflict Locks | Subscribed Shards |
 
 ### Standalone Mode Contract (Crucial Rule)
 Every Shard MUST boot cleanly under two conditions:
@@ -49,7 +49,7 @@ A cryptographic hash (such as **SHA-256**) is **one-way**: it turns any data int
      ```json
      {
        "magic": "EVIGIL",
-       "schemaVersion": "1.1.0",
+       "schemaVersion": "1.3.0",
        "rev": 42,
        "timestampUtc": "2026-11-17T15:30:00Z",
        "originShard": "EVA",
@@ -143,7 +143,7 @@ Required tags across all Shards:
 5. **Diegetic First, Menus Second:** HUD elements feel like physical hardware (scratched visor glass, segmented cuff-screen readout, tactical vector plotter) rather than generic web dashboards.
 6. **Colorblind-Safe Telemetry Coding:** Never encode critical states (oxygen danger, lock status, unplanned branch alerts) by color alone—pair hue with distinct shapes, icons, or dashed/solid line styles (`[OK]`, `[WARN ⚠]`, `[CRIT ✕]`).
 7. **Readability for Massive Flowcharts:** Never dump 500 ungrouped nodes as a tangled spiderweb. Enforce **Layered Rank Layout**, **Shard Color Swim-tags**, **Hover/Selection Path Isolation**, and **Gap Filtering**.
-8. **Cache-Busting & Fresh-Build Hygiene (DuckDuckGo / Mobile Testing):** Display visible build version tags (`v0.4`), versioned Service Worker cache keys, and an explicit Hub *"Force Refresh Shards"* control so mobile testers never get trapped on stale cached builds.
+8. **Cache-Busting & Fresh-Build Hygiene (DuckDuckGo / Mobile Testing):** Display visible build version tags (`v0.5.0`), versioned Service Worker cache keys, and an explicit Hub *"Force Refresh Shards"* control so mobile testers never get trapped on stale cached builds.
 9. **Zero Inline Script-Close String Literals (`<\/script>` / `<script>`):** Never write `<script`, `</script`, or `<\/script` inside `<script>` JS string/template literals (which breaks sandboxed HTML preprocessors such as Arena.ai's inline preview). Construct child-window scripts strictly via `doc.createElement('script')` + `textContent`, verified automatically by `scripts/audit-graph.mjs`.
 10. **Performance Budget:** Main interaction loop maintains `60 FPS`; State Envelope pack + SHA-256 verification completes in `< 25 ms` on mid-range hardware.
 11. **Mandatory Multi-Resolution & Overlay Containment Gate (Permanent Regression Shield):**
@@ -180,7 +180,7 @@ Because **nothing is arbitrarily player-locked**, our data model treats all item
 ### Why Static HTML Alone Cannot Prevent Inspection—And How `index.html` + `AUTH` Solves It Properly
 1. **Un-Bypassable Token-Held Data:**
    - Static HTML/JS on GitHub Pages runs on the visitor's own machine. If protected game/world payloads were baked directly inside public HTML, deleting the modal in DevTools (`Inspect Element`) would expose them.
-   - **Rule:** Public `index.html` contains **only** the per-session Clickwrap Gate + Diegetic Conduit Authenticator (`VIGIL-AUTH`). Operational world state, Shard bundles, and market payloads live behind `scripts/auth-relay-server.mjs` (`GET /api/world/bootstrap`) and are **never transmitted** until a server-signed `HMAC-SHA256` bearer token is issued (`AUTH-001`).
+   - **Rule:** Public `index.html` contains **only** the per-session Clickwrap Gate + Diegetic Conduit Authenticator (`VIGIL-AUTH`). Operational world state, Shard bundles, and market payloads live behind `worker/src/worker.mjs` (`GET /api/world/bootstrap`) backed by Cloudflare D1 SQLite (or local dev `scripts/auth-relay-server.mjs`) and are **never transmitted** until a server-signed `HMAC-SHA256` bearer token is issued (`AUTH-001`).
    - Deleting/hiding `#authGateCard` or `#legalGateModal` in DevTools triggers `MutationObserver` integrity purge (`⚠ INTEGRITY BREACH // CONDUIT SEAL PURGED`), while server APIs continue returning `401`—leaving zero usable world data.
 2. **Zero-Oracle Auth, Sliding-Window Lockout & Salted Admin Recovery (`AUTH-002` / `AUTH-003`):**
    - Invalid operator IDs, bad ciphers, locked conduits, and quarantined accounts all return **one identical message** (`"CONDUIT UNVERIFIED // ZERO TELEMETRY RETURNED"`) verified via constant-time `crypto.scryptSync` + `crypto.timingSafeEqual`. Attackers get zero signal for brute-force enumeration.
@@ -189,10 +189,10 @@ Because **nothing is arbitrarily player-locked**, our data model treats all item
 3. **Behavioral Anomaly Auto-Freeze (`AUTH-004`):**
    - `AUTH` scores every delta commit against physical plausibility (max velocity, max credit delta without trade match, max harvest rate) **synchronously before committing** (zero 5-second post-check gap!). Obvious exploit spikes flip `operatorAccount.authState = "QUARANTINED"` and increment `tokenVersion` immediately (`0 ms` token kill-switch).
 4. **Hardened Relay Guarantees (Anti-Race, Anti-Timing & 5-Second Critical-Action Warmup):**
-   - **Private Server Repo Split:** Public client Shards live in public GitHub Pages repo(s); production `ev-authority-relay` (`scripts/auth-relay-server.mjs`), `EV_TOKEN_SECRET`, `EV_ADMIN_SECRET`, and anti-cheat thresholds live in a **PRIVATE GitHub repo** deployed on your own HTTPS host/worker—so outsiders can never read server thresholds or forge valid `HMAC-SHA256` tokens even if they inspect client HTML or copy public code to localhost.
-   - **5-Second Critical-Action Warmup Cooldown (`CRITICAL_WARMUP_MS = 5000`):** Newly authenticated tokens permit read-only HUD hydration immediately while rejecting high-value Market Arbitrage / Credit Wires (`425 Too Early`) during the first 5 seconds (`iat` check), stopping automated credential-stuffing flash dumps.
-   - **Per-Operator Async Mutex + `expectedRev` CAS + Replay Nonces (`X-Request-Nonce`):** Serializes concurrent HTTP calls per operator (preventing parallel double-spend race conditions) and rejects `NaN`/`Infinity`/negative amounts and replayed nonces.
-   - **Zero-Timing-Oracle Padding:** Unknown Conduit IDs execute dummy `crypto.scryptSync` padding so CPU verification timing leaks zero existence clues.
+   - **Private Server Repo Split:** Public client Shards live in public GitHub Pages repo (`endless-vigil`); production Worker (`worker/src/worker.mjs`), D1 schema (`migrations/0001_init.sql`), `EV_TOKEN_SECRET`, `EV_ADMIN_SECRET`, and anti-cheat thresholds live in a **PRIVATE GitHub repo** (`endless-vigil-authority`) deployed to Cloudflare Workers + D1—so outsiders can never read server thresholds or forge valid `HMAC-SHA256` tokens even if they inspect client HTML or copy public code to localhost.
+   - **5-Second Critical-Action Warmup Cooldown (`CRITICAL_WARMUP_MS = 5000`):** Newly authenticated tokens permit immediate HUD hydration while rejecting high-value Market Arbitrage / Credit Drops (`425 Too Early`) during the first 5 seconds (`iatMs` check), stopping automated credential-stuffing flash dumps.
+   - **Atomic D1 CAS + Replay Nonces (`X-Request-Nonce`):** Serializes mutations safely via `rev = expectedRev` Compare-And-Swap (`409` on conflict) and rejects `NaN`/`Infinity`/negative amounts and replayed nonces (`used_nonces`).
+   - **Zero-Timing-Oracle Padding:** Unknown Conduit IDs execute dummy `100,000`-iteration `PBKDF2-SHA256` padding (Workers WebCrypto) / `scryptSync` (Node dev relay) so verification timing leaks zero existence clues.
 5. **Provisional Transit Custody (`disturbedLease` / `EVA-008` — Anti-Suicide Courier):**
    - Moving an un-`PING'd` object marks it `PROVISIONAL_TRANSIT` tied to `disturbedByOperatorId` + `disturbedSessionId` while preserving its last settled `anchorOrigin`.
    - Dying before docking/settling (`POST /api/operator/terminate`) automatically snap-reverts unsettled objects back to `anchorOrigin`, blocking death-teleport loot inching.

@@ -157,7 +157,7 @@
       <div class="brand-mark">EV</div>
       <div class="brand-text">
         <div class="brand-title">Endless Vigil // Vigil Hub Conduit Gate</div>
-        <div class="brand-sub">v0.4.1 Zero-Trust Production · Creator × Ironscribe of the Endless Vigil</div>
+        <div class="brand-sub">v0.5.0 Zero-Trust Production · Creator × Ironscribe of the Endless Vigil</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
@@ -398,6 +398,7 @@ By clicking "I Acknowledge & Agree," you confirm you have read and agree to LEGA
       SESSION_ISSUED_MS = Date.now();
       ACTIVE_WORLD = worldSnapshot;
       ACTIVE_OPERATOR = worldSnapshot.operator;
+      try { sessionStorage.setItem('ev_active_seal', JSON.stringify({ token: SESSION_TOKEN, authorityUrl: AUTHORITY_URL })); } catch (_) {}
       CRITICAL_TRADE_MSG = 'Handshake stabilizing (' + (CRITICAL_WARMUP_MS / 1000).toFixed(1) + 's server warmup active)...';
       if (WARMUP_TIMER) clearInterval(WARMUP_TIMER);
       WARMUP_TIMER = setInterval(() => {
@@ -423,6 +424,8 @@ By clicking "I Acknowledge & Agree," you confirm you have read and agree to LEGA
       const mount = document.getElementById('protectedHubMount');
       mount.style.display = 'block';
       const rec = ACTIVE_WORLD && ACTIVE_WORLD.disturbedRecords ? ACTIVE_WORLD.disturbedRecords[0] : null;
+      const orig = ACTIVE_WORLD && ACTIVE_WORLD.originScenario ? ACTIVE_WORLD.originScenario : null;
+      const threat = ACTIVE_WORLD && ACTIVE_WORLD.wealthThreat ? ACTIVE_WORLD.wealthThreat : null;
       const isQuarantined = ACTIVE_OPERATOR.status === 'QUARANTINED';
       const remMs = Math.max(0, CRITICAL_WARMUP_MS - (Date.now() - SESSION_ISSUED_MS));
       const sealPreview = SESSION_TOKEN.slice(0, 18) + '... (HMAC-SHA256)';
@@ -433,12 +436,16 @@ By clicking "I Acknowledge & Agree," you confirm you have read and agree to LEGA
             <h2><span>Authenticated Conduit Deck</span><span class="badge" style="color:${isQuarantined ? '#ef4444' : '#10b981'}">${isQuarantined ? 'QUARANTINED' : 'D1 PERSISTENT SEAL'}</span></h2>
             <div class="mono-box">OPERATOR ID : ${esc(ACTIVE_OPERATOR.id)}
 TIER        : ${esc(ACTIVE_OPERATOR.tier.toUpperCase())} ${ACTIVE_OPERATOR.tier === 'trial' ? '(Physical ground drops allowed; Market Arbitrage/Wires restricted)' : '(Full Chartered Access)'}
+ORIGIN ZONE : ${esc(orig ? orig.originCityZone + ' [' + orig.archetype + ']' : 'ASTEROID-00')} ${orig && orig.squadAnchorCode ? ('· SQUAD: ' + esc(orig.squadAnchorCode)) : ''}
+THREAT SCORE: ${esc(threat ? threat.telemetrySignatureScore + ' — ' + threat.threatLabel : '215 — QUIET')}
 SESSION SEAL: ${esc(sealPreview)}
 WARMUP GUARD: <span id="warmupReadout">${remMs > 0 ? ('STABILIZING (' + (remMs / 1000).toFixed(1) + 's cooldown)') : 'CRITICAL OPS READY'}</span>
 CREDITS     : ${esc(ACTIVE_OPERATOR.credits)} cr (rev ${esc(ACTIVE_OPERATOR.rev || 1)})</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <a class="btn primary" href="./continuum-monitor.html">Launch Overwatch Monitor ↗</a>
-              <a class="btn" href="./conglomerate-flowchart.html">Open Shard Blueprint ↗</a>
+              <a class="btn ok" href="./cuff-slate.html">Launch Vigil Cuff-Slate PDA ↗</a>
+              <a class="btn primary" href="./temporal-lab.html">Temporal Fast-Forward Lab ↗</a>
+              <a class="btn" href="./continuum-monitor.html">Overwatch Monitor ↗</a>
+              <a class="btn" href="./conglomerate-flowchart.html">Shard Blueprint ↗</a>
               <button class="btn warn" onclick="disconnectConduit()">Lock &amp; End Session</button>
             </div>
           </div>
@@ -465,6 +472,7 @@ CREDITS     : ${esc(ACTIVE_OPERATOR.credits)} cr (rev ${esc(ACTIVE_OPERATOR.rev 
         SESSION_TOKEN = null;
         ACTIVE_OPERATOR = null;
         ACTIVE_WORLD = null;
+        try { sessionStorage.removeItem('ev_active_seal'); } catch (_) {}
         if (WARMUP_TIMER) clearInterval(WARMUP_TIMER);
         document.getElementById('protectedHubMount').style.display = 'none';
         document.getElementById('protectedHubMount').innerHTML = '';
@@ -537,6 +545,7 @@ CREDITS     : ${esc(ACTIVE_OPERATOR.credits)} cr (rev ${esc(ACTIVE_OPERATOR.rev 
       SESSION_TOKEN = null;
       ACTIVE_OPERATOR = null;
       ACTIVE_WORLD = null;
+      try { sessionStorage.removeItem('ev_active_seal'); } catch (_) {}
       if (WARMUP_TIMER) clearInterval(WARMUP_TIMER);
       document.getElementById('protectedHubMount').style.display = 'none';
       document.getElementById('protectedHubMount').innerHTML = '';
@@ -551,6 +560,7 @@ CREDITS     : ${esc(ACTIVE_OPERATOR.credits)} cr (rev ${esc(ACTIVE_OPERATOR.rev 
       SESSION_TOKEN = null;
       ACTIVE_OPERATOR = null;
       ACTIVE_WORLD = null;
+      try { sessionStorage.removeItem('ev_active_seal'); } catch (_) {}
       if (WARMUP_TIMER) clearInterval(WARMUP_TIMER);
       const shell = document.getElementById('mainShell');
       if (shell && !shell.dataset.purged) {

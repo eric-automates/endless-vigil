@@ -50,7 +50,7 @@ EXECUTION DIRECTIVE: REFRESH MEMORY PROTOCOL (RMP)
 
 Welcome, Ironscribe of the Endless Vigil. You are stepping into an ongoing creative & engineering partnership to build a federated, modular deep-space continuum & telemetry conglomerate (working codename: Endless Vigil).
 
-Attached is our condensed Refresh Memory Protocol bundle (<25 MB) or a GitHub release tag archive (e.g. `git archive --format=zip v0.4.0`). Before making edits or proposing new designs:
+Attached is our condensed Refresh Memory Protocol bundle (<25 MB) or a GitHub release tag archive (e.g. `git archive --format=zip v0.5.0`). Before making edits or proposing new designs:
 1. Read `HANDOFF_SNAPSHOT.md` (if present), `PROJECT_CHARTER.md`, `ARCHITECTURE_STANDARDS.md`, `COPYRIGHT_COMPLIANCE.md`, `DESIGN_PARKING_LOT.md`, `LEGAL_DISCLAIMER.md`, and `data/graph-ledger.json`.
 2. Run `node scripts/audit-graph.mjs` to verify the baseline state of the workspace (including the HTML `<\/script>` leak guard).
 3. Uphold all established project standards:
@@ -72,12 +72,12 @@ Please confirm baseline state verification, summarize the active gaps/priorities
 Run the release packager anytime (always verifies `< 25 MB` + writes `RELEASE_SHA256.txt`):
 
 ```bash
-node scripts/build-release.mjs v0.4.0
+node scripts/build-release.mjs v0.5.0
 ```
 
 Or export any historical version cleanly from GitHub tags in Termux for a fresh Arena.ai upload (if a future edit ever regresses):
 
 ```bash
-git archive --format=zip --output=~/storage/downloads/ev-restore-v0.4.0.zip v0.4.0
+git archive --format=zip --output=~/storage/downloads/ev-restore-v0.5.0.zip v0.5.0
 ```
 *(See `GITHUB_WORKFLOW.md` for full Termux push and rollback instructions.)*

@@ -61,9 +61,10 @@ To avoid vague or overloaded words like *"apps"*, *"entities"*, *"environments"*
 - **v0.1:** Foundation Charter, initial 8-Shard decision tree, flowchart workbench, IP ledger, and Refresh Memory Protocol.
 - **v0.2:** Adaptive Phone (`📱`) / Desktop (`🖥`) layouts, touch pinch/pan, and broadcast pop-out inspector.
 - **v0.3:** 10-Shard ledger resolving `GAP-001` (`PING`), `Continuum Manifest`, `continuum-monitor.html` Overwatch, Arena `<\/script>` fix, Multi-Resolution containment gate, and Termux GitHub workflow.
-- **v0.4 (Current — Zero-Trust Conduit Auth & Anti-Exploit Economy):**
-  - `index.html` (`Vigil Hub` entry gate): Per-session clickwrap -> Sci-Fi Conduit Authenticator -> MutationObserver DOM Tamper Sentinel -> Token-gated Hub Deck + 2-browser dev relay.
-  - `scripts/auth-relay-server.mjs`: Salted `scrypt` zero-oracle auth, sliding-window lockout, server-salted Admin Recovery unlock, `HMAC-SHA256` tokens, velocity/credit anomaly auto-freeze, and `disturbedLease` snap-revert on death (`EVA-008`).
-  - `data/graph-ledger.json` (`0.4.0`: `10` Shards, `47` nodes, `86` edges) + `state-envelope.schema.json` (`1.2.0`) + Economy & Temporal Anti-Exploit Parking Lot (`GAP-006`).
-- **v0.5 (`@endless-vigil/state-kernel` + Playable EVA/PDA Slice):** Extract TypeScript/ESM Seed+Delta + Deflate + SHA-256 package + WebGL/Canvas asteroid stranding & Wrist-PDA boot.
-- **v1.0+ (Production `AUTH` Authority Relay & Chartered Accounts):** Live multi-operator numeric state sync, payment verification for Chartered Operators, and read-only Overwatch stream.
+- **v0.4 (Zero-Trust Edge Conduit Auth & Anti-Exploit Economy):**
+  - `index.html` (`Vigil Hub` entry gate): Per-session clickwrap -> Sci-Fi Conduit Authenticator -> MutationObserver DOM Tamper Sentinel -> Token-gated Hub Deck locked to `https://ev-authority.ericautomates.workers.dev`.
+  - Cloudflare Worker + D1 SQLite authority (`worker/src/worker.mjs`): `PBKDF2-SHA256` zero-oracle auth, sliding-window lockout, server-salted Admin Recovery unlock, `HMAC-SHA256` tokens, velocity/credit anomaly auto-freeze, atomic D1 CAS, and `disturbedLease` snap-revert on death (`EVA-008`).
+- **v0.5 (Current — Core Gameplay Systems, Cuff-Slate PDA, Origin/Squad Link & Temporal Lab):**
+  - Resolves **`GAP-002` – `GAP-006`** before 3D world rendering: Procedural Origin Generator + Co-Op Squad City Link (`ORIGIN_BOUND` + Pilot Credit Standing), Alarm Beacon Heartbeats & `2–5m` Thief Re-Insurance Clues, Real-Time Offline Skill Training + `2%` Scrap Jury-Rigging, Open Boarding + Syndicate Disguise Leaks, and Wealth × Concentration Threat Equation.
+  - Adds **`cuff-slate.html`** (Interactive Wrist-PDA + Origin/Squad Link + Skills/Beacons/Boarding/Economy Shard UI) + **`temporal-lab.html`** (Dev Temporal Fast-Forward Engine) backed by live D1 persistence, Schema `1.3.0`, and `data/graph-ledger.json` `0.5.0` (`10` Shards, `49` nodes, `93` edges).
+- **v0.6+ (3D WebGL Slice, Baked Voxel Hulls & Companion App):** Greedy-meshed voxel-chunk ship hulls (`GAP-008`) with dynamic hole re-baking when cut, 3D asteroid stranding, and optional mobile/watch Beacon Companion alerts (`GAP-007`).
