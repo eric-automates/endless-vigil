@@ -1,0 +1,92 @@
+#!/usr/bin/env node
+/**
+ * @shard TOOLING
+ * @branch-id RELEASE-PACKAGER
+ * @state-contract reads(all workspace artifacts) mutates(ev-release-bundle.zip, ev-private-server-bundle.zip, RELEASE_SHA256.txt)
+ * @invariant Strictly separates public client Shards (ev-release-bundle.zip) from private server authority code (ev-private-server-bundle.zip); never emits a bundle >= 25 MB.
+ */
+
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(__dirname, '..');
+const versionTag = process.argv[2] || 'v0.4.0';
+
+// 1. Run structural, wording, HTML safety, & resolution audit first
+execFileSync('node', [path.join(__dirname, 'audit-graph.mjs')], { cwd: rootDir, stdio: 'inherit' });
+
+const outPublicZip = path.join(rootDir, 'ev-release-bundle.zip');
+const outPrivateZip = path.join(rootDir, 'ev-private-server-bundle.zip');
+const outSha = path.join(rootDir, 'RELEASE_SHA256.txt');
+
+for (const z of [outPublicZip, outPrivateZip]) {
+  if (fs.existsSync(z)) fs.unlinkSync(z);
+}
+
+// 2A. Collect PUBLIC GitHub Pages repo targets (NEVER include scripts/auth-relay-server.mjs!)
+const publicTargets = [
+  'index.html',
+  'README.md',
+  'PROJECT_CHARTER.md',
+  'ARCHITECTURE_STANDARDS.md',
+  'COPYRIGHT_COMPLIANCE.md',
+  'LEGAL_DISCLAIMER.md',
+  'DESIGN_PARKING_LOT.md',
+  'GITHUB_WORKFLOW.md',
+  'REFRESH_MEMORY_PROTOCOL.md',
+  'conglomerate-flowchart.html',
+  'continuum-monitor.html',
+  'data/graph-ledger.json',
+  'data/state-envelope.schema.json',
+  'scripts/audit-graph.mjs',
+  'scripts/build-release.mjs',
+  'scripts/termux-push.sh'
+].filter((item) => fs.existsSync(path.join(rootDir, item)));
+
+execFileSync('zip', ['-r', '-q', 'ev-release-bundle.zip', ...publicTargets, '-x', '*.DS_Store', '*/node_modules/*'], {
+  cwd: rootDir
+});
+
+// 2B. Collect PRIVATE Authority Server repo targets (holds auth-relay, secrets template, & runtime inventory ledger)
+const privateTargets = [
+  'scripts/auth-relay-server.mjs',
+  'scripts/termux-push.sh',
+  'data/state-envelope.schema.json'
+].filter((item) => fs.existsSync(path.join(rootDir, item)));
+
+execFileSync('zip', ['-r', '-q', 'ev-private-server-bundle.zip', ...privateTargets, '-x', '*.DS_Store', '*/node_modules/*'], {
+  cwd: rootDir
+});
+
+function summarizeZip(zipPath) {
+  const buf = fs.readFileSync(zipPath);
+  if (buf.length > 25 * 1024 * 1024) {
+    throw new Error(`Bundle ${path.basename(zipPath)} exceeds 25 MB limit (${buf.length} bytes)`);
+  }
+  return {
+    name: path.basename(zipPath),
+    sha256: crypto.createHash('sha256').update(buf).digest('hex'),
+    sizeKb: (buf.length / 1024).toFixed(1)
+  };
+}
+
+const pubMeta = summarizeZip(outPublicZip);
+const privMeta = summarizeZip(outPrivateZip);
+
+fs.writeFileSync(
+  outSha,
+  `${pubMeta.sha256}  ${pubMeta.name}  (${versionTag}, ${pubMeta.sizeKb} KB)\n` +
+  `${privMeta.sha256}  ${privMeta.name}  (${versionTag}, ${privMeta.sizeKb} KB)\n`,
+  'utf8'
+);
+
+console.log('');
+console.log('=== RELEASE BUNDLES READY (PUBLIC / PRIVATE SPLIT) ===');
+console.log(`Tag     : ${versionTag}`);
+console.log(`Public  : ${pubMeta.name} (${pubMeta.sizeKb} KB) | SHA-256: ${pubMeta.sha256}`);
+console.log(`Private : ${privMeta.name} (${privMeta.sizeKb} KB) | SHA-256: ${privMeta.sha256}`);
+console.log(`HashRef : RELEASE_SHA256.txt`);

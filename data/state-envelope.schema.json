@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://endless-vigil.local/schemas/state-envelope.schema.json",
+  "title": "Endless Vigil State Envelope & Continuum Manifest Ledger",
+  "description": "Portable, checksummed, revision-guarded Continuum Manifest state passed between federated Telemetry Shards and optional Authority Relay.",
+  "type": "object",
+  "required": [
+    "magic",
+    "schemaVersion",
+    "rev",
+    "timestampUtc",
+    "originShard",
+    "payloadSha256",
+    "encoding",
+    "payload"
+  ],
+  "properties": {
+    "magic": { "const": "EVIGIL" },
+    "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "examples": ["1.2.0"] },
+    "rev": { "type": "integer", "minimum": 1 },
+    "timestampUtc": { "type": "string", "format": "date-time" },
+    "originShard": {
+      "type": "string",
+      "enum": ["HUB", "EVA", "PDA", "TECH", "SHIP", "WORLD", "SEC", "MKT", "MON", "AUTH"]
+    },
+    "parentSha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "payloadSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "encoding": { "type": "string", "enum": ["deflate-raw+base64url", "zstd+base64url", "json-uncompressed-dev"] },
+    "payload": {
+      "oneOf": [
+        { "type": "string", "minLength": 4 },
+        { "$ref": "#/$defs/ContinuumManifest" }
+      ]
+    }
+  },
+  "$defs": {
+    "ContinuumManifest": {
+      "type": "object",
+      "description": "Full world-linked identity ledger (replaces character-bound files; survives vessel/body swaps and reconstitution).",
+      "required": ["manifestId", "worldSeed", "activeZoneId", "operator", "pda", "pingInsurance", "tech", "ships", "containers", "sectorDeltas"],
+      "properties": {
+        "manifestId": { "type": "string" },
+        "worldSeed": { "type": "string" },
+        "activeZoneId": { "type": "string" },
+        "simClockSeconds": { "type": "number", "minimum": 0 },
+        "credits": { "type": "number", "minimum": 0 },
+        "telemetrySignatureScore": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Anti-snowball balance metric: hoarding wealth/ships/PING policies raises sector detectability."
+        },
+        "operatorAccount": {
+          "type": "object",
+          "description": "Authenticated conduit status issued by AUTH relay (tier gating, anomaly quarantine, zero-oracle lockout state).",
+          "properties": {
+            "accountTier": { "type": "string", "enum": ["trial", "chartered", "admin"] },
+            "authState": { "type": "string", "enum": ["ACTIVE", "LOCKED", "QUARANTINED"] },
+            "sessionId": { "type": "string" },
+            "anomalyScore": { "type": "number", "minimum": 0 },
+            "lastCheckpointUtc": { "type": "string", "format": "date-time" }
+          }
+        },
+        "disturbedRecords": {
+          "type": "array",
+          "description": "Anti-suicide-courier custody chain: un-PING'd items moved during a sortie stay PROVISIONAL_TRANSIT until settled at a Hub/Save Beacon; dying beforehand snap-reverts them to anchorOrigin.",
+          "items": {
+            "type": "object",
+            "required": ["entityId", "settlementState", "disturbedByOperatorId", "disturbedSessionId", "anchorOrigin"],
+            "properties": {
+              "entityId": { "type": "string" },
+              "settlementState": { "type": "string", "enum": ["SETTLED", "PROVISIONAL_TRANSIT"] },
+              "disturbedByOperatorId": { "type": "string" },
+              "disturbedSessionId": { "type": "string" },
+              "disturbedAtUtc": { "type": "string", "format": "date-time" },
+              "anchorOrigin": {
+                "type": "object",
+                "required": ["zoneId", "xyz"],
+                "properties": {
+                  "zoneId": { "type": "string" },
+                  "xyz": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+                }
+              }
+            }
+          }
+        },
+        "operator": {
+          "type": "object",
+          "required": ["operatorId", "pose", "suit", "carriedItemIds"],
+          "properties": {
+            "operatorId": { "type": "string" },
+            "pose": {
+              "type": "object",
+              "properties": {
+                "xyz": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+                "quat": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 }
+              }
+            },
+            "suit": {
+              "type": "object",
+              "required": ["o2Seconds", "maxO2Seconds", "leakRatePerSec", "integrityPct", "patches"],
+              "properties": {
+                "o2Seconds": { "type": "number", "minimum": 0 },
+                "maxO2Seconds": { "type": "number", "minimum": 1 },
+                "leakRatePerSec": { "type": "number", "minimum": 0 },
+                "integrityPct": { "type": "number", "minimum": 0, "maximum": 100 },
+                "patches": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "seamId": { "type": "string" },
+                      "material": { "type": "string", "enum": ["emergency_tape", "scrap_weld", "polymer_seal"] },
+                      "sealQualityPct": { "type": "number", "minimum": 0, "maximum": 100 }
+                    }
+                  }
+                }
+              }
+            },
+            "carriedItemIds": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "pingInsurance": {
+          "type": "object",
+          "description": "Particle Insurance Nano-Grid (PING): insured assets dissolve on operator death and enter Hub Reconstitution Queue.",
+          "required": ["homeHubId", "rentPerHourCredits", "insuredEntityIds", "reconstitutionQueueIds"],
+          "properties": {
+            "homeHubId": { "type": "string" },
+            "rentPerHourCredits": { "type": "number", "minimum": 0 },
+            "insuredEntityIds": { "type": "array", "items": { "type": "string" } },
+            "reconstitutionQueueIds": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "pda": {
+          "type": "object",
+          "required": ["tutorialSeen", "casingWearPct", "batteryPct", "unreadAlerts"],
+          "properties": {
+            "tutorialSeen": { "type": "boolean" },
+            "casingWearPct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "batteryPct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "unreadAlerts": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "tech": {
+          "type": "object",
+          "properties": {
+            "unlockedBlueprints": { "type": "array", "items": { "type": "string" } },
+            "activeResearchId": { "type": ["string", "null"] },
+            "researchProgressPct": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "ships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["shipId", "name", "zoneId", "hullPct", "powerAvailableKw"],
+            "properties": {
+              "shipId": { "type": "string" },
+              "name": { "type": "string" },
+              "zoneId": { "type": "string" },
+              "hullPct": { "type": "number", "minimum": 0, "maximum": 100 },
+              "powerAvailableKw": { "type": "number", "minimum": 0 },
+              "pingInsured": { "type": "boolean" },
+              "cargoContainerIds": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "containers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["containerId", "zoneId", "lockKind", "structureHp", "maxStructureHp", "cutProgressPct", "itemIds"],
+            "properties": {
+              "containerId": { "type": "string" },
+              "zoneId": { "type": "string" },
+              "lockKind": { "type": "string", "enum": ["none", "pin4", "cipher_module"] },
+              "codeSha256": { "type": ["string", "null"] },
+              "structureHp": { "type": "number", "minimum": 0 },
+              "maxStructureHp": { "type": "number", "minimum": 1 },
+              "cutProgressPct": { "type": "number", "minimum": 0, "maximum": 100 },
+              "hackProgressPct": { "type": "number", "minimum": 0, "maximum": 100 },
+              "itemIds": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "sectorDeltas": {
+          "type": "object",
+          "description": "Lazy-loaded sparse coordinates: stores shattered planets, mined asteroids, loose uninsured wreckage, and active privacy jammers without rendering 3D geometry until proximity.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string", "enum": ["intact", "mined_partial", "depleted", "shattered"] },
+              "massRemainingPct": { "type": "number", "minimum": 0, "maximum": 100 },
+              "debrisSeed": { "type": "string" },
+              "jammerPrivacyActive": { "type": "boolean" },
+              "uninsuredDropIds": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

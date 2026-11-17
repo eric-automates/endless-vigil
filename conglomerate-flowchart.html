@@ -1,0 +1,3179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Endless Vigil // Continuum Shard Map &amp; Decision Flowchart (v0.4)</title>
+  <!--
+    @shard HUB-WORKBENCH
+    @branch-id VISUAL-003
+    @state-contract Embedded self-contained interactive blueprint synchronized with data/graph-ledger.json.
+    @invariant Zero external CDN dependencies; zero literal script-close tokens inside JS; zero horizontal overflow >=320px.
+    @credits Creator & Ironscribe of the Endless Vigil
+  -->
+  <style>
+    :root {
+      --bg-0: #060911;
+      --bg-1: #0b111e;
+      --bg-2: #111a2d;
+      --bg-3: #18233c;
+      --border: #243252;
+      --border-strong: #374c7a;
+      --text-0: #eef4ff;
+      --text-1: #a7b6d4;
+      --text-2: #7588ae;
+      --accent: #38bdf8;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --crit: #ef4444;
+      --purple: #a855f7;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      height: 100dvh;
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      background: var(--bg-0);
+      color: var(--text-0);
+      font-family: var(--sans);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background-image:
+        radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.08), transparent 40%),
+        radial-gradient(circle at 80% 85%, rgba(168, 85, 247, 0.07), transparent 45%);
+    }
+
+    .topbar {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 8px 12px;
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      width: 100%;
+    }
+
+    .top-row-1 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      border-radius: 7px;
+      background: linear-gradient(135deg, #0f2942, #1b1738);
+      border: 1px solid var(--accent);
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 12px;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.22);
+    }
+
+    .brand-text { min-width: 0; }
+    .brand-title {
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .brand-sub {
+      font-size: 10.5px;
+      color: var(--text-1);
+      font-family: var(--mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mode-switcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-0);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 3px;
+      flex-shrink: 0;
+    }
+
+    .mode-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-1);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--mono);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      transition: all 0.14s ease;
+    }
+    .mode-btn:hover { color: var(--text-0); background: rgba(255,255,255,0.05); }
+    .mode-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.45);
+    }
+
+    .top-row-2 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      background: var(--bg-0);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      flex: 1 1 240px;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .tab-btn {
+      flex: 1 1 auto;
+      min-width: 0;
+      border: none;
+      background: transparent;
+      color: var(--text-1);
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11.5px;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.15s ease;
+      white-space: normal;
+      line-height: 1.2;
+    }
+    .tab-btn:hover { color: var(--text-0); background: rgba(255,255,255,0.04); }
+    .tab-btn.active {
+      background: var(--bg-3);
+      color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.35);
+    }
+
+    .stats-strip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      color: var(--text-1);
+      white-space: nowrap;
+      text-decoration: none;
+      max-width: 100%;
+    }
+    .pill.warn {
+      border-color: rgba(245, 158, 11, 0.55);
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.12);
+      cursor: pointer;
+    }
+    .pill.credit {
+      border-color: rgba(168, 85, 247, 0.45);
+      color: #d8b4fe;
+    }
+
+    .workspace {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .view-pane {
+      display: none;
+      flex: 1;
+      min-height: 0;
+      min-width: 0;
+      width: 100%;
+      position: relative;
+    }
+    .view-pane.active { display: flex; }
+
+    .studio-rail {
+      display: none;
+      width: 245px;
+      flex-shrink: 0;
+      background: var(--bg-1);
+      border-right: 1px solid var(--border);
+      flex-direction: column;
+      min-height: 0;
+    }
+    body[data-layout="desk-studio"] .studio-rail { display: flex; }
+    .rail-scroll {
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .canvas-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      position: relative;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      background: rgba(11, 17, 30, 0.94);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      z-index: 5;
+    }
+
+    select, input[type="text"], textarea {
+      background: var(--bg-0);
+      color: var(--text-0);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 12px;
+      font-family: var(--sans);
+      max-width: 100%;
+    }
+    select:focus, input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .btn {
+      background: var(--bg-2);
+      color: var(--text-0);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 9px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn:hover { border-color: var(--border-strong); background: var(--bg-3); }
+    .btn.primary { border-color: rgba(56, 189, 248, 0.5); color: var(--accent); }
+    .btn.warn { border-color: rgba(245, 158, 11, 0.5); color: #fbbf24; }
+    .btn.active { background: rgba(56, 189, 248, 0.16); border-color: var(--accent); color: var(--accent); }
+
+    .svg-stage {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      touch-action: none;
+      background-color: var(--bg-0);
+      background-image:
+        linear-gradient(to right, rgba(36, 50, 82, 0.22) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(36, 50, 82, 0.22) 1px, transparent 1px);
+      background-size: 28px 28px;
+      cursor: grab;
+      user-select: none;
+    }
+    .svg-stage:active { cursor: grabbing; }
+    .svg-stage svg { width: 100%; height: 100%; display: block; }
+
+    .floating-canvas-hud {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      display: flex;
+      gap: 5px;
+      z-index: 6;
+      background: rgba(11, 17, 30, 0.86);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px;
+      backdrop-filter: blur(4px);
+    }
+
+    .legend-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      background: var(--bg-1);
+      border-top: 1px solid var(--border);
+      font-size: 10.5px;
+      color: var(--text-1);
+      flex-wrap: wrap;
+    }
+
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); }
+    .swatch { width: 9px; height: 9px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+
+    .inspector {
+      width: 370px;
+      max-width: 42vw;
+      background: var(--bg-1);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      flex-shrink: 0;
+      transition: height 0.2s ease, transform 0.2s ease;
+    }
+
+    .inspector-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .sheet-toggle-btn {
+      display: none;
+      background: var(--bg-2);
+      border: 1px solid var(--border-strong);
+      color: var(--text-0);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .inspector-body {
+      padding: 12px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    body[data-layout="phone-sheet"] .view-pane.active { flex-direction: column; }
+    body[data-layout="phone-sheet"] .inspector {
+      width: 100%;
+      max-width: 100%;
+      border-left: none;
+      border-top: 2px solid var(--border-strong);
+      height: 44vh;
+      max-height: 55vh;
+    }
+    body[data-layout="phone-sheet"].sheet-collapsed .inspector { height: 46px; overflow: hidden; }
+    body[data-layout="phone-sheet"].sheet-collapsed .inspector-body { display: none; }
+    body[data-layout="phone-sheet"] .sheet-toggle-btn { display: inline-flex; }
+    body[data-layout="phone-sheet"] .legend-bar { display: none; }
+
+    body[data-layout="phone-split"] .view-pane.active { flex-direction: column; }
+    body[data-layout="phone-split"] .canvas-col { flex: 1 1 52%; }
+    body[data-layout="phone-split"] .inspector {
+      width: 100%;
+      max-width: 100%;
+      flex: 1 1 48%;
+      border-left: none;
+      border-top: 2px solid var(--border-strong);
+    }
+
+    .touch-deck {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--bg-0);
+    }
+    body[data-layout="phone-cards"] .svg-stage,
+    body[data-layout="phone-cards"] .legend-bar,
+    body[data-layout="phone-cards"] .inspector { display: none !important; }
+    body[data-layout="phone-cards"] .touch-deck { display: flex; }
+
+    body[data-layout="desk-zen"] .inspector {
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      width: min(360px, calc(100vw - 20px)); max-width: 88vw; z-index: 20;
+      box-shadow: -12px 0 30px rgba(0, 0, 0, 0.65);
+    }
+    body[data-layout="desk-zen"].zen-closed .inspector { transform: translateX(102%); pointer-events: none; }
+    .zen-fab { display: none; position: absolute; top: 52px; right: 12px; z-index: 15; }
+    body[data-layout="desk-zen"] .zen-fab { display: inline-flex; }
+
+    .card {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .card-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-2);
+      margin-bottom: 5px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      border: 1px solid currentColor;
+      white-space: nowrap;
+    }
+
+    .link-chip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      text-align: left;
+      padding: 8px 10px;
+      margin-top: 5px;
+      border-radius: 6px;
+      background: var(--bg-0);
+      border: 1px solid var(--border);
+      color: var(--text-0);
+      cursor: pointer;
+      font-size: 12px;
+      transition: border-color 0.12s;
+    }
+    .link-chip:hover { border-color: var(--accent); }
+    .link-chip small { color: var(--text-2); font-family: var(--mono); font-size: 10px; flex-shrink: 0; }
+
+    .mono-box {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--bg-0);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      color: #cbd5e1;
+      max-height: 165px;
+      overflow-y: auto;
+    }
+
+    .lab-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+      gap: 14px;
+      align-content: start;
+      width: 100%;
+    }
+
+    .lab-panel {
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .lab-panel h2 {
+      margin: 0;
+      font-size: 13.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 105px), 1fr)); gap: 8px; }
+    .metric { background: var(--bg-0); border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; min-width: 0; }
+    .metric .k { font-size: 10px; color: var(--text-2); font-family: var(--mono); text-transform: uppercase; }
+    .metric .v { font-size: 15px; font-weight: 700; font-family: var(--mono); margin-top: 2px; word-break: break-word; }
+
+    .flow-node { cursor: pointer; transition: opacity 0.15s ease; }
+    .flow-node rect.node-box { fill: #0f172a; stroke-width: 1.7; rx: 8; ry: 8; transition: filter 0.15s ease, stroke-width 0.15s ease; }
+    .flow-node:hover rect.node-box { filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.35)); stroke-width: 2.3; }
+    .flow-node.selected rect.node-box { stroke-width: 2.8; filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.55)); }
+    .flow-node.dimmed { opacity: 0.18; }
+
+    .flow-edge { fill: none; stroke-width: 1.7; transition: opacity 0.15s ease, stroke-width 0.15s ease; }
+    .flow-edge.dimmed { opacity: 0.11; }
+    .flow-edge.highlighted { stroke-width: 2.7; opacity: 1; }
+    .edge-label-bg { fill: #070b14; stroke: #1e293b; stroke-width: 0.8; rx: 4; }
+
+    /* Flexbox centering + min() viewport clamp prevents mobile CSS Grid right-edge overflow */
+    .diegetic-overlay {
+      position: fixed; inset: 0; width: 100%; max-width: 100vw;
+      background: rgba(4, 8, 15, 0.88);
+      backdrop-filter: blur(5px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 99; padding: 14px;
+    }
+    .diegetic-overlay.show { display: flex; }
+    .diegetic-box {
+      width: min(420px, calc(100vw - 28px)); max-width: 100%; min-width: 0; max-height: 88dvh; overflow-y: auto;
+      background: #0a1322; border: 1px solid var(--accent);
+      border-radius: 10px; padding: 16px; font-family: var(--mono);
+      box-shadow: 0 0 40px rgba(56, 189, 248, 0.22);
+    }
+    .progress-bar { height: 6px; background: #0f172a; border-radius: 999px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border); }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--ok)); transition: width 0.25s ease; }
+
+    .modal-backdrop {
+      position: fixed; inset: 0; width: 100%; max-width: 100vw;
+      background: rgba(3, 6, 12, 0.78);
+      display: none; align-items: center; justify-content: center;
+      z-index: 90; padding: 14px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: min(460px, calc(100vw - 28px)); max-width: 100%; min-width: 0; max-height: 88dvh; overflow-y: auto;
+      background: var(--bg-1); border: 1px solid var(--border-strong);
+      border-radius: 10px; padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .modal h3 { margin: 0; font-size: 14px; color: var(--accent); }
+    .form-row { display: flex; flex-direction: column; gap: 4px; }
+    .form-row label { font-size: 11px; color: var(--text-1); font-family: var(--mono); }
+
+    @media (max-width: 600px) {
+      .brand-title { font-size: 12px; }
+      .brand-sub { font-size: 10px; }
+      .tab-btn { font-size: 10.5px; padding: 6px 5px; }
+      .toolbar { padding: 6px 8px; gap: 5px; }
+      .btn { padding: 5px 8px; font-size: 11px; }
+      body[data-layout^="desk-"] .inspector { width: min(370px, 46vw); }
+      body[data-layout="desk-studio"] .studio-rail { width: min(220px, 34vw); }
+    }
+  </style>
+</head>
+<body data-layout="desk-split">
+
+  <header class="topbar">
+    <div class="top-row-1">
+      <div class="brand">
+        <div class="brand-mark">EV</div>
+        <div class="brand-text">
+          <div class="brand-title">Endless Vigil // Continuum Shard Blueprint</div>
+          <div class="brand-sub">v0.4 · Creator × Ironscribe of the Endless Vigil</div>
+        </div>
+      </div>
+
+      <div class="mode-switcher" title="Tap Phone or Browser icon repeatedly to cycle layout presets">
+        <button class="mode-btn" id="btnPhoneMode" onclick="cyclePhoneLayout()">📱 <span id="lblPhone">Sheet</span></button>
+        <button class="mode-btn" id="btnDeskMode" onclick="cycleDeskLayout()">🖥 <span id="lblDesk">Split</span></button>
+      </div>
+    </div>
+
+    <div class="top-row-2">
+      <div class="tabs" role="tablist">
+        <button class="tab-btn active" data-view="shards" onclick="switchView('shards')">1. Shard Map</button>
+        <button class="tab-btn" data-view="branches" onclick="switchView('branches')">2. Flowchart</button>
+        <button class="tab-btn" data-view="kernel" onclick="switchView('kernel')">3. Manifest Lab</button>
+      </div>
+
+      <div class="stats-strip">
+        <span class="pill" id="statSummary">10S · 47N · 86E</span>
+        <button class="pill warn" id="gapJumpPill" onclick="jumpToGaps()">⚠ 5 Gaps</button>
+        <a class="pill" href="./index.html" style="color:#34d399;border-color:rgba(16,185,129,0.45)">Hub Gate ↗</a>
+        <a class="pill" href="./continuum-monitor.html" target="_blank" style="color:#7dd3fc;border-color:rgba(56,189,248,0.45)">Overwatch ↗</a>
+        <span class="pill credit">Ironscribe v0.4</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace">
+
+    <!-- VIEW 1: HIGH-LEVEL FEDERATED SHARD MAP -->
+    <section class="view-pane active" id="view-shards">
+      <aside class="studio-rail">
+        <div class="inspector-head">
+          <strong style="font-size:12px;font-family:var(--mono)">SHARD OUTLINE</strong>
+          <button class="btn" onclick="popOutInspector()">↗ Pop Out</button>
+        </div>
+        <div class="rail-scroll" id="studioShardRail"></div>
+      </aside>
+
+      <div class="canvas-col">
+        <div class="toolbar">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text-1)">
+            <strong>HUB &amp; OVERWATCH</strong> → Modular Telemetry Shards + Markets + PING Grid
+          </span>
+          <div style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap">
+            <button class="btn primary" onclick="simulateDiegeticJump('EVA','PDA')">▶ EVA → PDA</button>
+            <button class="btn" onclick="simulateDiegeticJump('SHIP','WORLD')">▶ Ship → World</button>
+          </div>
+        </div>
+
+        <button class="btn primary zen-fab" onclick="toggleZenDrawer()">Inspector ◂</button>
+
+        <div class="svg-stage" id="shardStage">
+          <svg id="shardSvg" preserveAspectRatio="xMidYMid meet">
+            <g id="shardViewport"></g>
+          </svg>
+          <div class="floating-canvas-hud">
+            <button class="btn" onclick="zoomShard(1.18)" aria-label="Zoom In">＋</button>
+            <button class="btn" onclick="zoomShard(0.84)" aria-label="Zoom Out">－</button>
+            <button class="btn" onclick="resetShardPanZoom()">Fit</button>
+          </div>
+        </div>
+
+        <div class="touch-deck" id="shardTouchDeck"></div>
+
+        <div class="legend-bar">
+          <span class="legend-item"><span class="swatch" style="background:#38bdf8"></span> Same-Origin OPFS/IDB (&lt;5ms)</span>
+          <span class="legend-item"><span class="swatch" style="background:#f59e0b"></span> Portable Manifest (#vstate)</span>
+          <span class="legend-item"><span class="swatch" style="background:#94a3b8"></span> Phase-2 Authority Relay</span>
+        </div>
+      </div>
+
+      <aside class="inspector" id="shardInspector">
+        <div class="inspector-head">
+          <strong style="font-size:12.5px">Shard: <span id="siHeaderTitle">HUB</span></strong>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="badge" id="siBadge" style="color:#38bdf8">HUB</span>
+            <button class="sheet-toggle-btn" onclick="togglePhoneSheet()">▲ / ▼</button>
+            <button class="btn" style="padding:3px 7px;display:none" id="zenCloseShard" onclick="toggleZenDrawer()">✕</button>
+          </div>
+        </div>
+        <div class="inspector-body" id="siBody"></div>
+      </aside>
+    </section>
+
+    <!-- VIEW 2: INTERACTIVE DECISION-BRANCH FLOWCHART -->
+    <section class="view-pane" id="view-branches">
+      <aside class="studio-rail">
+        <div class="inspector-head">
+          <strong style="font-size:12px;font-family:var(--mono)">GAPS &amp; PHASES</strong>
+          <button class="btn" onclick="popOutInspector()">↗ Pop Out</button>
+        </div>
+        <div class="rail-scroll" id="studioFlowRail"></div>
+      </aside>
+
+      <div class="canvas-col">
+        <div class="toolbar">
+          <select id="shardFilter" onchange="renderDecisionGraph()" aria-label="Filter by Shard">
+            <option value="ALL">All Shards</option>
+          </select>
+
+          <select id="modeFilter" onchange="renderDecisionGraph()" aria-label="Filter by Branch Type">
+            <option value="ALL">All Branches</option>
+            <option value="GAPS">⚠ Gaps / Parking Lot</option>
+            <option value="JUMPS">↗ Shard Jumps</option>
+          </select>
+
+          <input type="text" id="nodeSearch" placeholder="Search PING, market, jammer..." oninput="renderDecisionGraph()" style="flex:1 1 120px;min-width:100px" />
+
+          <button class="btn active" id="traceBtn" onclick="toggleFocusTrace()">Trace: ON</button>
+          <button class="btn primary" onclick="openDraftModal()">+ Draft</button>
+          <button class="btn" onclick="exportLedgerJson()">↓ JSON</button>
+        </div>
+
+        <button class="btn primary zen-fab" onclick="toggleZenDrawer()">Inspector ◂</button>
+
+        <div class="svg-stage" id="flowStage">
+          <svg id="flowSvg">
+            <defs>
+              <marker id="arrow-std" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748b" />
+              </marker>
+              <marker id="arrow-jump" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+              </marker>
+              <marker id="arrow-gap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+              </marker>
+              <marker id="arrow-hi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#f8fafc" />
+              </marker>
+            </defs>
+            <g id="flowViewport"></g>
+          </svg>
+          <div class="floating-canvas-hud">
+            <button class="btn" onclick="zoomFlow(1.18)" aria-label="Zoom In">＋</button>
+            <button class="btn" onclick="zoomFlow(0.84)" aria-label="Zoom Out">－</button>
+            <button class="btn" onclick="resetFlowPanZoom()">Fit</button>
+          </div>
+        </div>
+
+        <div class="touch-deck" id="flowTouchDeck"></div>
+
+        <div class="legend-bar">
+          <span class="legend-item"><span class="swatch" style="background:#64748b"></span> Intra-Shard</span>
+          <span class="legend-item"><span class="swatch" style="background:#38bdf8"></span> ↗ Cross-Shard Jump</span>
+          <span class="legend-item"><span class="swatch" style="background:#f59e0b"></span> ⚠ Open Gap / Parking</span>
+          <span class="legend-item"><span class="swatch" style="background:#22c55e"></span> Terminal / Sync</span>
+        </div>
+      </div>
+
+      <aside class="inspector" id="nodeInspector">
+        <div class="inspector-head">
+          <strong style="font-size:12.5px">Node: <span id="niHeaderTitle">EVA-001</span></strong>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="badge" id="niBadge" style="color:#f97316">EVA-001</span>
+            <button class="sheet-toggle-btn" onclick="togglePhoneSheet()">▲ / ▼</button>
+            <button class="btn" style="padding:3px 7px;display:none" id="zenCloseFlow" onclick="toggleZenDrawer()">✕</button>
+          </div>
+        </div>
+        <div class="inspector-body" id="niBody"></div>
+      </aside>
+    </section>
+
+    <!-- VIEW 3: MANIFEST LAB & GAP AUDIT -->
+    <section class="view-pane" id="view-kernel">
+      <div class="lab-scroll">
+        <div class="lab-panel">
+          <h2>
+            <span>Continuum Manifest &amp; SHA-256 Lab</span>
+            <span class="badge" style="color:var(--ok)">Live Crypto</span>
+          </h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            <strong>World Seed + Sparse Deltas + PING Policy</strong> → <strong>Deflate</strong> → <strong>SHA-256 Checksum</strong>.
+          </p>
+          <div class="card-label">Editable Sample Continuum Manifest JSON</div>
+          <textarea id="sampleLedgerInput" rows="9" style="font-family:var(--mono);font-size:11px;width:100%"></textarea>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn primary" onclick="packAndHashSample()">1. Compress &amp; Hash</button>
+            <button class="btn warn" onclick="simulateCorruptEnvelope()">2. Corrupt 1 Byte</button>
+            <button class="btn" onclick="verifyEnvelopeSample()">3. Verify / Rollback</button>
+            <button class="btn" onclick="simulateDesyncFork()">4. Test Rev Desync</button>
+          </div>
+          <div class="metric-grid">
+            <div class="metric"><div class="k">Raw JSON</div><div class="v" id="mRawBytes">—</div></div>
+            <div class="metric"><div class="k">Compressed</div><div class="v" id="mCompBytes">—</div></div>
+            <div class="metric"><div class="k">Savings</div><div class="v" id="mSavings" style="color:var(--ok)">—</div></div>
+            <div class="metric"><div class="k">Revision</div><div class="v" id="mRev">rev 42</div></div>
+          </div>
+          <div class="card-label">Verification Status</div>
+          <div class="mono-box" id="verifyStatusBox" style="color:#93c5fd">Ready. Tap "1. Compress &amp; Hash" to run SubtleCrypto + CompressionStream.</div>
+          <div class="card-label">Packed State Envelope</div>
+          <div class="mono-box" id="envelopeOutputBox">—</div>
+        </div>
+
+        <div class="lab-panel">
+          <h2>
+            <span>Graph Coverage &amp; Gap Audit</span>
+            <span class="badge" id="auditBadge" style="color:var(--ok)">PASS</span>
+          </h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Mirrors <code>scripts/audit-graph.mjs</code>. Guarantees zero dead ends, zero broken IDs, and highlights open design gaps.
+          </p>
+          <div class="metric-grid" id="auditMetrics"></div>
+          <div class="card-label">Unplanned Design Gaps &amp; Parking Items (Tap to Inspect)</div>
+          <div id="auditGapsList"></div>
+          <div class="card-label">Cross-Shard Jumps Matrix</div>
+          <div class="mono-box" id="auditJumpsBox" style="max-height:220px"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="diegetic-overlay" id="diegeticOverlay">
+    <div class="diegetic-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;color:var(--accent);font-size:12px;font-weight:700">
+        <span id="dgTitle">CUFF-OS BIOS // SHARD HANDSHAKE</span>
+        <span id="dgClock">0 ms</span>
+      </div>
+      <div id="dgBody" style="margin-top:8px;font-size:11px;color:#cbd5e1;line-height:1.5"></div>
+      <div class="progress-bar"><div class="progress-fill" id="dgBar"></div></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="draftModal">
+    <div class="modal">
+      <h3>+ Draft New Decision Node &amp; Wire Branch</h3>
+      <div class="form-row"><label>Parent Node ID</label><select id="dmParent"></select></div>
+      <div class="form-row"><label>Edge Label (Choice / Trigger)</label><input type="text" id="dmEdgeLabel" placeholder="e.g., Reroute Auxiliary Battery" /></div>
+      <div class="form-row"><label>Target Shard</label><select id="dmShard">
+        <option value="EVA">EVA</option><option value="PDA">PDA</option><option value="TECH">TECH</option>
+        <option value="SEC">SEC</option><option value="SHIP">SHIP</option><option value="MKT">MKT</option>
+        <option value="WORLD">WORLD</option><option value="MON">MON</option><option value="HUB">HUB</option>
+      </select></div>
+      <div class="form-row"><label>New Node Title</label><input type="text" id="dmTitle" placeholder="e.g., Auxiliary Power Restored" /></div>
+      <div class="form-row"><label>Node Type</label><select id="dmType">
+        <option value="decision">decision</option><option value="action">action</option>
+        <option value="shard_jump">shard_jump</option><option value="gap">gap (UNPLANNED stub)</option><option value="terminal">terminal</option>
+      </select></div>
+      <div class="form-row"><label>Summary &amp; Mutation</label><input type="text" id="dmSummary" placeholder="Brief description of what happens..." /></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+        <button class="btn" onclick="closeDraftModal()">Cancel</button>
+        <button class="btn primary" onclick="commitDraftNode()">Add to Flowchart</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       EMBEDDED CANONICAL GRAPH LEDGER (Mirrors data/graph-ledger.json v0.4.0)
+       ========================================================================= */
+    const LEDGER = {
+          "meta": {
+                "project": "Endless Vigil",
+                "ledgerVersion": "0.4.0",
+                "coAuthors": [
+                      "Creator",
+                      "Ironscribe of the Endless Vigil"
+                ],
+                "shards": [
+                      {
+                            "id": "HUB",
+                            "name": "Vigil Hub Gateway & Med-Bay",
+                            "repo": "ev-hub",
+                            "role": "Single public entry URL, per-session Legal Gate, Continuum Manifest verification, Med-Bay reconstitution, and PING insurance kiosk.",
+                            "color": "#38bdf8",
+                            "ownedSlices": [
+                                  "meta",
+                                  "session",
+                                  "pingInsurance"
+                            ],
+                            "diegeticTransition": "Visor Initialization & Envelope Checksum Gate"
+                      },
+                      {
+                            "id": "EVA",
+                            "name": "EVA / Exterior Telemetry",
+                            "repo": "ev-shard-eva",
+                            "role": "First-person orbital survival on asteroids & wreckage, suit breach physics, lazy-loaded debris recovery, and disturbedLease custody tracking.",
+                            "color": "#f97316",
+                            "ownedSlices": [
+                                  "operator.pose",
+                                  "operator.suit",
+                                  "operator.carriedItemIds",
+                                  "disturbedRecords[]"
+                            ],
+                            "diegeticTransition": "Helmet Visor HUD Lock-In"
+                      },
+                      {
+                            "id": "PDA",
+                            "name": "Vigil Cuff-Slate (Wrist PDA)",
+                            "repo": "ev-shard-pda",
+                            "role": "Worn wrist-mounted diagnostics, first-boot tutorial layer, distress scans, live telemetry sync.",
+                            "color": "#22c55e",
+                            "ownedSlices": [
+                                  "pda.tutorialSeen",
+                                  "pda.casingWearPct",
+                                  "pda.batteryPct",
+                                  "pda.unreadAlerts"
+                            ],
+                            "diegeticTransition": "Arm Raise + OLED Cuff BIOS Handshake"
+                      },
+                      {
+                            "id": "TECH",
+                            "name": "Tech & Fabrication Lab",
+                            "repo": "ev-shard-tech",
+                            "role": "Blueprint reverse-engineering, salvage analysis, tool crafting (Thermal Arc Lance, Pulse Decoder, Jammer Cores).",
+                            "color": "#a855f7",
+                            "ownedSlices": [
+                                  "tech.unlockedBlueprints",
+                                  "tech.activeResearchId",
+                                  "tech.researchProgressPct"
+                            ],
+                            "diegeticTransition": "Schematic Projection Grid Boot"
+                      },
+                      {
+                            "id": "SEC",
+                            "name": "Physical Security & Breach",
+                            "repo": "ev-shard-security",
+                            "role": "Code-locked containers, persistent partial thermal cutting, cyber-breach module—zero arbitrary operator locks.",
+                            "color": "#eab308",
+                            "ownedSlices": [
+                                  "containers[]"
+                            ],
+                            "diegeticTransition": "Physical Lock / Seam Telemetry Zoom"
+                      },
+                      {
+                            "id": "SHIP",
+                            "name": "Shipwright & Vessel Ops",
+                            "repo": "ev-shard-ship",
+                            "role": "Derelict boarding, power/oxygen routing, multi-ship fleet registry, cargo bays, Hub reconstitution dock.",
+                            "color": "#06b6d4",
+                            "ownedSlices": [
+                                  "ships[]"
+                            ],
+                            "diegeticTransition": "Airlock Depressurization & Bulkhead Iris"
+                      },
+                      {
+                            "id": "MKT",
+                            "name": "Continuum Markets & PING Exchange",
+                            "repo": "ev-shard-markets",
+                            "role": "Always-running economy: Open Exchange, Black Market, Sector Equities, bulk-sell salvage, and PING upkeep ticker.",
+                            "color": "#10b981",
+                            "ownedSlices": [
+                                  "credits",
+                                  "markets",
+                                  "pingInsurance.rentPerHourCredits"
+                            ],
+                            "diegeticTransition": "Hub Trade Terminal & Bond Ticker"
+                      },
+                      {
+                            "id": "WORLD",
+                            "name": "World Forge & Sector Cartography",
+                            "repo": "ev-shard-world",
+                            "role": "Seeded star-sector coordinates, asteroid mining, privacy jammers, and permanent planetary fracture deltas.",
+                            "color": "#ec4899",
+                            "ownedSlices": [
+                                  "worldSeed",
+                                  "sectorDeltas"
+                            ],
+                            "diegeticTransition": "Orbital Holo-Table Projection"
+                      },
+                      {
+                            "id": "MON",
+                            "name": "Overwatch Continuum Monitor",
+                            "repo": "ev-continuum-monitor",
+                            "role": "Strictly read-only universe monitor: coordinate camera (respects paid sector jammers), markets, Manifest & Docs links.",
+                            "color": "#60a5fa",
+                            "ownedSlices": [],
+                            "diegeticTransition": "Read-Only Telemetry Overwatch Feed"
+                      },
+                      {
+                            "id": "AUTH",
+                            "name": "Zero-Trust Authority Relay & Authenticator",
+                            "repo": "ev-authority-relay",
+                            "role": "Zero-oracle conduit authenticator, server-issued ephemeral tokens, DOM anti-tamper lock, rate lockout, admin unlock, behavioral anomaly freeze & numeric sync.",
+                            "color": "#94a3b8",
+                            "ownedSlices": [
+                                  "operatorAccount",
+                                  "authoritativeLedger",
+                                  "conflictLocks"
+                            ],
+                            "diegeticTransition": "Subspace Conduit Handshake & Signed Token Gate"
+                      }
+                ]
+          },
+          "nodes": [
+                {
+                      "id": "HUB-001",
+                      "shard": "HUB",
+                      "phase": "BOOT",
+                      "title": "Entry Launch & Per-Session Legal Clickwrap",
+                      "summary": "Visitor opens Vigil Hub (index.html); per-session clickwrap Terms & Legal Disclaimer must be clicked through before any operational conduit boots.",
+                      "type": "entry",
+                      "expectedOutcomes": [
+                            "terms_accepted"
+                      ],
+                      "stateMutations": [
+                            "session.acknowledgedTermsUtc"
+                      ],
+                      "commentTag": "@branch-id HUB-001"
+                },
+                {
+                      "id": "AUTH-001",
+                      "shard": "AUTH",
+                      "phase": "BOOT",
+                      "title": "Sci-Fi Conduit Authenticator (Zero-Trust Gate)",
+                      "summary": "Realistic diegetic authenticator requests Operator Conduit Code. Protected world/shard payloads are withheld until server issues signed ephemeral session token.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "token_issued",
+                            "invalid_zero_oracle",
+                            "admin_unlock_flow",
+                            "open_overwatch"
+                      ],
+                      "stateMutations": [
+                            "operatorAccount.sessionId"
+                      ],
+                      "commentTag": "@branch-id AUTH-001"
+                },
+                {
+                      "id": "AUTH-002",
+                      "shard": "AUTH",
+                      "phase": "BOOT",
+                      "title": "Zero-Oracle Rejection & DOM Anti-Tamper Lock",
+                      "summary": "Bad code or DevTools modal removal returns uniform 'CONDUIT UNVERIFIED // ZERO TELEMETRY RETURNED' (no brute-force hints) and locks after N attempts.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "retry_window_open",
+                            "locked_out_tamper"
+                      ],
+                      "stateMutations": [
+                            "operatorAccount.authState"
+                      ],
+                      "commentTag": "@branch-id AUTH-002"
+                },
+                {
+                      "id": "AUTH-003",
+                      "shard": "AUTH",
+                      "phase": "SECURITY",
+                      "title": "Admin Recovery Console & Anomaly Auto-Freeze",
+                      "summary": "Server-salted Admin Recovery key unlocks locked codes; behavioral heuristics (velocity/dupe/credit spikes) auto-quarantine hostile codes.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "admin_unlocked",
+                            "quarantined_permanent"
+                      ],
+                      "stateMutations": [
+                            "operatorAccount.authState",
+                            "operatorAccount.anomalyScore"
+                      ],
+                      "commentTag": "@branch-id AUTH-003"
+                },
+                {
+                      "id": "AUTH-005",
+                      "shard": "AUTH",
+                      "phase": "SECURITY",
+                      "title": "Conduit Quarantined / Revoked",
+                      "summary": "Account frozen; bearer token invalidated across all Shards until explicit Admin recovery audit clears anomaly.",
+                      "type": "terminal",
+                      "expectedOutcomes": [],
+                      "stateMutations": [
+                            "operatorAccount.authState='QUARANTINED'"
+                      ],
+                      "commentTag": "@branch-id AUTH-005"
+                },
+                {
+                      "id": "HUB-002",
+                      "shard": "HUB",
+                      "phase": "BOOT",
+                      "title": "SHA-256 Checksum & Rev Gate",
+                      "summary": "Recompute SHA-256 on server-delivered or cached Continuum Manifest and verify monotonic rev + parentSha256.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "valid_sync",
+                            "new_operator_seed",
+                            "corrupt_checksum",
+                            "rev_fork_desync"
+                      ],
+                      "stateMutations": [
+                            "session.lastVerifiedSha256"
+                      ],
+                      "commentTag": "@branch-id HUB-002"
+                },
+                {
+                      "id": "HUB-003",
+                      "shard": "HUB",
+                      "phase": "BOOT",
+                      "title": "Auto-Rollback / 3-Way Merge",
+                      "summary": "Corrupt or forked Manifest Envelope detected; restore verified parent snapshot or merge entity deltas.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "recovered_resume"
+                      ],
+                      "stateMutations": [
+                            "session.recoveryUsed=true"
+                      ],
+                      "commentTag": "@branch-id HUB-003"
+                },
+                {
+                      "id": "HUB-004",
+                      "shard": "HUB",
+                      "phase": "BOOT",
+                      "title": "Seed New Continuum Manifest",
+                      "summary": "Generate 64-bit worldSeed, stranded asteroid zone, suit breach venting O2, worn Wrist-PDA unseen.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "enter_eva_act0"
+                      ],
+                      "stateMutations": [
+                            "manifestId:init",
+                            "worldSeed:init",
+                            "suit.leakRatePerSec=1.2"
+                      ],
+                      "commentTag": "@branch-id HUB-004"
+                },
+                {
+                      "id": "MON-001",
+                      "shard": "MON",
+                      "phase": "OVERWATCH",
+                      "title": "Read-Only Continuum Monitor",
+                      "summary": "Public read-only watch terminal: view economy tickers, repo docs, Manifest checksums, or enter sector XYZ.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "inspect_clear_sector",
+                            "inspect_jammed_sector",
+                            "read_market_feeds"
+                      ],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id MON-001"
+                },
+                {
+                      "id": "MON-002",
+                      "shard": "MON",
+                      "phase": "OVERWATCH",
+                      "title": "Jammer Static Blockade",
+                      "summary": "Zooming into paid privatized coordinates displays RF static & 'SIGNAL INTERCEPT DENIED // SECTOR PRIVATIZED'.",
+                      "type": "terminal",
+                      "expectedOutcomes": [],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id MON-002"
+                },
+                {
+                      "id": "EVA-001",
+                      "shard": "EVA",
+                      "phase": "ACT_0_STRANDED",
+                      "title": "Wake Up: Suit Breach Venting Air",
+                      "summary": "Operator wakes stranded by crew on drifting Asteroid-0. Torso seam venting O2 rapidly.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "open_pda",
+                            "scavenge_debris",
+                            "ignore_wait"
+                      ],
+                      "stateMutations": [
+                            "o2Seconds:tick(-1.2/s)"
+                      ],
+                      "commentTag": "@branch-id EVA-001"
+                },
+                {
+                      "id": "PDA-001",
+                      "shard": "PDA",
+                      "phase": "ACT_0_STRANDED",
+                      "title": "First Boot: Battered Wrist-PDA Tutorial",
+                      "summary": "Separate PDA Shard loads via diegetic wrist-raise with live suit damage & tutorial layer active.",
+                      "type": "shard_jump",
+                      "expectedOutcomes": [
+                            "run_suit_diag",
+                            "scan_beacons",
+                            "open_tech_lab",
+                            "return_eva"
+                      ],
+                      "stateMutations": [
+                            "pda.tutorialSeen=true"
+                      ],
+                      "commentTag": "@branch-id PDA-001"
+                },
+                {
+                      "id": "PDA-002",
+                      "shard": "PDA",
+                      "phase": "ACT_0_STRANDED",
+                      "title": "Suit Diagnostics & Breach Locator",
+                      "summary": "Highlights seam leak rate, O2 countdown, and nearest salvageable wreckage.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "return_eva_equipped"
+                      ],
+                      "stateMutations": [
+                            "pda.unreadAlerts:ack"
+                      ],
+                      "commentTag": "@branch-id PDA-002"
+                },
+                {
+                      "id": "PDA-003",
+                      "shard": "PDA",
+                      "phase": "ACT_1_SALVAGE",
+                      "title": "Sector Distress & Derelict Scan",
+                      "summary": "Reveals locked supply crate & derelict shuttle beacon coords in asteroid cluster.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "mark_waypoints"
+                      ],
+                      "stateMutations": [
+                            "world.beacons:discovered"
+                      ],
+                      "commentTag": "@branch-id PDA-003"
+                },
+                {
+                      "id": "EVA-002",
+                      "shard": "EVA",
+                      "phase": "ACT_0_STRANDED",
+                      "title": "Scavenge Asteroid Wreckage Field",
+                      "summary": "Search floating crew debris for sealant tape, scrap plating, or abandoned tool kit.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "found_seal_tape",
+                            "found_raw_scrap",
+                            "nothing_found"
+                      ],
+                      "stateMutations": [
+                            "operator.carriedItemIds:push",
+                            "disturbedRecords:PROVISIONAL_TRANSIT"
+                      ],
+                      "commentTag": "@branch-id EVA-002"
+                },
+                {
+                      "id": "EVA-003",
+                      "shard": "EVA",
+                      "phase": "ACT_0_STRANDED",
+                      "title": "Apply Emergency Seal Tape",
+                      "summary": "Full temporary seal stops O2 venting immediately; preserves suit integrity.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "stabilized_eva"
+                      ],
+                      "stateMutations": [
+                            "operator.suit.leakRatePerSec=0",
+                            "item:consumed"
+                      ],
+                      "commentTag": "@branch-id EVA-003"
+                },
+                {
+                      "id": "EVA-004",
+                      "shard": "EVA",
+                      "phase": "ACT_0_STRANDED",
+                      "title": "Improvised Scrap-Plate Patch",
+                      "summary": "Reduces O2 leak by 70%; buys critical minutes to reach derelict airlock or craft polymer seal.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "stabilized_eva"
+                      ],
+                      "stateMutations": [
+                            "operator.suit.leakRatePerSec=0.35"
+                      ],
+                      "commentTag": "@branch-id EVA-004"
+                },
+                {
+                      "id": "EVA-005",
+                      "shard": "EVA",
+                      "phase": "ACT_0_STRANDED",
+                      "title": "Biological Termination (O2 Zero / Fatal)",
+                      "summary": "Operator expires; body nanoparticles broadcast termination pulse across sector for PING & disturbedLease settlement.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "ping_resolve_on_death"
+                      ],
+                      "stateMutations": [
+                            "operator.suit.o2Seconds=0"
+                      ],
+                      "commentTag": "@branch-id EVA-005"
+                },
+                {
+                      "id": "MED-001",
+                      "shard": "HUB",
+                      "phase": "RECONSTITUTION",
+                      "title": "Hub Med-Bay Respawn, PING & Custody Check",
+                      "summary": "Non-permadeath Hub Med-Bay reconstitution: PING'd assets dissolve to dock, settled drops remain, unsettled disturbed gear reverts.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "all_pingd_dissolve",
+                            "ship_pingd_cargo_unpingd",
+                            "unpingd_left_in_space",
+                            "provisional_disturbed_revert"
+                      ],
+                      "stateMutations": [
+                            "operator.pose:hub_medbay"
+                      ],
+                      "commentTag": "@branch-id MED-001"
+                },
+                {
+                      "id": "PING-001",
+                      "shard": "HUB",
+                      "phase": "RECONSTITUTION",
+                      "title": "One-Button Hub Hangar Reconstitution",
+                      "summary": "All PING'd gear & vessel dissolved on death into queue; walk to Hub dock & press 1 button to restore.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "resume_from_hub"
+                      ],
+                      "stateMutations": [
+                            "pingInsurance.reconstitutionQueueIds:empty",
+                            "ships[home]:spawn"
+                      ],
+                      "commentTag": "@branch-id PING-001"
+                },
+                {
+                      "id": "PING-002",
+                      "shard": "HUB",
+                      "phase": "RECONSTITUTION",
+                      "title": "Partial PING: Ship Restored, Cargo Adrift",
+                      "summary": "PING'd ship dissolved back to Hub queue while settled un-PING'd cargo stays floating at wreck coords for EVA salvage.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "eva_recovery_run"
+                      ],
+                      "stateMutations": [
+                            "ships[home]:queue",
+                            "sectorDeltas[wreck].uninsuredDropIds:push"
+                      ],
+                      "commentTag": "@branch-id PING-002"
+                },
+                {
+                      "id": "EVA-007",
+                      "shard": "EVA",
+                      "phase": "RECONSTITUTION",
+                      "title": "Lazy-Loaded Wreckage Recovery",
+                      "summary": "Settled un-PING'd gear sits as lightweight coords (zero 3D rendered) until someone enters visual proximity.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "back_to_cluster"
+                      ],
+                      "stateMutations": [
+                            "sectorDeltas[wreck].uninsuredDropIds:pop"
+                      ],
+                      "commentTag": "@branch-id EVA-007"
+                },
+                {
+                      "id": "EVA-008",
+                      "shard": "EVA",
+                      "phase": "RECONSTITUTION",
+                      "title": "Provisional Transit Snap-Revert (Anti-Suicide Courier)",
+                      "summary": "Un-PING'd items tagged PROVISIONAL_TRANSIT by deceased operator before Hub/Save checkpoint snap-revert to anchorOrigin.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "reverted_to_anchor"
+                      ],
+                      "stateMutations": [
+                            "disturbedRecords[id].xyz=anchorOrigin"
+                      ],
+                      "commentTag": "@branch-id EVA-008"
+                },
+                {
+                      "id": "EVA-006",
+                      "shard": "EVA",
+                      "phase": "ACT_1_SALVAGE",
+                      "title": "Suit Stabilized: Explore Cluster",
+                      "summary": "Traverse sector, use Cuff-Slate/Tech, breach crates, board ships, settle cargo & trade at Hub Markets, or deploy jammers.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "approach_crate",
+                            "approach_derelict",
+                            "open_tech_lab",
+                            "visit_markets",
+                            "save_sync"
+                      ],
+                      "stateMutations": [
+                            "disturbedRecords:SETTLED_AT_HUB"
+                      ],
+                      "commentTag": "@branch-id EVA-006"
+                },
+                {
+                      "id": "MKT-001",
+                      "shard": "MKT",
+                      "phase": "ECONOMY",
+                      "title": "Hub Markets & PING Insurance Desk",
+                      "summary": "Sell 80% salvage on Open/Black Exchange or Equities; Bulk-PING or Bulk-unPING kept gear (hourly rent ticker).",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "bulk_ping_manage",
+                            "trade_open_black_stock",
+                            "wealth_balance_gap",
+                            "trial_drop_balance_gap",
+                            "exit_markets"
+                      ],
+                      "stateMutations": [
+                            "credits:delta",
+                            "pingInsurance.rentPerHourCredits:recalc"
+                      ],
+                      "commentTag": "@branch-id MKT-001"
+                },
+                {
+                      "id": "GAP-005",
+                      "shard": "MKT",
+                      "phase": "BALANCE",
+                      "title": "PARKING LOT: Anti-Snowball Wealth Balance",
+                      "summary": "Tune telemetry signature detectability & progressive PING rent scaling so mega-rich actors stay vulnerable.",
+                      "type": "gap",
+                      "expectedOutcomes": [],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id GAP-005"
+                },
+                {
+                      "id": "GAP-006",
+                      "shard": "MKT",
+                      "phase": "BALANCE",
+                      "title": "PARKING LOT: Trial Physical Drops & Anti-RMT Audit",
+                      "summary": "Weigh pros/cons of trial ground drops vs. zero-value starter kits and wash-trade/RMT credit-spike alerts.",
+                      "type": "gap",
+                      "expectedOutcomes": [],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id GAP-006"
+                },
+                {
+                      "id": "TECH-001",
+                      "shard": "TECH",
+                      "phase": "ACT_1_SALVAGE",
+                      "title": "Tech & Reverse-Engineering Lab",
+                      "summary": "Separate Tech Shard hydrates salvage inventory and blueprint unlocks.",
+                      "type": "shard_jump",
+                      "expectedOutcomes": [
+                            "unlock_arc_cutter",
+                            "unlock_pulse_decoder",
+                            "unlock_polymer_seal",
+                            "tier2_unplanned",
+                            "exit_to_eva"
+                      ],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id TECH-001"
+                },
+                {
+                      "id": "TECH-002",
+                      "shard": "TECH",
+                      "phase": "ACT_1_SALVAGE",
+                      "title": "Craft Thermal Arc Lance / Decoder",
+                      "summary": "Unlocks breach tools needed to cut or hack physical containers owned by anyone.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "return_eva_tooled"
+                      ],
+                      "stateMutations": [
+                            "tech.unlockedBlueprints:add",
+                            "operator.carriedItemIds:add"
+                      ],
+                      "commentTag": "@branch-id TECH-002"
+                },
+                {
+                      "id": "GAP-002",
+                      "shard": "TECH",
+                      "phase": "ACT_2_EXPANSION",
+                      "title": "UNPLANNED: Tier-2 Orbital Tech Tree",
+                      "summary": "Need blueprint dependencies for planetary core drills, jammer arrays, and demolition payloads.",
+                      "type": "gap",
+                      "expectedOutcomes": [],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id GAP-002"
+                },
+                {
+                      "id": "SEC-001",
+                      "shard": "SEC",
+                      "phase": "ACT_1_SALVAGE",
+                      "title": "Inspect Code-Locked Supply Box",
+                      "summary": "Physical container with 4-digit PIN hash & cuttable titanium seams. Zero arbitrary operator locks.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "enter_pin",
+                            "use_arc_cutter",
+                            "use_pulse_decoder",
+                            "walk_away"
+                      ],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id SEC-001"
+                },
+                {
+                      "id": "SEC-002",
+                      "shard": "SEC",
+                      "phase": "ACT_1_SALVAGE",
+                      "title": "PIN Entry Check",
+                      "summary": "Compare SHA-256 of entered code against container codeSha256.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "pin_valid",
+                            "pin_invalid"
+                      ],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id SEC-002"
+                },
+                {
+                      "id": "SEC-003",
+                      "shard": "SEC",
+                      "phase": "ACT_1_SALVAGE",
+                      "title": "Thermal Arc Lance Cutting Loop",
+                      "summary": "Progressively cuts box seams; partial cutProgressPct saves persistently to world delta!",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "cut_complete",
+                            "cut_aborted_partial"
+                      ],
+                      "stateMutations": [
+                            "containers[id].cutProgressPct:+",
+                            "containers[id].structureHp:-"
+                      ],
+                      "commentTag": "@branch-id SEC-003"
+                },
+                {
+                      "id": "SEC-004",
+                      "shard": "SEC",
+                      "phase": "ACT_1_SALVAGE",
+                      "title": "Pulse Decoder Cyber-Breach",
+                      "summary": "Signal frequency alignment mini-task bypasses PIN without damaging box structure.",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "hack_success",
+                            "hack_trip_alarm"
+                      ],
+                      "stateMutations": [
+                            "containers[id].hackProgressPct:+"
+                      ],
+                      "commentTag": "@branch-id SEC-004"
+                },
+                {
+                      "id": "SEC-005",
+                      "shard": "SEC",
+                      "phase": "ACT_1_SALVAGE",
+                      "title": "Container Breached: Loot Physical Items",
+                      "summary": "Box opens permanently in world delta; contents become PROVISIONAL_TRANSIT world objects until settled.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "back_to_eva_looted"
+                      ],
+                      "stateMutations": [
+                            "containers[id].lockKind='none'",
+                            "operator.carriedItemIds:transfer"
+                      ],
+                      "commentTag": "@branch-id SEC-005"
+                },
+                {
+                      "id": "GAP-003",
+                      "shard": "SEC",
+                      "phase": "MULTIPLAYER",
+                      "title": "UNPLANNED: Breached-Box Owner Alert",
+                      "summary": "Need design for how offline/remote box owners get pinged on Cuff-Slate when a hack trips an alarm.",
+                      "type": "gap",
+                      "expectedOutcomes": [],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id GAP-003"
+                },
+                {
+                      "id": "SHIP-001",
+                      "shard": "SHIP",
+                      "phase": "ACT_2_VESSEL",
+                      "title": "Airlock Entry: Board Derelict / Ship",
+                      "summary": "Diegetic airlock cycle loads Shipwright Shard, preserving inventory, PING status, and world state.",
+                      "type": "shard_jump",
+                      "expectedOutcomes": [
+                            "restore_aux_power",
+                            "switch_owned_ship",
+                            "undock_to_world",
+                            "boarding_event_unplanned",
+                            "exit_airlock"
+                      ],
+                      "stateMutations": [
+                            "operator.suit.o2Seconds:refill"
+                      ],
+                      "commentTag": "@branch-id SHIP-001"
+                },
+                {
+                      "id": "SHIP-002",
+                      "shard": "SHIP",
+                      "phase": "ACT_2_VESSEL",
+                      "title": "Subsystem Power & Life-Support Grid",
+                      "summary": "Route reactor kW across engines, oxygen scrubbers, cargo locks, and sensors.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "ship_operational"
+                      ],
+                      "stateMutations": [
+                            "ships[active].powerAvailableKw:allocated"
+                      ],
+                      "commentTag": "@branch-id SHIP-002"
+                },
+                {
+                      "id": "SHIP-003",
+                      "shard": "SHIP",
+                      "phase": "ACT_2_VESSEL",
+                      "title": "Multi-Ship Fleet Registry",
+                      "summary": "Switch active vessel among multiple acquired ships, inspect remote hulls & PING coverage.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "ship_selected"
+                      ],
+                      "stateMutations": [
+                            "ships.activeId:changed"
+                      ],
+                      "commentTag": "@branch-id SHIP-003"
+                },
+                {
+                      "id": "GAP-004",
+                      "shard": "SHIP",
+                      "phase": "MULTIPLAYER",
+                      "title": "UNPLANNED: Multi-Player Ship Boarding Conflict",
+                      "summary": "Define helm permissions vs. physical bulkhead cutting when two operators inhabit one vessel.",
+                      "type": "gap",
+                      "expectedOutcomes": [],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id GAP-004"
+                },
+                {
+                      "id": "WORLD-001",
+                      "shard": "WORLD",
+                      "phase": "ACT_3_COSMOS",
+                      "title": "World Forge & Sector Holo-Map",
+                      "summary": "Separate World Shard renders seeded galaxy + sparse sectorDeltas for mining, jammers, & mega-events.",
+                      "type": "shard_jump",
+                      "expectedOutcomes": [
+                            "mine_asteroid",
+                            "deploy_jammer",
+                            "shatter_planet",
+                            "travel_sector",
+                            "commit_envelope"
+                      ],
+                      "stateMutations": [],
+                      "commentTag": "@branch-id WORLD-001"
+                },
+                {
+                      "id": "WORLD-002",
+                      "shard": "WORLD",
+                      "phase": "ACT_3_COSMOS",
+                      "title": "Industrial Asteroid Mining Delta",
+                      "summary": "Extracts ore into ship cargo and decrements asteroid massRemainingPct in sparse deltas (rate-verified by AUTH).",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "return_world_updated"
+                      ],
+                      "stateMutations": [
+                            "sectorDeltas[id].massRemainingPct:-"
+                      ],
+                      "commentTag": "@branch-id WORLD-002"
+                },
+                {
+                      "id": "JAM-001",
+                      "shard": "WORLD",
+                      "phase": "ACT_3_COSMOS",
+                      "title": "Deploy Paid Sector Privacy Jammer",
+                      "summary": "Privatizes sector coordinates; Overwatch Monitor cameras show RF static & access-denied alert.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "jammer_active_saved"
+                      ],
+                      "stateMutations": [
+                            "sectorDeltas[id].jammerPrivacyActive=true",
+                            "credits:-"
+                      ],
+                      "commentTag": "@branch-id JAM-001"
+                },
+                {
+                      "id": "WORLD-003",
+                      "shard": "WORLD",
+                      "phase": "ACT_3_COSMOS",
+                      "title": "Cataclysm: Shatter Planet Permanently",
+                      "summary": "Records permanent planetary fracture delta + debrisSeed; rocks Sector Equities & every Shard.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "planet_shattered_saved"
+                      ],
+                      "stateMutations": [
+                            "sectorDeltas[planet].status='shattered'",
+                            "sectorDeltas[planet].debrisSeed:set"
+                      ],
+                      "commentTag": "@branch-id WORLD-003"
+                },
+                {
+                      "id": "HUB-005",
+                      "shard": "HUB",
+                      "phase": "PERSISTENCE",
+                      "title": "Checkpoint Continuum Manifest & Sync",
+                      "summary": "Canonicalize deltas -> Settle PROVISIONAL_TRANSIT items -> Deflate -> SHA-256 checksum -> Commit to Relay.",
+                      "type": "action",
+                      "expectedOutcomes": [
+                            "relay_sync"
+                      ],
+                      "stateMutations": [
+                            "rev:+1",
+                            "parentSha256=prev",
+                            "payloadSha256=hash",
+                            "disturbedRecords:SETTLED"
+                      ],
+                      "commentTag": "@branch-id HUB-005"
+                },
+                {
+                      "id": "AUTH-004",
+                      "shard": "AUTH",
+                      "phase": "MULTIPLAYER",
+                      "title": "Authority Relay Numeric & Behavioral Audit Sync",
+                      "summary": "Server reconciles XYZ poses, ship positions, container CAS, market ticks, and anomaly scoring (flags weird spikes).",
+                      "type": "decision",
+                      "expectedOutcomes": [
+                            "sync_clean",
+                            "anomaly_flagged"
+                      ],
+                      "stateMutations": [
+                            "authoritativeLedger:committed"
+                      ],
+                      "commentTag": "@branch-id AUTH-004"
+                },
+                {
+                      "id": "AUTH-006",
+                      "shard": "AUTH",
+                      "phase": "MULTIPLAYER",
+                      "title": "World Consensus Committed",
+                      "summary": "Authoritative world state signed and broadcast to Shards + read-only Overwatch feed.",
+                      "type": "terminal",
+                      "expectedOutcomes": [],
+                      "stateMutations": [
+                            "authoritativeLedger:signed"
+                      ],
+                      "commentTag": "@branch-id AUTH-006"
+                }
+          ],
+          "edges": [
+                {
+                      "id": "E-01",
+                      "from": "HUB-001",
+                      "to": "AUTH-001",
+                      "label": "Legal Clicked -> Auth Gate",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "terms_accepted"
+                },
+                {
+                      "id": "E-02",
+                      "from": "AUTH-001",
+                      "to": "HUB-002",
+                      "label": "Token Issued (Verified)",
+                      "branchType": "left",
+                      "outcomeKey": "token_issued"
+                },
+                {
+                      "id": "E-03",
+                      "from": "AUTH-001",
+                      "to": "AUTH-002",
+                      "label": "Invalid / DOM Tamper",
+                      "branchType": "right",
+                      "outcomeKey": "invalid_zero_oracle"
+                },
+                {
+                      "id": "E-04",
+                      "from": "AUTH-001",
+                      "to": "AUTH-003",
+                      "label": "Admin Console",
+                      "branchType": "multi",
+                      "outcomeKey": "admin_unlock_flow"
+                },
+                {
+                      "id": "E-05",
+                      "from": "AUTH-001",
+                      "to": "MON-001",
+                      "label": "Read-Only Overwatch",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "open_overwatch"
+                },
+                {
+                      "id": "E-06",
+                      "from": "AUTH-002",
+                      "to": "AUTH-001",
+                      "label": "Retry Window Open",
+                      "branchType": "left",
+                      "outcomeKey": "retry_window_open"
+                },
+                {
+                      "id": "E-07",
+                      "from": "AUTH-002",
+                      "to": "AUTH-003",
+                      "label": "4 Strikes -> Locked",
+                      "branchType": "right",
+                      "outcomeKey": "locked_out_tamper"
+                },
+                {
+                      "id": "E-08",
+                      "from": "AUTH-003",
+                      "to": "AUTH-001",
+                      "label": "Admin Override Unlock",
+                      "branchType": "left",
+                      "outcomeKey": "admin_unlocked"
+                },
+                {
+                      "id": "E-09",
+                      "from": "AUTH-003",
+                      "to": "AUTH-005",
+                      "label": "Anomaly Quarantine",
+                      "branchType": "right",
+                      "outcomeKey": "quarantined_permanent"
+                },
+                {
+                      "id": "E-10",
+                      "from": "MON-001",
+                      "to": "WORLD-001",
+                      "label": "View Unjammed Coords",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "inspect_clear_sector"
+                },
+                {
+                      "id": "E-11",
+                      "from": "MON-001",
+                      "to": "MON-002",
+                      "label": "Zoom Privatized Sector",
+                      "branchType": "right",
+                      "outcomeKey": "inspect_jammed_sector"
+                },
+                {
+                      "id": "E-12",
+                      "from": "MON-001",
+                      "to": "MKT-001",
+                      "label": "Read Market Tickers",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "read_market_feeds"
+                },
+                {
+                      "id": "E-13",
+                      "from": "HUB-002",
+                      "to": "EVA-001",
+                      "label": "Checksum OK (Hydrate)",
+                      "branchType": "left",
+                      "outcomeKey": "valid_sync"
+                },
+                {
+                      "id": "E-14",
+                      "from": "HUB-002",
+                      "to": "HUB-004",
+                      "label": "New Operator Seed",
+                      "branchType": "multi",
+                      "outcomeKey": "new_operator_seed"
+                },
+                {
+                      "id": "E-15",
+                      "from": "HUB-002",
+                      "to": "HUB-003",
+                      "label": "Checksum Corrupt",
+                      "branchType": "right",
+                      "outcomeKey": "corrupt_checksum"
+                },
+                {
+                      "id": "E-16",
+                      "from": "HUB-002",
+                      "to": "HUB-003",
+                      "label": "Rev Fork Desync",
+                      "branchType": "fallback",
+                      "outcomeKey": "rev_fork_desync"
+                },
+                {
+                      "id": "E-17",
+                      "from": "HUB-003",
+                      "to": "EVA-001",
+                      "label": "Recovered State",
+                      "branchType": "left",
+                      "outcomeKey": "recovered_resume"
+                },
+                {
+                      "id": "E-18",
+                      "from": "HUB-004",
+                      "to": "EVA-001",
+                      "label": "Spawn Stranded",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "enter_eva_act0"
+                },
+                {
+                      "id": "E-19",
+                      "from": "EVA-001",
+                      "to": "PDA-001",
+                      "label": "Click Wrist PDA",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "open_pda"
+                },
+                {
+                      "id": "E-20",
+                      "from": "EVA-001",
+                      "to": "EVA-002",
+                      "label": "Scavenge Wreckage",
+                      "branchType": "left",
+                      "outcomeKey": "scavenge_debris"
+                },
+                {
+                      "id": "E-21",
+                      "from": "EVA-001",
+                      "to": "EVA-005",
+                      "label": "Wait / O2 Runs Out",
+                      "branchType": "right",
+                      "outcomeKey": "ignore_wait"
+                },
+                {
+                      "id": "E-22",
+                      "from": "PDA-001",
+                      "to": "PDA-002",
+                      "label": "Suit Diagnostics",
+                      "branchType": "left",
+                      "outcomeKey": "run_suit_diag"
+                },
+                {
+                      "id": "E-23",
+                      "from": "PDA-001",
+                      "to": "PDA-003",
+                      "label": "Scan Signals",
+                      "branchType": "multi",
+                      "outcomeKey": "scan_beacons"
+                },
+                {
+                      "id": "E-24",
+                      "from": "PDA-001",
+                      "to": "TECH-001",
+                      "label": "Jump -> Tech Lab",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "open_tech_lab"
+                },
+                {
+                      "id": "E-25",
+                      "from": "PDA-001",
+                      "to": "EVA-002",
+                      "label": "Close PDA -> EVA",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "return_eva"
+                },
+                {
+                      "id": "E-26",
+                      "from": "PDA-002",
+                      "to": "EVA-002",
+                      "label": "Locate Seal Materials",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "return_eva_equipped"
+                },
+                {
+                      "id": "E-27",
+                      "from": "PDA-003",
+                      "to": "EVA-006",
+                      "label": "Waypoints Uploaded",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "mark_waypoints"
+                },
+                {
+                      "id": "E-28",
+                      "from": "EVA-002",
+                      "to": "EVA-003",
+                      "label": "Found Seal Tape",
+                      "branchType": "left",
+                      "outcomeKey": "found_seal_tape"
+                },
+                {
+                      "id": "E-29",
+                      "from": "EVA-002",
+                      "to": "EVA-004",
+                      "label": "Found Scrap Alloy",
+                      "branchType": "multi",
+                      "outcomeKey": "found_raw_scrap"
+                },
+                {
+                      "id": "E-30",
+                      "from": "EVA-002",
+                      "to": "EVA-005",
+                      "label": "Empty Search -> O2 Zero",
+                      "branchType": "right",
+                      "outcomeKey": "nothing_found"
+                },
+                {
+                      "id": "E-31",
+                      "from": "EVA-003",
+                      "to": "EVA-006",
+                      "label": "Leak Sealed 100%",
+                      "branchType": "left",
+                      "outcomeKey": "stabilized_eva"
+                },
+                {
+                      "id": "E-32",
+                      "from": "EVA-004",
+                      "to": "EVA-006",
+                      "label": "Leak Slowed 70%",
+                      "branchType": "left",
+                      "outcomeKey": "stabilized_eva"
+                },
+                {
+                      "id": "E-33",
+                      "from": "EVA-005",
+                      "to": "MED-001",
+                      "label": "Body Nano-Pulse -> Hub",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "ping_resolve_on_death"
+                },
+                {
+                      "id": "E-34",
+                      "from": "MED-001",
+                      "to": "PING-001",
+                      "label": "All Gear PING'd",
+                      "branchType": "left",
+                      "outcomeKey": "all_pingd_dissolve"
+                },
+                {
+                      "id": "E-35",
+                      "from": "MED-001",
+                      "to": "PING-002",
+                      "label": "Ship PING'd / Cargo Settled",
+                      "branchType": "multi",
+                      "outcomeKey": "ship_pingd_cargo_unpingd"
+                },
+                {
+                      "id": "E-36",
+                      "from": "MED-001",
+                      "to": "EVA-007",
+                      "label": "Settled Un-PING'd Adrift",
+                      "branchType": "right",
+                      "outcomeKey": "unpingd_left_in_space"
+                },
+                {
+                      "id": "E-37",
+                      "from": "MED-001",
+                      "to": "EVA-008",
+                      "label": "Unsettled Disturbed Revert",
+                      "branchType": "fallback",
+                      "outcomeKey": "provisional_disturbed_revert"
+                },
+                {
+                      "id": "E-38",
+                      "from": "PING-001",
+                      "to": "EVA-006",
+                      "label": "1-Button Spawn -> Resume",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "resume_from_hub"
+                },
+                {
+                      "id": "E-39",
+                      "from": "PING-002",
+                      "to": "EVA-007",
+                      "label": "EVA Back to Wreck Coords",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "eva_recovery_run"
+                },
+                {
+                      "id": "E-40",
+                      "from": "EVA-007",
+                      "to": "EVA-006",
+                      "label": "Uninsured Salvage Recovered",
+                      "branchType": "left",
+                      "outcomeKey": "back_to_cluster"
+                },
+                {
+                      "id": "E-41",
+                      "from": "EVA-008",
+                      "to": "EVA-006",
+                      "label": "Snap-Reverted to Anchor",
+                      "branchType": "left",
+                      "outcomeKey": "reverted_to_anchor"
+                },
+                {
+                      "id": "E-42",
+                      "from": "EVA-006",
+                      "to": "SEC-001",
+                      "label": "Inspect Locked Box",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "approach_crate"
+                },
+                {
+                      "id": "E-43",
+                      "from": "EVA-006",
+                      "to": "SHIP-001",
+                      "label": "Board Derelict Ship",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "approach_derelict"
+                },
+                {
+                      "id": "E-44",
+                      "from": "EVA-006",
+                      "to": "TECH-001",
+                      "label": "Open Tech Lab",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "open_tech_lab"
+                },
+                {
+                      "id": "E-45",
+                      "from": "EVA-006",
+                      "to": "MKT-001",
+                      "label": "Dock -> Settle & Trade",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "visit_markets"
+                },
+                {
+                      "id": "E-46",
+                      "from": "EVA-006",
+                      "to": "HUB-005",
+                      "label": "Checkpoint & Save Manifest",
+                      "branchType": "fallback",
+                      "outcomeKey": "save_sync"
+                },
+                {
+                      "id": "E-47",
+                      "from": "MKT-001",
+                      "to": "MKT-001",
+                      "label": "Bulk PING / Un-PING",
+                      "branchType": "left",
+                      "outcomeKey": "bulk_ping_manage"
+                },
+                {
+                      "id": "E-48",
+                      "from": "MKT-001",
+                      "to": "MKT-001",
+                      "label": "Open / Black / Stock Trade",
+                      "branchType": "multi",
+                      "outcomeKey": "trade_open_black_stock"
+                },
+                {
+                      "id": "E-49",
+                      "from": "MKT-001",
+                      "to": "GAP-005",
+                      "label": "Anti-Snowball Balance",
+                      "branchType": "unplanned",
+                      "outcomeKey": "wealth_balance_gap"
+                },
+                {
+                      "id": "E-50",
+                      "from": "MKT-001",
+                      "to": "GAP-006",
+                      "label": "Trial Drops & RMT Rules",
+                      "branchType": "unplanned",
+                      "outcomeKey": "trial_drop_balance_gap"
+                },
+                {
+                      "id": "E-51",
+                      "from": "MKT-001",
+                      "to": "EVA-006",
+                      "label": "Undock to Sector",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "exit_markets"
+                },
+                {
+                      "id": "E-52",
+                      "from": "TECH-001",
+                      "to": "TECH-002",
+                      "label": "Unlock Arc Lance",
+                      "branchType": "left",
+                      "outcomeKey": "unlock_arc_cutter"
+                },
+                {
+                      "id": "E-53",
+                      "from": "TECH-001",
+                      "to": "TECH-002",
+                      "label": "Unlock Pulse Decoder",
+                      "branchType": "multi",
+                      "outcomeKey": "unlock_pulse_decoder"
+                },
+                {
+                      "id": "E-54",
+                      "from": "TECH-001",
+                      "to": "TECH-002",
+                      "label": "Unlock Polymer Seal",
+                      "branchType": "multi",
+                      "outcomeKey": "unlock_polymer_seal"
+                },
+                {
+                      "id": "E-55",
+                      "from": "TECH-001",
+                      "to": "GAP-002",
+                      "label": "Tier-2 Tech Unplanned",
+                      "branchType": "unplanned",
+                      "outcomeKey": "tier2_unplanned"
+                },
+                {
+                      "id": "E-56",
+                      "from": "TECH-001",
+                      "to": "EVA-006",
+                      "label": "Return to EVA",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "exit_to_eva"
+                },
+                {
+                      "id": "E-57",
+                      "from": "TECH-002",
+                      "to": "EVA-006",
+                      "label": "Equip New Tool",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "return_eva_tooled"
+                },
+                {
+                      "id": "E-58",
+                      "from": "SEC-001",
+                      "to": "SEC-002",
+                      "label": "Enter 4-Digit PIN",
+                      "branchType": "left",
+                      "outcomeKey": "enter_pin"
+                },
+                {
+                      "id": "E-59",
+                      "from": "SEC-001",
+                      "to": "SEC-003",
+                      "label": "Cut w/ Arc Lance",
+                      "branchType": "multi",
+                      "outcomeKey": "use_arc_cutter"
+                },
+                {
+                      "id": "E-60",
+                      "from": "SEC-001",
+                      "to": "SEC-004",
+                      "label": "Hack w/ Decoder",
+                      "branchType": "multi",
+                      "outcomeKey": "use_pulse_decoder"
+                },
+                {
+                      "id": "E-61",
+                      "from": "SEC-001",
+                      "to": "EVA-006",
+                      "label": "Leave Locked",
+                      "branchType": "right",
+                      "outcomeKey": "walk_away"
+                },
+                {
+                      "id": "E-62",
+                      "from": "SEC-002",
+                      "to": "SEC-005",
+                      "label": "Valid PIN",
+                      "branchType": "left",
+                      "outcomeKey": "pin_valid"
+                },
+                {
+                      "id": "E-63",
+                      "from": "SEC-002",
+                      "to": "SEC-001",
+                      "label": "Wrong PIN (Retry)",
+                      "branchType": "right",
+                      "outcomeKey": "pin_invalid"
+                },
+                {
+                      "id": "E-64",
+                      "from": "SEC-003",
+                      "to": "SEC-005",
+                      "label": "Cut 100% -> Open",
+                      "branchType": "left",
+                      "outcomeKey": "cut_complete"
+                },
+                {
+                      "id": "E-65",
+                      "from": "SEC-003",
+                      "to": "EVA-006",
+                      "label": "Stop Early (Saves %)",
+                      "branchType": "right",
+                      "outcomeKey": "cut_aborted_partial"
+                },
+                {
+                      "id": "E-66",
+                      "from": "SEC-004",
+                      "to": "SEC-005",
+                      "label": "Cipher Bypassed",
+                      "branchType": "left",
+                      "outcomeKey": "hack_success"
+                },
+                {
+                      "id": "E-67",
+                      "from": "SEC-004",
+                      "to": "GAP-003",
+                      "label": "Alarm Tripped",
+                      "branchType": "unplanned",
+                      "outcomeKey": "hack_trip_alarm"
+                },
+                {
+                      "id": "E-68",
+                      "from": "SEC-005",
+                      "to": "EVA-006",
+                      "label": "Claim / Carry Items",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "back_to_eva_looted"
+                },
+                {
+                      "id": "E-69",
+                      "from": "SHIP-001",
+                      "to": "SHIP-002",
+                      "label": "Restore Aux Power",
+                      "branchType": "left",
+                      "outcomeKey": "restore_aux_power"
+                },
+                {
+                      "id": "E-70",
+                      "from": "SHIP-001",
+                      "to": "SHIP-003",
+                      "label": "Switch Owned Ship",
+                      "branchType": "multi",
+                      "outcomeKey": "switch_owned_ship"
+                },
+                {
+                      "id": "E-71",
+                      "from": "SHIP-001",
+                      "to": "WORLD-001",
+                      "label": "Undock -> World Map",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "undock_to_world"
+                },
+                {
+                      "id": "E-72",
+                      "from": "SHIP-001",
+                      "to": "GAP-004",
+                      "label": "Hostile Boarding",
+                      "branchType": "unplanned",
+                      "outcomeKey": "boarding_event_unplanned"
+                },
+                {
+                      "id": "E-73",
+                      "from": "SHIP-001",
+                      "to": "EVA-006",
+                      "label": "EVA Spacewalk",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "exit_airlock"
+                },
+                {
+                      "id": "E-74",
+                      "from": "SHIP-002",
+                      "to": "SHIP-001",
+                      "label": "Systems Online",
+                      "branchType": "left",
+                      "outcomeKey": "ship_operational"
+                },
+                {
+                      "id": "E-75",
+                      "from": "SHIP-003",
+                      "to": "SHIP-001",
+                      "label": "Vessel Active",
+                      "branchType": "left",
+                      "outcomeKey": "ship_selected"
+                },
+                {
+                      "id": "E-76",
+                      "from": "WORLD-001",
+                      "to": "WORLD-002",
+                      "label": "Mine Asteroid",
+                      "branchType": "left",
+                      "outcomeKey": "mine_asteroid"
+                },
+                {
+                      "id": "E-77",
+                      "from": "WORLD-001",
+                      "to": "JAM-001",
+                      "label": "Deploy Privacy Jammer",
+                      "branchType": "multi",
+                      "outcomeKey": "deploy_jammer"
+                },
+                {
+                      "id": "E-78",
+                      "from": "WORLD-001",
+                      "to": "WORLD-003",
+                      "label": "Shatter Planet",
+                      "branchType": "multi",
+                      "outcomeKey": "shatter_planet"
+                },
+                {
+                      "id": "E-79",
+                      "from": "WORLD-001",
+                      "to": "SHIP-001",
+                      "label": "Drop to Ship Helm",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "travel_sector"
+                },
+                {
+                      "id": "E-80",
+                      "from": "WORLD-001",
+                      "to": "HUB-005",
+                      "label": "Save World Manifest",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "commit_envelope"
+                },
+                {
+                      "id": "E-81",
+                      "from": "WORLD-002",
+                      "to": "WORLD-001",
+                      "label": "Sector Ore Logged",
+                      "branchType": "left",
+                      "outcomeKey": "return_world_updated"
+                },
+                {
+                      "id": "E-82",
+                      "from": "JAM-001",
+                      "to": "MON-002",
+                      "label": "Blocks Monitor Feed",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "jammer_active_saved"
+                },
+                {
+                      "id": "E-83",
+                      "from": "WORLD-003",
+                      "to": "HUB-005",
+                      "label": "Commit Planet Delta",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "planet_shattered_saved"
+                },
+                {
+                      "id": "E-84",
+                      "from": "HUB-005",
+                      "to": "AUTH-004",
+                      "label": "Relay & Anomaly Audit",
+                      "branchType": "shard_jump",
+                      "outcomeKey": "relay_sync"
+                },
+                {
+                      "id": "E-85",
+                      "from": "AUTH-004",
+                      "to": "AUTH-006",
+                      "label": "Checks Clean -> Sign",
+                      "branchType": "left",
+                      "outcomeKey": "sync_clean"
+                },
+                {
+                      "id": "E-86",
+                      "from": "AUTH-004",
+                      "to": "AUTH-003",
+                      "label": "Exploit / Temporal Spike",
+                      "branchType": "right",
+                      "outcomeKey": "anomaly_flagged"
+                }
+          ]
+    };
+
+    const shardById = new Map(LEDGER.meta.shards.map(s => [s.id, s]));
+    let currentView = 'shards';
+    let selectedShardId = "HUB";
+    let selectedNodeId = "MED-001";
+    let focusTrace = true;
+
+    const PHONE_MODES = [{ id: 'phone-sheet', label: 'Sheet' }, { id: 'phone-split', label: 'Split' }, { id: 'phone-cards', label: 'Cards' }];
+    const DESK_MODES  = [{ id: 'desk-split',  label: 'Split' }, { id: 'desk-studio', label: 'Studio' }, { id: 'desk-zen',    label: 'Zen' }];
+    let phoneIdx = 0, deskIdx = 0, activeLayout = 'desk-split';
+    let shardPZ = { x: 0, y: 0, scale: 1 };
+    let flowPZ  = { x: 16, y: 16, scale: 0.85 };
+    const syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ev_workbench_sync') : null;
+
+    function esc(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function isPhoneLayout() { return activeLayout.startsWith('phone-'); }
+
+    function applyLayout(layoutId) {
+      activeLayout = layoutId;
+      document.body.setAttribute('data-layout', layoutId);
+      const isPhone = isPhoneLayout();
+      document.getElementById('btnPhoneMode').classList.toggle('active', isPhone);
+      document.getElementById('btnDeskMode').classList.toggle('active', !isPhone);
+      document.getElementById('lblPhone').textContent = PHONE_MODES[phoneIdx].label;
+      document.getElementById('lblDesk').textContent = DESK_MODES[deskIdx].label;
+      document.getElementById('zenCloseShard').style.display = layoutId === 'desk-zen' ? 'inline-flex' : 'none';
+      document.getElementById('zenCloseFlow').style.display  = layoutId === 'desk-zen' ? 'inline-flex' : 'none';
+
+      if (layoutId === 'phone-sheet') document.body.classList.add('sheet-collapsed');
+      else document.body.classList.remove('sheet-collapsed');
+      if (layoutId === 'desk-zen') document.body.classList.remove('zen-closed');
+
+      try { localStorage.setItem('ev_preferred_layout', layoutId); } catch (_) {}
+      resetShardPanZoom();
+      renderShardMap();
+      renderDecisionGraph();
+      renderStudioRails();
+    }
+
+    function cyclePhoneLayout() {
+      if (isPhoneLayout()) phoneIdx = (phoneIdx + 1) % PHONE_MODES.length;
+      applyLayout(PHONE_MODES[phoneIdx].id);
+    }
+    function cycleDeskLayout() {
+      if (!isPhoneLayout()) deskIdx = (deskIdx + 1) % DESK_MODES.length;
+      applyLayout(DESK_MODES[deskIdx].id);
+    }
+    function togglePhoneSheet(forceOpen) {
+      if (activeLayout !== 'phone-sheet') return;
+      if (forceOpen === true) document.body.classList.remove('sheet-collapsed');
+      else if (forceOpen === false) document.body.classList.add('sheet-collapsed');
+      else document.body.classList.toggle('sheet-collapsed');
+    }
+    function toggleZenDrawer() { document.body.classList.toggle('zen-closed'); }
+
+    function initAdaptiveLayout() {
+      let saved = null;
+      try { saved = localStorage.getItem('ev_preferred_layout'); } catch (_) {}
+      const narrow = typeof window !== 'undefined' && window.innerWidth && window.innerWidth <= 820;
+      const target = saved || (narrow ? 'phone-sheet' : 'desk-split');
+      const pIdx = PHONE_MODES.findIndex(m => m.id === target);
+      const dIdx = DESK_MODES.findIndex(m => m.id === target);
+      if (pIdx >= 0) phoneIdx = pIdx;
+      if (dIdx >= 0) deskIdx = dIdx;
+      applyLayout(target);
+    }
+
+    /* SAFE DOM-based Pop-Out Window (Zero script-tag strings inside JS!) */
+    function popOutInspector() {
+      const win = window.open('', 'EV_INSPECTOR', 'width=440,height=780');
+      if (!win) {
+        alert('Popup blocked inside preview sandbox. Download or open standalone in browser to detach Inspector onto a second monitor!');
+        return;
+      }
+      const d = win.document;
+      d.title = 'Endless Vigil — Detached Inspector';
+      const st = d.createElement('style');
+      st.textContent = 'body{margin:0;padding:14px;background:#060911;color:#eef4ff;font-family:system-ui,sans-serif;font-size:13px}.card{background:#111a2d;border:1px solid #243252;border-radius:8px;padding:10px;margin-bottom:10px}.mono-box{font-family:monospace;font-size:11px;color:#7dd3fc}';
+      d.head.appendChild(st);
+      d.body.innerHTML = '<h3 style="margin-top:0;color:#38bdf8">Detached Multi-Monitor Inspector</h3><div id="mirror">Waiting for selection...</div>';
+      const sc = d.createElement('script');
+      sc.textContent = "const ch = new BroadcastChannel('ev_workbench_sync'); ch.onmessage = (e) => { if (e.data && e.data.html) document.getElementById('mirror').innerHTML = e.data.html; };";
+      d.body.appendChild(sc);
+      broadcastInspector();
+    }
+
+    function broadcastInspector() {
+      if (!syncChannel) return;
+      const el = currentView === 'shards' ? document.getElementById('siBody') : document.getElementById('niBody');
+      if (el) syncChannel.postMessage({ view: currentView, html: el.innerHTML });
+    }
+
+    function switchView(viewName) {
+      currentView = viewName;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === viewName));
+      document.querySelectorAll('.view-pane').forEach(p => p.classList.toggle('active', p.id === `view-${viewName}`));
+      if (viewName === 'branches') renderDecisionGraph();
+      if (viewName === 'kernel') runAuditView();
+      broadcastInspector();
+    }
+
+    function jumpToGaps() {
+      switchView('branches');
+      document.getElementById('shardFilter').value = 'ALL';
+      document.getElementById('modeFilter').value = 'GAPS';
+      selectedNodeId = 'GAP-005';
+      resetFlowPanZoom();
+      renderDecisionGraph();
+    }
+
+    function attachPanZoom(stageId, getPZ, setPZ, applyFn) {
+      const stage = document.getElementById(stageId);
+      const pointers = new Map();
+      let dragging = false, startPan = { x: 0, y: 0 }, startDown = { x: 0, y: 0 }, pinchStartDist = 0, pinchStartScale = 1;
+      function dist(p1, p2) { return Math.hypot(p2.x - p1.x, p2.y - p1.y); }
+
+      stage.addEventListener('pointerdown', (ev) => {
+        if (ev.target.closest('.floating-canvas-hud')) return;
+        pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+        if (pointers.size === 1) {
+          dragging = false; startPan = { x: getPZ().x, y: getPZ().y }; startDown = { x: ev.clientX, y: ev.clientY };
+        } else if (pointers.size === 2) {
+          const pts = [...pointers.values()];
+          pinchStartDist = dist(pts[0], pts[1]) || 1;
+          pinchStartScale = getPZ().scale;
+        }
+      });
+
+      stage.addEventListener('pointermove', (ev) => {
+        if (!pointers.has(ev.pointerId)) return;
+        pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+        if (pointers.size === 1) {
+          const dx = ev.clientX - startDown.x, dy = ev.clientY - startDown.y;
+          if (!dragging && Math.hypot(dx, dy) > 6) dragging = true;
+          if (dragging) { setPZ({ ...getPZ(), x: startPan.x + dx, y: startPan.y + dy }); applyFn(); }
+        } else if (pointers.size === 2) {
+          const pts = [...pointers.values()];
+          const nextScale = Math.min(2.5, Math.max(0.32, pinchStartScale * (dist(pts[0], pts[1]) / pinchStartDist)));
+          setPZ({ ...getPZ(), scale: nextScale }); applyFn();
+        }
+      });
+
+      const endPointer = (ev) => pointers.delete(ev.pointerId);
+      stage.addEventListener('pointerup', endPointer);
+      stage.addEventListener('pointercancel', endPointer);
+      stage.addEventListener('wheel', (ev) => {
+        ev.preventDefault();
+        const pz = getPZ();
+        setPZ({ ...pz, scale: Math.min(2.5, Math.max(0.3, pz.scale * (ev.deltaY < 0 ? 1.1 : 0.91))) });
+        applyFn();
+      }, { passive: false });
+    }
+
+    /* VIEW 1: 10-SHARD CONSTELLATION (LANDSCAPE + PORTRAIT NATIVE) */
+    const SHARD_POS_LANDSCAPE = {
+      HUB:   { x: 260, y: 18,  w: 290, h: 86 },
+      MON:   { x: 610, y: 18,  w: 290, h: 86 },
+      EVA:   { x: 28,  y: 174, w: 204, h: 96 },
+      PDA:   { x: 252, y: 174, w: 204, h: 96 },
+      TECH:  { x: 476, y: 174, w: 204, h: 96 },
+      SEC:   { x: 700, y: 174, w: 204, h: 96 },
+      MKT:   { x: 924, y: 174, w: 208, h: 96 },
+      SHIP:  { x: 240, y: 332, w: 280, h: 96 },
+      WORLD: { x: 640, y: 332, w: 280, h: 96 },
+      AUTH:  { x: 400, y: 484, w: 360, h: 86 }
+    };
+
+    const SHARD_POS_PORTRAIT = {
+      HUB:   { x: 18,  y: 14,  w: 184, h: 84 },
+      MON:   { x: 218, y: 14,  w: 184, h: 84 },
+      EVA:   { x: 18,  y: 156, w: 184, h: 94 },
+      PDA:   { x: 218, y: 156, w: 184, h: 94 },
+      TECH:  { x: 18,  y: 266, w: 184, h: 94 },
+      SEC:   { x: 218, y: 266, w: 184, h: 94 },
+      MKT:   { x: 18,  y: 376, w: 184, h: 94 },
+      SHIP:  { x: 218, y: 376, w: 184, h: 94 },
+      WORLD: { x: 18,  y: 486, w: 384, h: 84 },
+      AUTH:  { x: 18,  y: 586, w: 384, h: 82 }
+    };
+
+    const SHARD_LINKS = [
+      { from: "HUB", to: "EVA",   kind: "origin", label: "Mount / Hydrate" },
+      { from: "HUB", to: "MON",   kind: "origin", label: "Read-Only Feed" },
+      { from: "HUB", to: "MKT",   kind: "origin", label: "PING & Markets" },
+      { from: "HUB", to: "PDA",   kind: "origin", label: "Standalone or Mount" },
+      { from: "EVA", to: "PDA",   kind: "portable", label: "Wrist-Raise" },
+      { from: "PDA", to: "TECH",  kind: "portable", label: "Blueprints" },
+      { from: "EVA", to: "SEC",   kind: "portable", label: "Cut / Code / Hack" },
+      { from: "EVA", to: "MKT",   kind: "portable", label: "Sell 80% / PING" },
+      { from: "EVA", to: "SHIP",  kind: "portable", label: "Airlock Entry" },
+      { from: "SHIP", to: "WORLD", kind: "portable", label: "Undock Holo-Map" },
+      { from: "WORLD", to: "MON", kind: "relay", label: "Jammer / Coords" },
+      { from: "MKT", to: "MON",   kind: "relay", label: "Live Tickers" },
+      { from: "EVA", to: "AUTH",  kind: "relay", label: "XYZ / O2 Delta" },
+      { from: "SEC", to: "AUTH",  kind: "relay", label: "Cut HP / Lock CAS" },
+      { from: "SHIP", to: "AUTH", kind: "relay", label: "Vessel Authority" },
+      { from: "WORLD", to: "AUTH", kind: "relay", label: "Planet & Jammer Deltas" }
+    ];
+
+    function applyShardTransform() {
+      const vp = document.getElementById('shardViewport');
+      if (vp) vp.setAttribute('transform', `translate(${shardPZ.x}, ${shardPZ.y}) scale(${shardPZ.scale})`);
+    }
+    function zoomShard(factor) { shardPZ.scale = Math.min(2.4, Math.max(0.45, shardPZ.scale * factor)); applyShardTransform(); }
+    function resetShardPanZoom() { shardPZ = { x: 0, y: 0, scale: 1 }; applyShardTransform(); }
+
+    function renderShardMap() {
+      const svg = document.getElementById('shardSvg');
+      const portrait = isPhoneLayout();
+      const POS = portrait ? SHARD_POS_PORTRAIT : SHARD_POS_LANDSCAPE;
+      svg.setAttribute('viewBox', portrait ? '0 0 420 685' : '0 0 1160 590');
+
+      const busRect = portrait
+        ? `<rect x="18" y="110" width="384" height="32" rx="7" fill="#0d182d" stroke="#2c4470" stroke-dasharray="6 4"/>
+           <text x="210" y="130" text-anchor="middle" fill="#7dd3fc" font-family="ui-monospace, monospace" font-size="10" font-weight="700">CONTINUUM MANIFEST BUS (Deflate + SHA-256)</text>`
+        : `<rect x="28" y="118" width="1104" height="36" rx="8" fill="#0d182d" stroke="#2c4470" stroke-dasharray="6 4"/>
+           <text x="580" y="140" text-anchor="middle" fill="#7dd3fc" font-family="ui-monospace, monospace" font-size="12" font-weight="700">CONTINUUM MANIFEST BUS — World Seed + Sparse Deltas + PING Grid · Deflate · SHA-256 Checksum</text>`;
+
+      let defs = `<defs>
+        <marker id="sm-arrow-origin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 1 L10 5 L0 9 z" fill="#38bdf8"/></marker>
+        <marker id="sm-arrow-port" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 1 L10 5 L0 9 z" fill="#f59e0b"/></marker>
+        <marker id="sm-arrow-relay" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 1 L10 5 L0 9 z" fill="#94a3b8"/></marker>
+      </defs>`;
+
+      let inner = busRect;
+
+      for (const link of SHARD_LINKS) {
+        const a = POS[link.from], b = POS[link.to];
+        const x1 = a.x + a.w / 2, y1 = a.y + (b.y > a.y ? a.h : b.y < a.y ? 0 : a.h / 2);
+        const x2 = b.x + b.w / 2, y2 = b.y + (b.y > a.y ? 0 : b.y < a.y ? b.h : b.h / 2);
+        const isActive = link.from === selectedShardId || link.to === selectedShardId;
+        const stroke = link.kind === 'origin' ? '#38bdf8' : link.kind === 'portable' ? '#f59e0b' : '#94a3b8';
+        const dash = link.kind === 'portable' ? '5 4' : link.kind === 'relay' ? '3 4' : 'none';
+        const marker = link.kind === 'origin' ? 'url(#sm-arrow-origin)' : link.kind === 'portable' ? 'url(#sm-arrow-port)' : 'url(#sm-arrow-relay)';
+        const my = (y1 + y2) / 2;
+
+        let d;
+        if (Math.abs(a.y - b.y) < 10) {
+          const lr = a.x < b.x;
+          const sx = lr ? a.x + a.w : a.x, ex = lr ? b.x : b.x + b.w;
+          d = `M ${sx} ${a.y + a.h/2} C ${(sx+ex)/2} ${a.y - 14}, ${(sx+ex)/2} ${b.y - 14}, ${ex} ${b.y + b.h/2}`;
+        } else {
+          d = `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
+        }
+        inner += `<path d="${d}" fill="none" stroke="${stroke}" stroke-dasharray="${dash}" stroke-width="${isActive ? 2.5 : 1.2}" opacity="${isActive ? 0.95 : 0.28}" marker-end="${marker}" />`;
+      }
+
+      for (const s of LEDGER.meta.shards) {
+        const p = POS[s.id];
+        const isSel = s.id === selectedShardId;
+        const nodeCount = LEDGER.nodes.filter(n => n.shard === s.id).length;
+        const maxTitle = portrait && p.w < 220 ? 18 : 27;
+        const shortName = s.name.length > maxTitle ? s.name.slice(0, maxTitle - 1) + '…' : s.name;
+        const shortTrans = s.diegeticTransition.slice(0, portrait && p.w < 220 ? 22 : 30);
+
+        inner += `
+          <g class="flow-node ${isSel ? 'selected' : ''}" onclick="selectShard('${s.id}', true)">
+            <rect class="node-box" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" stroke="${s.color}" />
+            <rect x="${p.x}" y="${p.y}" width="${p.w}" height="23" rx="8" fill="${s.color}" opacity="0.16" />
+            <text x="${p.x + 10}" y="${p.y + 15}" fill="${s.color}" font-family="ui-monospace, monospace" font-size="11" font-weight="700">${esc(s.id)}</text>
+            <text x="${p.x + p.w - 10}" y="${p.y + 15}" text-anchor="end" fill="#cbd5e1" font-family="ui-monospace, monospace" font-size="10">${nodeCount}n</text>
+            <text x="${p.x + 10}" y="${p.y + 42}" fill="#f1f5f9" font-size="12.5" font-weight="700">${esc(shortName)}</text>
+            <text x="${p.x + 10}" y="${p.y + 60}" fill="#94a3b8" font-size="10.5">${esc(s.repo)}</text>
+            <text x="${p.x + 10}" y="${p.y + 77}" fill="#64748b" font-family="ui-monospace, monospace" font-size="9.5">${esc(shortTrans)}</text>
+          </g>`;
+      }
+
+      svg.innerHTML = `${defs}<g id="shardViewport">${inner}</g>`;
+      applyShardTransform();
+      renderShardInspector();
+      renderShardTouchDeck();
+    }
+
+    function selectShard(id, userTapped) {
+      selectedShardId = id;
+      renderShardMap();
+      if (userTapped && activeLayout === 'phone-sheet') togglePhoneSheet(true);
+    }
+
+    function renderShardInspector() {
+      const s = shardById.get(selectedShardId);
+      if (!s) return;
+      document.getElementById('siHeaderTitle').textContent = `${s.id} · ${s.name}`;
+      const badge = document.getElementById('siBadge');
+      badge.textContent = s.id;
+      badge.style.color = s.color;
+      const shardNodes = LEDGER.nodes.filter(n => n.shard === s.id);
+      const outbound = SHARD_LINKS.filter(l => l.from === s.id);
+      const inbound = SHARD_LINKS.filter(l => l.to === s.id);
+
+      document.getElementById('siBody').innerHTML = `
+        <div class="card">
+          <div class="card-label">Telemetry Shard</div>
+          <div style="font-size:15px;font-weight:700;color:#fff">${esc(s.name)}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:${s.color};margin-top:2px">github.com/&lt;user&gt;/${esc(s.repo)}</div>
+          <p style="margin:8px 0 0;color:var(--text-1)">${esc(s.role)}</p>
+        </div>
+        <div class="card">
+          <div class="card-label">Diegetic Transition</div>
+          <div style="color:#e2e8f0;font-weight:600">${esc(s.diegeticTransition)}</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Owned Manifest Slices</div>
+          <div class="mono-box">${s.ownedSlices.length ? s.ownedSlices.map(sl => `• ${esc(sl)}`).join('<br>') : 'Read-Only Observer (Zero Write Slices)'}</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Shard Linkages (${inbound.length} In / ${outbound.length} Out)</div>
+          ${outbound.map(l => `<button class="link-chip" onclick="selectShard('${l.to}', false)"><span>→ ${esc(l.to)} (${esc(l.label)})</span><small>${esc(l.kind)}</small></button>`).join('')}
+          ${inbound.map(l => `<button class="link-chip" onclick="selectShard('${l.from}', false)"><span>← ${esc(l.from)} (${esc(l.label)})</span><small>${esc(l.kind)}</small></button>`).join('')}
+        </div>
+        <button class="btn primary" style="width:100%;justify-content:center;padding:9px" onclick="inspectShardBranches('${s.id}')">
+          Inspect ${shardNodes.length} Nodes in ${esc(s.id)} →
+        </button>
+      `;
+      broadcastInspector();
+    }
+
+    function renderShardTouchDeck() {
+      const deck = document.getElementById('shardTouchDeck');
+      deck.innerHTML = LEDGER.meta.shards.map(s => {
+        const cnt = LEDGER.nodes.filter(n => n.shard === s.id).length;
+        return `<div class="card" style="border-color:${s.color}">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span class="badge" style="color:${s.color}">${esc(s.id)} · ${esc(s.repo)}</span>
+            <span style="font-family:var(--mono);font-size:11px;color:var(--text-2)">${cnt} nodes</span>
+          </div>
+          <div style="font-size:15px;font-weight:700;margin-top:6px">${esc(s.name)}</div>
+          <p style="margin:4px 0 8px;color:var(--text-1);font-size:12px">${esc(s.role)}</p>
+          <button class="btn primary" style="width:100%;justify-content:center" onclick="inspectShardBranches('${s.id}')">Explore ${esc(s.id)} Branches →</button>
+        </div>`;
+      }).join('');
+    }
+
+    function inspectShardBranches(shardId) {
+      switchView('branches');
+      document.getElementById('shardFilter').value = shardId;
+      document.getElementById('modeFilter').value = 'ALL';
+      const first = LEDGER.nodes.find(n => n.shard === shardId);
+      if (first) selectedNodeId = first.id;
+      resetFlowPanZoom();
+      renderDecisionGraph();
+    }
+
+    /* VIEW 2: FLOWCHART */
+    function populateShardDropdown() {
+      const sel = document.getElementById('shardFilter');
+      for (const s of LEDGER.meta.shards) {
+        const opt = document.createElement('option');
+        opt.value = s.id; opt.textContent = `${s.id} — ${s.name}`;
+        sel.appendChild(opt);
+      }
+      document.getElementById('dmParent').innerHTML = LEDGER.nodes.map(n => `<option value="${esc(n.id)}">${esc(n.id)}: ${esc(n.title)}</option>`).join('');
+    }
+
+    function toggleFocusTrace() {
+      focusTrace = !focusTrace;
+      const btn = document.getElementById('traceBtn');
+      btn.textContent = `Trace: ${focusTrace ? 'ON' : 'OFF'}`;
+      btn.classList.toggle('active', focusTrace);
+      renderDecisionGraph();
+    }
+
+    function computeFilteredGraph() {
+      const shardF = document.getElementById('shardFilter').value;
+      const modeF = document.getElementById('modeFilter').value;
+      const q = document.getElementById('nodeSearch').value.trim().toLowerCase();
+
+      let activeIds = new Set(LEDGER.nodes.map(n => n.id));
+      if (shardF !== 'ALL') {
+        const direct = new Set(LEDGER.nodes.filter(n => n.shard === shardF).map(n => n.id));
+        for (const e of LEDGER.edges) { if (direct.has(e.from)) direct.add(e.to); if (direct.has(e.to)) direct.add(e.from); }
+        activeIds = direct;
+      }
+      if (modeF === 'GAPS') {
+        const gapSet = new Set();
+        for (const n of LEDGER.nodes) if (n.type === 'gap') {
+          gapSet.add(n.id);
+          for (const e of LEDGER.edges) if (e.to === n.id) gapSet.add(e.from);
+        }
+        activeIds = new Set([...activeIds].filter(id => gapSet.has(id)));
+      } else if (modeF === 'JUMPS') {
+        const nodesMap = new Map(LEDGER.nodes.map(n => [n.id, n]));
+        const jumpSet = new Set();
+        for (const e of LEDGER.edges) {
+          const fn = nodesMap.get(e.from), tn = nodesMap.get(e.to);
+          if (fn && tn && fn.shard !== tn.shard) { jumpSet.add(e.from); jumpSet.add(e.to); }
+        }
+        activeIds = new Set([...activeIds].filter(id => jumpSet.has(id)));
+      }
+      if (q) {
+        activeIds = new Set([...activeIds].filter(id => {
+          const n = LEDGER.nodes.find(x => x.id === id);
+          return n && (`${n.id} ${n.title} ${n.summary} ${n.shard}`.toLowerCase().includes(q));
+        }));
+      }
+      return { nodes: LEDGER.nodes.filter(n => activeIds.has(n.id)), edges: LEDGER.edges.filter(e => activeIds.has(e.from) && activeIds.has(e.to)) };
+    }
+
+    function layoutLayeredDag(nodes, edges) {
+      const nodeMap = new Map(nodes.map(n => [n.id, n]));
+      const outMap = new Map(nodes.map(n => [n.id, []]));
+      const inDeg = new Map(nodes.map(n => [n.id, 0]));
+      for (const e of edges) { outMap.get(e.from).push(e); inDeg.set(e.to, (inDeg.get(e.to) || 0) + 1); }
+
+      const rank = new Map();
+      const roots = nodes.filter(n => n.type === 'entry' || inDeg.get(n.id) === 0).map(n => n.id);
+      if (roots.length === 0 && nodes.length > 0) roots.push(nodes[0].id);
+
+      const queue = [];
+      for (const r of roots) { rank.set(r, 0); queue.push(r); }
+      const visited = new Set(roots);
+      while (queue.length > 0) {
+        const curr = queue.shift(), rCurr = rank.get(curr);
+        for (const e of outMap.get(curr) || []) if (!visited.has(e.to)) { visited.add(e.to); rank.set(e.to, rCurr + 1); queue.push(e.to); }
+      }
+      for (const n of nodes) if (!rank.has(n.id)) rank.set(n.id, 0);
+
+      const layers = new Map();
+      for (const n of nodes) {
+        const r = rank.get(n.id);
+        if (!layers.has(r)) layers.set(r, []);
+        layers.get(r).push(n);
+      }
+
+      const NODE_W = 248, NODE_H = 88, COL_GAP = 105, ROW_GAP = 32;
+      const pos = new Map();
+      for (const r of [...layers.keys()].sort((a, b) => a - b)) {
+        const colNodes = layers.get(r).sort((a, b) => a.shard.localeCompare(b.shard) || a.id.localeCompare(b.id));
+        const totalH = colNodes.length * NODE_H + Math.max(0, colNodes.length - 1) * ROW_GAP;
+        const startY = Math.max(20, (520 - totalH) / 2);
+        colNodes.forEach((n, idx) => pos.set(n.id, { x: 24 + r * (NODE_W + COL_GAP), y: startY + idx * (NODE_H + ROW_GAP), w: NODE_W, h: NODE_H, rank: r }));
+      }
+      return { pos, nodeMap };
+    }
+
+    function renderDecisionGraph() {
+      const { nodes, edges } = computeFilteredGraph();
+      const { pos, nodeMap } = layoutLayeredDag(nodes, edges);
+      const vp = document.getElementById('flowViewport');
+      if (!nodeMap.has(selectedNodeId) && nodes.length > 0) selectedNodeId = nodes[0].id;
+
+      const connectedNodes = new Set([selectedNodeId]), connectedEdges = new Set();
+      if (focusTrace && selectedNodeId) {
+        for (const e of edges) if (e.from === selectedNodeId || e.to === selectedNodeId) { connectedEdges.add(e.id); connectedNodes.add(e.from); connectedNodes.add(e.to); }
+      }
+
+      let edgeSvg = '', labelSvg = '', nodeSvg = '';
+      edges.forEach((e, idx) => {
+        const a = pos.get(e.from), b = pos.get(e.to);
+        if (!a || !b) return;
+        const fn = nodeMap.get(e.from), tn = nodeMap.get(e.to);
+        const isJump = fn.shard !== tn.shard;
+        const isGap = tn.type === 'gap' || e.branchType === 'unplanned';
+        const isHi = focusTrace && connectedEdges.has(e.id);
+        const isDim = focusTrace && !connectedEdges.has(e.id);
+        const stroke = isHi ? '#f8fafc' : isGap ? '#f59e0b' : isJump ? '#38bdf8' : '#64748b';
+        const marker = isHi ? 'url(#arrow-hi)' : isGap ? 'url(#arrow-gap)' : isJump ? 'url(#arrow-jump)' : 'url(#arrow-std)';
+        const dash = isGap ? '6 4' : isJump ? '7 3' : e.branchType === 'fallback' ? '3 3' : 'none';
+
+        let d, lx, ly;
+        if (b.rank > a.rank) {
+          const x1 = a.x + a.w, y1 = a.y + a.h / 2, x2 = b.x, y2 = b.y + b.h / 2, dx = Math.max(46, (x2 - x1) * 0.5);
+          d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+          lx = (x1 + x2) / 2; ly = (y1 + y2) / 2;
+        } else {
+          const archTop = Math.min(a.y, b.y) - 42 - ((idx % 3) * 14);
+          d = `M ${a.x + a.w * 0.5} ${a.y} C ${a.x + a.w * 0.5} ${archTop}, ${b.x + b.w * 0.5} ${archTop}, ${b.x + b.w * 0.5} ${b.y}`;
+          lx = (a.x + b.x + a.w) / 2; ly = archTop + 10;
+        }
+        edgeSvg += `<path class="flow-edge ${isHi ? 'highlighted' : ''} ${isDim ? 'dimmed' : ''}" d="${d}" stroke="${stroke}" stroke-dasharray="${dash}" marker-end="${marker}" />`;
+        if (!isDim || !focusTrace) {
+          const txt = esc(e.label.length > 22 ? e.label.slice(0, 21) + '…' : e.label);
+          const tw = txt.length * 5.8 + 10;
+          labelSvg += `<g opacity="${isHi ? 1 : 0.85}" style="pointer-events:none"><rect class="edge-label-bg" x="${lx - tw / 2}" y="${ly - 9}" width="${tw}" height="17" /><text x="${lx}" y="${ly + 3}" text-anchor="middle" fill="${isGap ? '#fbbf24' : isJump ? '#7dd3fc' : '#cbd5e1'}" font-family="ui-monospace, monospace" font-size="9.5">${txt}</text></g>`;
+        }
+      });
+
+      for (const n of nodes) {
+        const p = pos.get(n.id), s = shardById.get(n.shard) || { color: '#94a3b8' };
+        const isGap = n.type === 'gap', isSel = n.id === selectedNodeId, isDim = focusTrace && !connectedNodes.has(n.id);
+        const borderCol = isGap ? '#f59e0b' : s.color;
+        const typeTag = isGap ? '⚠ GAP' : n.type === 'shard_jump' ? '↗ JUMP' : n.type.toUpperCase();
+        nodeSvg += `<g class="flow-node ${isSel ? 'selected' : ''} ${isDim ? 'dimmed' : ''}" onclick="selectFlowNode('${n.id}', true)">
+          <rect class="node-box" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" stroke="${borderCol}" ${isGap ? 'stroke-dasharray="5 3"' : ''} />
+          <rect x="${p.x}" y="${p.y}" width="${p.w}" height="22" rx="8" fill="${borderCol}" opacity="0.16" />
+          <text x="${p.x + 10}" y="${p.y + 15}" fill="${borderCol}" font-family="ui-monospace, monospace" font-size="10.5" font-weight="700">${esc(n.id)} · ${esc(n.shard)}</text>
+          <text x="${p.x + p.w - 10}" y="${p.y + 15}" text-anchor="end" fill="${isGap ? '#fbbf24' : '#94a3b8'}" font-family="ui-monospace, monospace" font-size="9.5" font-weight="700">${esc(typeTag)}</text>
+          <text x="${p.x + 10}" y="${p.y + 42}" fill="#f8fafc" font-size="12" font-weight="700">${esc(n.title.length > 31 ? n.title.slice(0, 30) + '…' : n.title)}</text>
+          <text x="${p.x + 10}" y="${p.y + 60}" fill="#94a3b8" font-size="10.5">${esc(n.summary.slice(0, 38))}${n.summary.length > 38 ? '…' : ''}</text>
+          <text x="${p.x + 10}" y="${p.y + 77}" fill="#64748b" font-family="ui-monospace, monospace" font-size="9.5">${esc(n.commentTag || '')}</text>
+        </g>`;
+      }
+
+      vp.innerHTML = edgeSvg + nodeSvg + labelSvg;
+      applyFlowTransform();
+      renderNodeInspector();
+      renderFlowTouchDeck(nodes);
+    }
+
+    function selectFlowNode(id, userTapped) {
+      selectedNodeId = id;
+      renderDecisionGraph();
+      if (userTapped && activeLayout === 'phone-sheet') togglePhoneSheet(true);
+    }
+
+    function renderNodeInspector() {
+      const n = LEDGER.nodes.find(x => x.id === selectedNodeId);
+      const badge = document.getElementById('niBadge'), body = document.getElementById('niBody');
+      if (!n) { body.innerHTML = '<div class="card">No matching nodes.</div>'; return; }
+      document.getElementById('niHeaderTitle').textContent = `${n.id} · ${n.title.slice(0, 22)}`;
+      const s = shardById.get(n.shard) || { color: '#94a3b8', name: n.shard };
+      badge.textContent = n.id; badge.style.color = n.type === 'gap' ? '#f59e0b' : s.color;
+
+      const incoming = LEDGER.edges.filter(e => e.to === n.id), outgoing = LEDGER.edges.filter(e => e.from === n.id);
+      const wired = new Set(outgoing.map(e => e.outcomeKey));
+      const missing = (n.expectedOutcomes || []).filter(o => !wired.has(o));
+
+      body.innerHTML = `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span class="card-label" style="margin:0">${esc(s.name)} · ${esc(n.phase)}</span>
+            <span class="badge" style="color:${n.type === 'gap' ? '#f59e0b' : s.color}">${esc(n.type)}</span>
+          </div>
+          <div style="font-size:15px;font-weight:700;color:#fff;margin-top:6px">${esc(n.title)}</div>
+          <p style="margin:6px 0 0;color:var(--text-1)">${esc(n.summary)}</p>
+        </div>
+        ${n.type === 'gap' ? `<div class="card" style="border-color:rgba(245,158,11,0.55);background:rgba(245,158,11,0.08)"><div class="card-label" style="color:#fbbf24">⚠ Parking / Open Gap</div><div style="color:#fde68a;font-size:12px">Flagged intentionally. Tap <strong>+ Draft</strong> above to expand.</div></div>` : ''}
+        ${missing.length ? `<div class="card" style="border-color:rgba(239,68,68,0.55)"><div class="card-label" style="color:#f87171">Unwired Outcomes</div><div class="mono-box">${missing.map(esc).join(', ')}</div></div>` : ''}
+        <div class="card">
+          <div class="card-label">Continuum Manifest &amp; Tag</div>
+          <div class="mono-box"><strong>Tag:</strong> ${esc(n.commentTag || '')}<br><strong>Mutates:</strong> ${(n.stateMutations && n.stateMutations.length) ? n.stateMutations.map(esc).join(', ') : 'Read-only'}</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Outgoing Branches (${outgoing.length})</div>
+          ${outgoing.length ? outgoing.map(e => {
+            const target = LEDGER.nodes.find(x => x.id === e.to);
+            const jump = target && target.shard !== n.shard;
+            return `<button class="link-chip" onclick="selectFlowNode('${e.to}', false)"><span>${jump ? '↗ ' : '→ '}${esc(e.label)}</span><small>${esc(e.to)}</small></button>`;
+          }).join('') : '<div style="color:var(--text-2);font-size:11px">Terminal or Gap stub.</div>'}
+        </div>
+        <div class="card">
+          <div class="card-label">Incoming Triggers (${incoming.length})</div>
+          ${incoming.length ? incoming.map(e => `<button class="link-chip" onclick="selectFlowNode('${e.from}', false)"><span>← ${esc(e.label)}</span><small>${esc(e.from)}</small></button>`).join('') : '<div style="color:var(--text-2);font-size:11px">Root Entry Node.</div>'}
+        </div>`;
+      broadcastInspector();
+    }
+
+    function renderFlowTouchDeck(filteredNodes) {
+      const deck = document.getElementById('flowTouchDeck');
+      const n = LEDGER.nodes.find(x => x.id === selectedNodeId) || filteredNodes[0];
+      if (!n) { deck.innerHTML = '<div class="card">No matching nodes.</div>'; return; }
+      const s = shardById.get(n.shard) || { color: '#94a3b8', name: n.shard };
+      const incoming = LEDGER.edges.filter(e => e.to === n.id), outgoing = LEDGER.edges.filter(e => e.from === n.id);
+      deck.innerHTML = `
+        <div class="card" style="border-color:${n.type === 'gap' ? '#f59e0b' : s.color}">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span class="badge" style="color:${n.type === 'gap' ? '#f59e0b' : s.color}">${esc(n.id)} · ${esc(n.shard)}</span>
+            <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-2)">${esc(n.phase)}</span>
+          </div>
+          <div style="font-size:16px;font-weight:700;margin-top:8px">${esc(n.title)}</div>
+          <p style="margin:6px 0 8px;color:var(--text-1)">${esc(n.summary)}</p>
+          <div class="mono-box">${(n.stateMutations && n.stateMutations.length) ? 'Mutates: ' + n.stateMutations.map(esc).join(', ') : 'Read-only navigation'}</div>
+        </div>
+        <div class="card"><div class="card-label">Tap Next Decision Branch (${outgoing.length})</div>${outgoing.length ? outgoing.map(e => `<button class="link-chip" onclick="selectFlowNode('${e.to}', false)"><span>→ ${esc(e.label)}</span><small>${esc(e.to)}</small></button>`).join('') : '<div style="color:#fbbf24">Terminal / Gap stub.</div>'}</div>
+        <div class="card"><div class="card-label">Step Back (${incoming.length})</div>${incoming.length ? incoming.map(e => `<button class="link-chip" onclick="selectFlowNode('${e.from}', false)"><span>← ${esc(e.label)}</span><small>${esc(e.from)}</small></button>`).join('') : '<div style="color:var(--text-2)">Root Entry Point</div>'}</div>
+        <div class="card"><div class="card-label">All Filtered Nodes (${filteredNodes.length})</div>${filteredNodes.map(x => `<button class="link-chip" style="${x.id===n.id?'border-color:var(--accent)':''}" onclick="selectFlowNode('${x.id}', false)"><span>${esc(x.id)}: ${esc(x.title)}</span><small>${esc(x.shard)}</small></button>`).join('')}</div>`;
+    }
+
+    function renderStudioRails() {
+      const sRail = document.getElementById('studioShardRail'), fRail = document.getElementById('studioFlowRail');
+      sRail.innerHTML = LEDGER.meta.shards.map(s => `<button class="link-chip" onclick="selectShard('${s.id}', false)"><span>${esc(s.id)} · ${esc(s.name)}</span><small>${LEDGER.nodes.filter(n=>n.shard===s.id).length}</small></button>`).join('');
+      const gaps = LEDGER.nodes.filter(n => n.type === 'gap');
+      fRail.innerHTML = `<div class="card-label">Open Gaps (${gaps.length})</div>` +
+        gaps.map(g => `<button class="link-chip" style="border-color:rgba(245,158,11,0.45)" onclick="inspectGapFromAudit('${g.id}')"><span>⚠ ${esc(g.id)}</span><small>${esc(g.shard)}</small></button>`).join('') +
+        `<div class="card-label" style="margin-top:10px">Key Milestones</div>` +
+        ['HUB-001','AUTH-001','MON-001','EVA-001','PDA-001','MED-001','PING-001','EVA-008','MKT-001','SEC-001','SHIP-001','WORLD-001','HUB-005'].map(id => {
+          const n = LEDGER.nodes.find(x => x.id === id);
+          return n ? `<button class="link-chip" onclick="selectFlowNode('${n.id}', false)"><span>${esc(n.id)}</span><small>${esc(n.shard)}</small></button>` : '';
+        }).join('');
+    }
+
+    function applyFlowTransform() { const vp = document.getElementById('flowViewport'); if (vp) vp.setAttribute('transform', `translate(${flowPZ.x}, ${flowPZ.y}) scale(${flowPZ.scale})`); }
+    function zoomFlow(factor) { flowPZ.scale = Math.min(2.4, Math.max(0.28, flowPZ.scale * factor)); applyFlowTransform(); }
+    function resetFlowPanZoom() { flowPZ = { x: 16, y: 16, scale: isPhoneLayout() ? 0.68 : 0.85 }; applyFlowTransform(); }
+
+    function openDraftModal() { document.getElementById('dmParent').value = selectedNodeId || 'EVA-001'; document.getElementById('draftModal').classList.add('open'); }
+    function closeDraftModal() { document.getElementById('draftModal').classList.remove('open'); }
+    function commitDraftNode() {
+      const parentId = document.getElementById('dmParent').value;
+      const edgeLabel = document.getElementById('dmEdgeLabel').value.trim() || 'Draft Decision';
+      const shard = document.getElementById('dmShard').value;
+      const title = document.getElementById('dmTitle').value.trim() || 'New Drafted Node';
+      const type = document.getElementById('dmType').value;
+      const summary = document.getElementById('dmSummary').value.trim() || 'Drafted interactively inside Endless Vigil Flowchart.';
+      const num = LEDGER.nodes.length + 1;
+      const newId = `${type === 'gap' ? 'GAP' : shard}-D${String(num).padStart(2, '0')}`;
+      LEDGER.nodes.push({ id: newId, shard, phase: 'DRAFTED', title, summary, type, expectedOutcomes: [], stateMutations: [], commentTag: `@branch-id ${newId}` });
+      LEDGER.edges.push({ id: `E-${LEDGER.edges.length + 1}`, from: parentId, to: newId, label: edgeLabel, branchType: type === 'gap' ? 'unplanned' : 'multi', outcomeKey: edgeLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_') });
+      document.getElementById('dmParent').innerHTML = LEDGER.nodes.map(n => `<option value="${esc(n.id)}">${esc(n.id)}: ${esc(n.title)}</option>`).join('');
+      selectedNodeId = newId; updateHeaderCounts(); closeDraftModal(); renderDecisionGraph();
+    }
+
+    function exportLedgerJson() {
+      const blob = new Blob([JSON.stringify(LEDGER, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'graph-ledger.json'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function updateHeaderCounts() {
+      const gaps = LEDGER.nodes.filter(n => n.type === 'gap').length;
+      document.getElementById('statSummary').textContent = `${LEDGER.meta.shards.length}S · ${LEDGER.nodes.length}N · ${LEDGER.edges.length}E`;
+      document.getElementById('gapJumpPill').textContent = `⚠ ${gaps} Gaps`;
+    }
+
+    function simulateDiegeticJump(fromShard, toShard) {
+      const overlay = document.getElementById('diegeticOverlay'), sTo = shardById.get(toShard);
+      document.getElementById('dgTitle').textContent = sTo.diegeticTransition.toUpperCase();
+      document.getElementById('dgBar').style.width = '0%'; document.getElementById('dgClock').textContent = '0 ms';
+      document.getElementById('dgBody').innerHTML = `<div>[01] Freezing ${fromShard} tick &amp; packing sparse delta...</div>`;
+      overlay.classList.add('show');
+      setTimeout(() => { document.getElementById('dgBar').style.width = '48%'; document.getElementById('dgClock').textContent = '9 ms'; document.getElementById('dgBody').innerHTML += `<div>[02] Deflate + SHA-256 verified: <code>7e4b...a90f</code></div>`; }, 170);
+      setTimeout(() => { document.getElementById('dgBar').style.width = '100%'; document.getElementById('dgClock').textContent = '17 ms'; document.getElementById('dgBody').innerHTML += `<div style="color:#4ade80">[03] Mounted ${sTo.repo} — zero spinner shown.</div>`; }, 420);
+      setTimeout(() => overlay.classList.remove('show'), 1500);
+    }
+
+    /* VIEW 3: MANIFEST LAB & AUDIT */
+    const SAMPLE_MANIFEST = {
+      manifestId: "ev_manifest_0x44A1", worldSeed: "0x94F1A0028C77E11D", activeZoneId: "asteroid_00", simClockSeconds: 184.5,
+      credits: 4820, telemetrySignatureScore: 215,
+      operatorAccount: { accountTier: "chartered", authState: "ACTIVE", sessionId: "sess_77a", anomalyScore: 0 },
+      disturbedRecords: [{ entityId: "core_module_99", settlementState: "PROVISIONAL_TRANSIT", disturbedByOperatorId: "op_01", disturbedSessionId: "sess_77a", anchorOrigin: { zoneId: "asteroid_00", xyz: [18.5, -4, 9.2] } }],
+      operator: { operatorId: "op_01", pose: { xyz: [12.4, -1.8, 4.0], quat: [0, 0.25, 0, 0.96] }, suit: { o2Seconds: 47.5, maxO2Seconds: 120, leakRatePerSec: 0.35, integrityPct: 68, patches: [{ seamId: "torso_01", material: "scrap_weld", sealQualityPct: 70 }] }, carriedItemIds: ["item_arc_lance_01", "item_pda_battered"] },
+      pingInsurance: { homeHubId: "hub_alpha", rentPerHourCredits: 18, insuredEntityIds: ["ship_derelict_01", "item_arc_lance_01"], reconstitutionQueueIds: [] },
+      pda: { tutorialSeen: true, casingWearPct: 64, batteryPct: 81, unreadAlerts: ["LOW_SEAL_WARNING"] },
+      tech: { unlockedBlueprints: ["polymer_seal", "thermal_arc_lance"], activeResearchId: "pulse_decoder", researchProgressPct: 40 },
+      ships: [{ shipId: "ship_derelict_01", name: "Vigil Skiff-IV", zoneId: "asteroid_00", hullPct: 54, powerAvailableKw: 18, pingInsured: true, cargoContainerIds: [] }],
+      containers: [{ containerId: "crate_774", zoneId: "asteroid_00", lockKind: "pin4", codeSha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", structureHp: 55, maxStructureHp: 100, cutProgressPct: 45, hackProgressPct: 0, itemIds: ["item_med_02"] }],
+      sectorDeltas: { "planet_04": { status: "shattered", massRemainingPct: 12, debrisSeed: "0xB309", jammerPrivacyActive: false }, "sector_7g": { status: "intact", jammerPrivacyActive: true } }
+    };
+
+    let currentEnvelope = null, lastGoodEnvelope = null;
+    function toBase64Url(u8) { let b = ''; for (let i = 0; i < u8.length; i++) b += String.fromCharCode(u8[i]); return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,''); }
+    function fromBase64Url(s) { const b = s.replace(/-/g,'+').replace(/_/g,'/') + '==='.slice((s.length+3)%4); const bin = atob(b); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a; }
+
+    async function sha256Hex(u8) {
+      if (crypto && crypto.subtle) return [...new Uint8Array(await crypto.subtle.digest('SHA-256', u8))].map(b => b.toString(16).padStart(2,'0')).join('');
+      let h = 2166136261; for (const b of u8) { h ^= b; h = Math.imul(h, 16777619); } return (h >>> 0).toString(16).padStart(8,'0').repeat(8);
+    }
+
+    async function compressBytes(u8) {
+      if (typeof CompressionStream !== 'undefined') {
+        const cs = new CompressionStream('deflate-raw'), w = cs.writable.getWriter(); w.write(u8); w.close();
+        return { bytes: new Uint8Array(await new Response(cs.readable).arrayBuffer()), encoding: 'deflate-raw+base64url' };
+      }
+      return { bytes: u8, encoding: 'json-uncompressed-dev' };
+    }
+
+    async function packAndHashSample() {
+      const status = document.getElementById('verifyStatusBox');
+      try {
+        const parsed = JSON.parse(document.getElementById('sampleLedgerInput').value);
+        const rawBytes = new TextEncoder().encode(JSON.stringify(parsed));
+        const { bytes: compBytes, encoding } = await compressBytes(rawBytes);
+        const hash = await sha256Hex(compBytes);
+        currentEnvelope = { magic: 'EVIGIL', schemaVersion: '1.2.0', rev: (currentEnvelope ? currentEnvelope.rev : 41) + 1, timestampUtc: new Date().toISOString(), originShard: 'EVA', parentSha256: currentEnvelope ? currentEnvelope.payloadSha256 : null, payloadSha256: hash, encoding, payload: toBase64Url(compBytes) };
+        lastGoodEnvelope = JSON.parse(JSON.stringify(currentEnvelope));
+        const savingsPct = Math.round((1 - compBytes.length / rawBytes.length) * 100);
+        document.getElementById('mRawBytes').textContent = `${rawBytes.length} B`;
+        document.getElementById('mCompBytes').textContent = `${compBytes.length} B`;
+        document.getElementById('mSavings').textContent = `${savingsPct}%`;
+        document.getElementById('mRev').textContent = `rev ${currentEnvelope.rev}`;
+        status.style.color = '#4ade80'; status.textContent = `OK: Packed ${rawBytes.length}B -> ${compBytes.length}B (${encoding}) | SHA-256: ${hash}`;
+        document.getElementById('envelopeOutputBox').textContent = JSON.stringify(currentEnvelope, null, 2);
+      } catch (err) { status.style.color = '#f87171'; status.textContent = `JSON Error: ${err.message}`; }
+    }
+
+    function simulateCorruptEnvelope() {
+      const status = document.getElementById('verifyStatusBox');
+      if (!currentEnvelope) { status.style.color = '#fbbf24'; status.textContent = 'Run Step 1 first.'; return; }
+      const p = currentEnvelope.payload; currentEnvelope.payload = p.slice(0,2) + (p[2]==='A'?'B':'A') + p.slice(3);
+      status.style.color = '#fbbf24'; status.textContent = 'INJECTED CORRUPTION: Flipped 1 payload byte without updating SHA-256.';
+      document.getElementById('envelopeOutputBox').textContent = JSON.stringify(currentEnvelope, null, 2);
+    }
+
+    async function verifyEnvelopeSample() {
+      const status = document.getElementById('verifyStatusBox');
+      if (!currentEnvelope) return;
+      const actualHash = await sha256Hex(fromBase64Url(currentEnvelope.payload));
+      if (actualHash !== currentEnvelope.payloadSha256) {
+        status.style.color = '#f87171';
+        status.innerHTML = `CHECKSUM MISMATCH!<br>Expected: ${currentEnvelope.payloadSha256}<br>Actual: ${actualHash}<br><span style="color:#4ade80">AUTO-ROLLBACK -> Restored rev ${lastGoodEnvelope.rev}.</span>`;
+        currentEnvelope = JSON.parse(JSON.stringify(lastGoodEnvelope));
+        document.getElementById('envelopeOutputBox').textContent = JSON.stringify(currentEnvelope, null, 2);
+      } else {
+        status.style.color = '#4ade80'; status.textContent = `VERIFIED INTACT: SHA-256 matches at rev ${currentEnvelope.rev}.`;
+      }
+    }
+
+    function simulateDesyncFork() {
+      const status = document.getElementById('verifyStatusBox');
+      if (!currentEnvelope) { status.style.color = '#fbbf24'; status.textContent = 'Run Step 1 first.'; return; }
+      status.style.color = '#fbbf24';
+      status.innerHTML = `DESYNC FORK DETECTED: Conflicting parentSha256 at rev=${currentEnvelope.rev}.<br>Policy: Hold fork in localBackupRing[3] -> Run Entity-Level 3-Way Merge.`;
+    }
+
+    function runAuditView() {
+      const nodeMap = new Map(LEDGER.nodes.map(n => [n.id, n])), outMap = new Map(LEDGER.nodes.map(n => [n.id, []])), jumps = []; let broken = 0;
+      for (const e of LEDGER.edges) {
+        const f = nodeMap.get(e.from), t = nodeMap.get(e.to);
+        if (!f || !t) { broken++; continue; }
+        outMap.get(e.from).push(e);
+        if (f.shard !== t.shard) jumps.push(`${e.id}: ${f.id}(${f.shard}) ──[${e.label}]──▶ ${t.id}(${t.shard})`);
+      }
+      const gaps = LEDGER.nodes.filter(n => n.type === 'gap');
+      const deadEnds = LEDGER.nodes.filter(n => n.type !== 'terminal' && n.type !== 'gap' && outMap.get(n.id).length === 0);
+      document.getElementById('auditMetrics').innerHTML = `
+        <div class="metric"><div class="k">Nodes</div><div class="v">${LEDGER.nodes.length}</div></div>
+        <div class="metric"><div class="k">Edges</div><div class="v">${LEDGER.edges.length}</div></div>
+        <div class="metric"><div class="k">Shard Jumps</div><div class="v" style="color:var(--accent)">${jumps.length}</div></div>
+        <div class="metric"><div class="k">Open Gaps</div><div class="v" style="color:var(--warn)">${gaps.length}</div></div>
+        <div class="metric"><div class="k">Broken / Dead</div><div class="v" style="color:${broken+deadEnds.length?'var(--crit)':'var(--ok)'}">${broken + deadEnds.length}</div></div>`;
+      document.getElementById('auditGapsList').innerHTML = gaps.map(g => `<button class="link-chip" onclick="inspectGapFromAudit('${g.id}')"><span>⚠ <strong>${esc(g.id)}</strong> (${esc(g.shard)}) — ${esc(g.title)}</span><small>Inspect →</small></button>`).join('');
+      document.getElementById('auditJumpsBox').innerHTML = jumps.map(esc).join('<br>');
+    }
+
+    function inspectGapFromAudit(id) {
+      switchView('branches'); document.getElementById('shardFilter').value = 'ALL'; document.getElementById('modeFilter').value = 'GAPS';
+      selectedNodeId = id; resetFlowPanZoom(); renderDecisionGraph();
+    }
+
+    document.getElementById('sampleLedgerInput').value = JSON.stringify(SAMPLE_MANIFEST, null, 2);
+    populateShardDropdown();
+    attachPanZoom('shardStage', () => shardPZ, (v) => { shardPZ = v; }, applyShardTransform);
+    attachPanZoom('flowStage',  () => flowPZ,  (v) => { flowPZ = v; },  applyFlowTransform);
+    updateHeaderCounts();
+    initAdaptiveLayout();
+  </script>
+</body>
+</html>

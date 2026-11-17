@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Endless Vigil // Overwatch Continuum Monitor</title>
+  <!--
+    @shard MON-OVERWATCH
+    @branch-id MON-001 / MON-002
+    @state-contract Strictly READ-ONLY Overwatch client. Zero state-write endpoints; respects paid sector jammers.
+    @invariant Zero external CDN dependencies; zero script-close literals inside JS; zero horizontal overflow >=320px.
+    @credits Creator & Ironscribe of the Endless Vigil
+  -->
+  <style>
+    :root {
+      --bg-0: #05080f;
+      --bg-1: #0a101d;
+      --bg-2: #10192b;
+      --bg-3: #17233b;
+      --border: #233252;
+      --border-strong: #384e7d;
+      --text-0: #eef4ff;
+      --text-1: #a7b6d4;
+      --text-2: #7588ae;
+      --accent: #38bdf8;
+      --ok: #10b981;
+      --warn: #f59e0b;
+      --crit: #ef4444;
+      --purple: #a855f7;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; height: 100dvh; width: 100%; max-width: 100vw; overflow-x: hidden;
+      background: var(--bg-0); color: var(--text-0); font-family: var(--sans); font-size: 13px; line-height: 1.45;
+    }
+    body {
+      display: flex; flex-direction: column; overflow: hidden;
+      background-image: radial-gradient(circle at 18% 8%, rgba(56, 189, 248, 0.08), transparent 38%),
+                        radial-gradient(circle at 82% 88%, rgba(16, 185, 129, 0.07), transparent 42%);
+    }
+
+    .topbar {
+      display: flex; flex-direction: column; gap: 7px; padding: 8px 12px;
+      background: var(--bg-1); border-bottom: 1px solid var(--border); flex-shrink: 0; width: 100%; max-width: 100%;
+    }
+    .top-row-1, .top-row-2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; min-width: 0; }
+    .brand { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1 1 200px; max-width: 100%; }
+    .brand-mark {
+      width: 30px; height: 30px; flex-shrink: 0; border-radius: 7px;
+      background: linear-gradient(135deg, #0b253d, #0f2d28); border: 1px solid var(--accent);
+      display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 700; color: var(--accent); font-size: 11.5px;
+    }
+    .brand-text { min-width: 0; flex: 1; }
+    .brand-title { font-weight: 700; font-size: 13px; letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-sub { font-size: 10.5px; color: var(--text-1); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .mode-switcher {
+      display: inline-flex; align-items: center; gap: 4px; background: var(--bg-0);
+      border: 1px solid var(--border-strong); border-radius: 8px; padding: 3px; flex-shrink: 0;
+    }
+    .mode-btn {
+      border: none; background: transparent; color: var(--text-1); border-radius: 6px; padding: 4px 8px;
+      font-size: 11px; font-weight: 700; font-family: var(--mono); cursor: pointer; white-space: nowrap;
+    }
+    .mode-btn.active { background: rgba(56, 189, 248, 0.18); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.45); }
+
+    .tabs {
+      display: flex; flex-wrap: wrap; gap: 4px; background: var(--bg-0); padding: 3px; border-radius: 8px;
+      border: 1px solid var(--border); flex: 1 1 240px; min-width: 0; max-width: 100%;
+    }
+    .tab-btn {
+      flex: 1 1 auto; min-width: 0; border: none; background: transparent; color: var(--text-1); padding: 6px 6px;
+      border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; text-align: center; white-space: normal; line-height: 1.2;
+    }
+    .tab-btn.active { background: var(--bg-3); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.35); }
+
+    .stats-strip { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10.5px; flex-wrap: wrap; max-width: 100%; }
+    .pill {
+      padding: 3px 8px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--border);
+      color: var(--text-1); white-space: nowrap; text-decoration: none; cursor: pointer; max-width: 100%;
+    }
+    .pill.ro { border-color: rgba(16, 185, 129, 0.5); color: #34d399; background: rgba(16, 185, 129, 0.1); }
+    .pill.credit { border-color: rgba(168, 85, 247, 0.45); color: #d8b4fe; }
+
+    .workspace { flex: 1; min-height: 0; width: 100%; max-width: 100vw; display: flex; overflow: hidden; }
+    .view-pane { display: none; flex: 1; min-height: 0; min-width: 0; width: 100%; overflow-y: auto; overflow-x: hidden; padding: 12px; }
+    .view-pane.active { display: block; }
+
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+      gap: 12px;
+      align-content: start;
+      width: 100%;
+    }
+
+    .panel {
+      background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+      display: flex; flex-direction: column; gap: 10px; min-width: 0; max-width: 100%;
+    }
+    .panel h2 {
+      margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent);
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0;
+    }
+
+    .btn {
+      background: var(--bg-2); color: var(--text-0); border: 1px solid var(--border); border-radius: 6px;
+      padding: 5px 9px; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex;
+      align-items: center; gap: 5px; white-space: normal; text-decoration: none; max-width: 100%;
+    }
+    .btn:hover { border-color: var(--border-strong); background: var(--bg-3); }
+    .btn.primary { border-color: rgba(56, 189, 248, 0.55); color: var(--accent); }
+    .btn.warn { border-color: rgba(245, 158, 11, 0.55); color: #fbbf24; }
+    .btn.ok { border-color: rgba(16, 185, 129, 0.55); color: #34d399; }
+
+    input[type="number"], input[type="text"] {
+      background: var(--bg-0); color: var(--text-0); border: 1px solid var(--border); border-radius: 6px;
+      padding: 5px 8px; font-family: var(--mono); font-size: 12px; width: 72px; max-width: 100%;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-family: var(--mono);
+      font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid currentColor; white-space: nowrap; max-width: 100%;
+    }
+
+    .mono-box {
+      font-family: var(--mono); font-size: 11px; background: var(--bg-0); border: 1px solid var(--border);
+      border-radius: 6px; padding: 9px; word-break: break-word; overflow-wrap: anywhere; color: #cbd5e1;
+      max-height: 280px; overflow-y: auto; white-space: pre-wrap; max-width: 100%; min-width: 0;
+    }
+
+    /* Coordinate Sector Viewport */
+    .cam-viewport {
+      position: relative; height: min(290px, 48vh); width: 100%; max-width: 100%; background: #03060c; border: 1px solid var(--border-strong);
+      border-radius: 8px; overflow: hidden;
+    }
+    .cam-viewport svg { width: 100%; height: 100%; display: block; }
+
+    .jammer-static {
+      position: absolute; inset: 0; display: none; flex-direction: column; justify-content: center;
+      align-items: center; text-align: center; padding: 14px;
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 1px, transparent 1px, transparent 3px),
+        repeating-linear-gradient(90deg, rgba(239,68,68,0.08) 0px, rgba(56,189,248,0.08) 2px, rgba(5,8,15,0.92) 4px);
+      animation: staticJitter 0.14s infinite;
+    }
+    .jammer-static.active { display: flex; }
+    @keyframes staticJitter {
+      0% { background-position: 0 0, 0 0; }
+      50% { background-position: 0 2px, 3px 0; }
+      100% { background-position: 0 -1px, -2px 0; }
+    }
+
+    .jammer-alert {
+      background: rgba(15, 7, 10, 0.92); border: 1.5px solid var(--crit); border-radius: 8px;
+      padding: 12px 14px; width: min(340px, 100%); max-width: 100%; box-shadow: 0 0 28px rgba(239, 68, 68, 0.3);
+    }
+
+    /* Market Table */
+    .mkt-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0;
+      padding: 7px 9px; background: var(--bg-0); border: 1px solid var(--border); border-radius: 6px;
+      font-family: var(--mono); font-size: 11.5px; word-break: break-word; overflow-wrap: anywhere;
+    }
+    .delta-up { color: #34d399; }
+    .delta-dn { color: #f87171; }
+
+    .doc-btn {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; min-width: 0;
+      text-align: left; padding: 8px 10px; background: var(--bg-0); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-0); cursor: pointer; font-size: 12px; word-break: break-word;
+    }
+    .doc-btn:hover { border-color: var(--accent); }
+    .doc-btn small { font-family: var(--mono); font-size: 10px; color: var(--text-2); }
+
+    /* Legal Gate Modal (Flexbox centered + explicit min() width clamp prevents mobile CSS Grid right-edge overflow) */
+    .legal-backdrop {
+      position: fixed; inset: 0; width: 100%; max-width: 100vw; background: rgba(3, 6, 12, 0.92); backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center; z-index: 120; padding: 12px;
+    }
+    .legal-backdrop.open { display: flex; }
+    .legal-box {
+      width: min(520px, calc(100vw - 24px)); max-width: 100%; min-width: 0; max-height: 88dvh; overflow-y: auto;
+      background: var(--bg-1); border: 1px solid var(--accent); border-radius: 12px; padding: 14px;
+      display: flex; flex-direction: column; gap: 10px; box-shadow: 0 0 40px rgba(56, 189, 248, 0.25);
+    }
+
+    body[data-layout="desk-studio"] .grid-cards { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+    body[data-layout="phone-cards"] .grid-cards { grid-template-columns: 1fr; }
+
+    @media (max-width: 600px) {
+      .brand-title { font-size: 12px; }
+      .tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .tab-btn { font-size: 10.5px; padding: 6px 4px; }
+    }
+  </style>
+</head>
+<body data-layout="desk-split">
+
+  <!-- TOP ADAPTIVE BAR -->
+  <header class="topbar">
+    <div class="top-row-1">
+      <div class="brand">
+        <div class="brand-mark">OW</div>
+        <div class="brand-text">
+          <div class="brand-title">Endless Vigil // Overwatch Continuum Monitor</div>
+          <div class="brand-sub">v0.4 Read-Only Telemetry · Creator × Ironscribe of the Endless Vigil</div>
+        </div>
+      </div>
+
+      <div class="mode-switcher">
+        <button class="mode-btn" id="btnPhone" onclick="setMode('phone')">📱 Phone</button>
+        <button class="mode-btn active" id="btnDesk" onclick="setMode('desk')">🖥 Studio</button>
+      </div>
+    </div>
+
+    <div class="top-row-2">
+      <div class="tabs" role="tablist">
+        <button class="tab-btn active" data-tab="camera" onclick="openTab('camera')">1. Sector Feed</button>
+        <button class="tab-btn" data-tab="markets" onclick="openTab('markets')">2. Economy &amp; PING</button>
+        <button class="tab-btn" data-tab="manifest" onclick="openTab('manifest')">3. Manifest &amp; Docs</button>
+        <button class="tab-btn" data-tab="parking" onclick="openTab('parking')">4. Parking Lot</button>
+      </div>
+
+      <div class="stats-strip">
+        <span class="pill ro">● READ-ONLY FEED</span>
+        <button class="pill" onclick="openLegalModal()">⚖ Terms / Legal</button>
+        <a class="pill" href="./index.html" style="color:#34d399;border-color:rgba(16,185,129,0.4)">Hub Gate ↗</a>
+        <a class="pill" href="./conglomerate-flowchart.html" target="_blank" style="color:#7dd3fc;border-color:rgba(56,189,248,0.4)">Flowchart ↗</a>
+        <span class="pill credit">Ironscribe</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace">
+
+    <!-- TAB 1: COORDINATE CAMERA & SECTOR JAMMER PRIVACY -->
+    <section class="view-pane active" id="tab-camera">
+      <div class="grid-cards">
+        <div class="panel">
+          <h2>
+            <span>Coordinate Sector Camera</span>
+            <span class="badge" id="camStatusBadge" style="color:var(--ok)">SIGNAL CLEAR</span>
+          </h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Observe sector telemetry by <strong>coordinates only</strong> (no operator-name stalking). Paid counter-telemetry jammers block public observation.
+          </p>
+
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <label style="font-family:var(--mono);font-size:11px;color:var(--text-2)">XYZ:</label>
+            <input type="number" id="coordX" value="12" />
+            <input type="number" id="coordY" value="-2" />
+            <input type="number" id="coordZ" value="4" />
+            <button class="btn primary" onclick="scanCoordinates()">Tune Feed</button>
+          </div>
+
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn" onclick="jumpPreset(0,0,0)">Hub-Alpha [0,0,0]</button>
+            <button class="btn" onclick="jumpPreset(12,-2,4)">Asteroid-00 [12,-2,4]</button>
+            <button class="btn" onclick="jumpPreset(88,14,-30)">Planet-04 Shatter [88,14,-30]</button>
+            <button class="btn warn" onclick="jumpPreset(44,-19,12)">Privatized Sector-7G [44,-19,12]</button>
+          </div>
+
+          <div class="cam-viewport">
+            <svg id="camSvg" viewBox="0 0 480 280" preserveAspectRatio="xMidYMid slice"></svg>
+            <div class="jammer-static" id="jammerOverlay">
+              <div class="jammer-alert">
+                <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:#f87171">
+                  ⚠ SIGNAL INTERCEPT DENIED // SECTOR PRIVATIZED
+                </div>
+                <p style="margin:6px 0 0;font-size:11.5px;color:#fecaca">
+                  Active paid Counter-Telemetry Jammer detected at coordinates <span id="jamCoordEcho">[44, -19, 12]</span>.
+                  Public Overwatch viewing is restricted in this sector.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mono-box" id="camLogBox"></div>
+        </div>
+
+        <div class="panel">
+          <h2>
+            <span>Lazy-Loaded Sparse World Records</span>
+            <span class="badge" style="color:var(--accent)">Zero Idle 3D</span>
+          </h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Un-PING'd wreckage, cut boxes, and planetary debris stay stored purely as lightweight sparse coordinates until an operator enters visual proximity.
+          </p>
+          <div class="mono-box" id="sparseRecordsBox"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: SIMULATED ECONOMY, MARKETS & PING INSURANCE -->
+    <section class="view-pane" id="tab-markets">
+      <div class="grid-cards">
+        <div class="panel">
+          <h2>
+            <span>Open Exchange &amp; Black Market</span>
+            <button class="btn primary" onclick="tickMarkets(true)">↻ Tick Market</button>
+          </h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Always-running Continuum economy. Scrappers typically liquidate ~80% of salvage here and Bulk-PING the ~20% they retain.
+          </p>
+          <div id="marketList" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+
+        <div class="panel">
+          <h2>
+            <span>Sector Equities &amp; PING Grid</span>
+            <button class="btn warn" onclick="togglePlanetShock()" id="shockBtn">Simulate Planet-04 Fracture</button>
+          </h2>
+          <div id="equitiesList" style="display:flex;flex-direction:column;gap:6px"></div>
+          <div style="margin-top:6px;font-family:var(--mono);font-size:11px;color:var(--text-2)">PARTICLE INSURANCE NANO-GRID (PING) TELEMETRY</div>
+          <div class="mono-box" id="pingStatusBox"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: CONTINUUM MANIFEST & MASTER REPOSITORY DOCS -->
+    <section class="view-pane" id="tab-manifest">
+      <div class="grid-cards">
+        <div class="panel">
+          <h2>
+            <span>Continuum Manifest Inspector</span>
+            <span class="badge" style="color:var(--ok)">SHA-256 Verified</span>
+          </h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            The unified world-linked identity ledger (replaces character-only files; tracks ships, PING policies, and every physical world interaction).
+          </p>
+          <div class="mono-box" id="manifestSummaryBox"></div>
+        </div>
+
+        <div class="panel">
+          <h2>
+            <span>Master Repository &amp; Docs Links</span>
+            <span class="badge" id="docSourceBadge" style="color:var(--accent)">Embedded + Live Fetch</span>
+          </h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Loads live files directly on GitHub Pages, or falls back cleanly to verified embedded snapshots in offline/sandboxed preview.
+          </p>
+          <div id="docButtons" style="display:flex;flex-direction:column;gap:6px"></div>
+          <div class="mono-box" id="docViewerBox" style="max-height:300px">Select any repository document above to inspect its contents or open it directly.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: DESIGN PARKING LOT -->
+    <section class="view-pane" id="tab-parking">
+      <div class="grid-cards">
+        <div class="panel">
+          <h2>
+            <span>Anti-Snowball &amp; Balance Parking Lot</span>
+            <span class="badge" style="color:var(--warn)">Design Review</span>
+          </h2>
+          <div class="mono-box" style="max-height:none">
+1. TELEMETRY SIGNATURE RADIUS (GAP-005)
+   - Hoarding ships, rare tools, and heavy PING coverage raises your sector Telemetry Signature.
+   - Light scrappers stay off long-range Overwatch sweeps; mega-wealthy operators become high-visibility targets.
+
+2. PROGRESSIVE PING PREMIUM SCALING
+   - Starter ship + salvage rig = minimal hourly rent (18 cr/hr).
+   - Stacking fleets scales hourly PING rent exponentially, forcing tough risk/liquidation decisions.
+
+3. PROVISIONAL CUSTODY &amp; ANTI-EXPLOIT GUARDRAILS (EVA-008 / AUTH-004)
+   - disturbedLease: moving un-PING'd gear flags PROVISIONAL_TRANSIT; dying unsettled snap-reverts to anchorOrigin (no suicide-courier dragging).
+   - Zero-Oracle Auth + Salted Admin Override + Velocity/Credit Anomaly Auto-Freeze.
+
+4. REMAINING OPEN GAPS
+   - GAP-002 (TECH): Tier-2 orbital drills, jammer arrays, demolition payloads.
+   - GAP-003 (SEC): Remote Cuff-Slate owner alerts when a hack trips an alarm.
+   - GAP-004 (SHIP): Multi-player ship boarding helm override vs. bulkhead cutting.
+   - GAP-006 (MKT): Trial ground drops vs. zero-value starter kits &amp; anti-RMT wash-trade escrow.
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>
+            <span>GitHub &amp; Termux Release Snapshot</span>
+            <span class="badge" style="color:var(--ok)">v0.4.0</span>
+          </h2>
+          <div class="mono-box" style="max-height:none">
+1-COMMAND TERMUX PUSH:
+  evpush ~/storage/downloads/ev-release-bundle.zip v0.4.0
+
+VERSION ROLLBACK + REFRESH MEMORY PROTOCOL:
+  git archive --format=zip --output=~/storage/downloads/ev-restore-v0.4.0.zip v0.4.0
+
+See GITHUB_WORKFLOW.md and REFRESH_MEMORY_PROTOCOL.md for full instructions.
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MANDATORY TERMS & LEGAL DISCLAIMER GATE -->
+  <div class="legal-backdrop" id="legalModal">
+    <div class="legal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+        <strong style="font-size:13.5px;color:var(--accent);font-family:var(--mono);word-break:break-word">ENDLESS VIGIL // TERMS OF ACCESS</strong>
+        <span class="badge" style="color:var(--warn)">REQUIRED NOTICE</span>
+      </div>
+      <div class="mono-box" style="max-height:260px">
+FICTIONAL CONTINUUM SOFTWARE DISCLAIMER:
+All telemetry feeds, sector coordinates, markets, exchanges, equities, containment-breach tools, orbital demolition events, and signal-jamming depictions in Endless Vigil are strictly works of interactive fiction.
+
+• Nothing herein constitutes financial, investment, security, legal, or technical advice.
+• You bear sole responsibility for lawful real-world conduct; the Creator and Ironscribe of the Endless Vigil assume no liability for real-world misuse or reenactment of fictional concepts.
+• Provided "AS IS" without warranties of any kind. Overwatch views are read-only.
+
+By clicking "I Acknowledge & Agree," you confirm that you have read, understood, and agree to be bound by the Terms of Access & Legal Disclaimer (LEGAL_DISCLAIMER.md).
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text-2)" id="legalTimestampHint">Clickwrap consent stored locally.</span>
+        <button class="btn ok" onclick="acceptLegalTerms()">I Acknowledge &amp; Agree →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Zero script-close tokens in JS */
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function setMode(m) {
+      document.body.setAttribute('data-layout', m === 'phone' ? 'phone-cards' : 'desk-studio');
+      document.getElementById('btnPhone').classList.toggle('active', m === 'phone');
+      document.getElementById('btnDesk').classList.toggle('active', m !== 'phone');
+    }
+
+    function openTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      document.querySelectorAll('.view-pane').forEach(p => p.classList.toggle('active', p.id === `tab-${name}`));
+    }
+
+    /* Per-Session Legal Gate (Always prompts on fresh session entry) */
+    let SESSION_TERMS_ACK = null;
+    function openLegalModal() { document.getElementById('legalModal').classList.add('open'); }
+    function acceptLegalTerms() {
+      SESSION_TERMS_ACK = new Date().toISOString();
+      document.getElementById('legalTimestampHint').textContent = `Session Acknowledged: ${SESSION_TERMS_ACK}`;
+      document.getElementById('legalModal').classList.remove('open');
+    }
+    function checkLegalGate() {
+      if (!SESSION_TERMS_ACK) openLegalModal();
+      else document.getElementById('legalTimestampHint').textContent = `Session Acknowledged: ${SESSION_TERMS_ACK}`;
+    }
+
+    /* Coordinate Sector Camera + Jammer Privacy */
+    const SECTORS = [
+      { name: "Hub-Alpha Station", x: 0, y: 0, z: 0, jammed: false, status: "ACTIVE HUB", notes: "Med-Bay Reconstitution Pads, PING Kiosk, Open & Black Exchange Terminals online." },
+      { name: "Asteroid-00 Stranded Zone", x: 12, y: -2, z: 4, jammed: false, status: "SPARSE DELTA", notes: "crate_774 (PIN locked, 45% Arc-Lance cut seam persisted) · Vigil Skiff-IV derelict · 2 un-PING'd debris pods." },
+      { name: "Planet-04 Fracture Basin", x: 88, y: 14, z: -30, jammed: false, status: "SHATTERED", notes: "Permanent World Delta: planet_04 status='shattered', debrisSeed='0xB309'. Core salvage zone." },
+      { name: "Privatized Sector-7G", x: 44, y: -19, z: 12, jammed: true, status: "PRIVATIZED", notes: "Paid Counter-Telemetry Jammer active." }
+    ];
+
+    function jumpPreset(x, y, z) {
+      document.getElementById('coordX').value = x;
+      document.getElementById('coordY').value = y;
+      document.getElementById('coordZ').value = z;
+      scanCoordinates();
+    }
+
+    function scanCoordinates() {
+      const x = Number(document.getElementById('coordX').value || 0);
+      const y = Number(document.getElementById('coordY').value || 0);
+      const z = Number(document.getElementById('coordZ').value || 0);
+      const hit = SECTORS.find(s => Math.hypot(s.x - x, s.y - y, s.z - z) <= 8);
+
+      const overlay = document.getElementById('jammerOverlay');
+      const badge = document.getElementById('camStatusBadge');
+      const svg = document.getElementById('camSvg');
+      const log = document.getElementById('camLogBox');
+
+      if (hit && hit.jammed) {
+        overlay.classList.add('active');
+        document.getElementById('jamCoordEcho').textContent = `[${x}, ${y}, ${z}]`;
+        badge.textContent = 'PRIVATIZED // JAMMED';
+        badge.style.color = '#ef4444';
+        svg.innerHTML = '';
+        log.textContent = `[OVERWATCH] Target [${x}, ${y}, ${z}] (${hit.name}) rejected by active Sector Jammer. Zero coordinate telemetry leaked.`;
+        return;
+      }
+
+      overlay.classList.remove('active');
+      badge.textContent = hit ? hit.status : 'DEEP VACUUM';
+      badge.style.color = hit && hit.status === 'SHATTERED' ? '#f59e0b' : '#10b981';
+
+      if (hit && hit.status === 'SHATTERED') {
+        svg.innerHTML = `
+          <circle cx="240" cy="140" r="56" fill="none" stroke="#ef4444" stroke-dasharray="6 5" opacity="0.5"/>
+          <polygon points="195,120 228,105 218,145" fill="#7c2d12" stroke="#f97316"/>
+          <polygon points="246,96 286,125 252,148" fill="#451a03" stroke="#fb923c"/>
+          <polygon points="215,160 258,158 238,192" fill="#7c2d12" stroke="#f59e0b"/>
+          <text x="16" y="26" fill="#fbbf24" font-family="monospace" font-size="11">CAM [${x},${y},${z}] · ${esc(hit.name)} (SHATTERED)</text>`;
+      } else {
+        svg.innerHTML = `
+          <line x1="0" y1="140" x2="480" y2="140" stroke="#1e293b" stroke-dasharray="4 4"/>
+          <line x1="240" y1="0" x2="240" y2="280" stroke="#1e293b" stroke-dasharray="4 4"/>
+          <circle cx="240" cy="140" r="42" fill="rgba(56,189,248,0.12)" stroke="#38bdf8"/>
+          <rect x="275" y="112" width="22" height="16" rx="2" fill="#422006" stroke="#eab308"/>
+          <text x="275" y="106" fill="#fde047" font-family="monospace" font-size="9">crate_774 (45% cut)</text>
+          <text x="16" y="26" fill="#7dd3fc" font-family="monospace" font-size="11">CAM [${x},${y},${z}] · ${esc(hit ? hit.name : 'Uncharted Coordinate Drift')}</text>`;
+      }
+      log.textContent = hit ? `[OVERWATCH] ${hit.name} @ [${x}, ${y}, ${z}]\n${hit.notes}` : `[OVERWATCH] Open vacuum @ [${x}, ${y}, ${z}] — Zero active entities or structures in lazy-load radius.`;
+    }
+
+    /* Markets & Equities */
+    let planetShocked = false;
+    const MARKETS = [
+      { exchange: "OPEN", name: "Polymer Seal Tape", price: 42, delta: +2.4 },
+      { exchange: "OPEN", name: "Titanium Hull Scrap", price: 118, delta: -1.1 },
+      { exchange: "OPEN", name: "Liquid O2 Cell", price: 65, delta: +0.8 },
+      { exchange: "BLACK", name: "Thermal Arc Lance (Unreg)", price: 940, delta: +6.5 },
+      { exchange: "BLACK", name: "Pulse Decoder Rig", price: 1480, delta: -3.2 },
+      { exchange: "BLACK", name: "Sector Privacy Jammer Core", price: 3200, delta: +11.4 }
+    ];
+    const EQUITIES = [
+      { ticker: "VHBG", name: "Vigil Hub Reconstitution Bonds", price: 104.2, delta: +1.2 },
+      { ticker: "BELT", name: "Belt Salvage Collective", price: 58.7, delta: +3.8 },
+      { ticker: "CFMN", name: "Core-Fracture Heavy Mining", price: 212.0, delta: -2.0 }
+    ];
+
+    function tickMarkets(manual) {
+      MARKETS.forEach(m => {
+        const swing = (Math.random() - 0.48) * 6;
+        m.delta = Number((m.delta * 0.4 + swing).toFixed(1));
+        m.price = Math.max(12, Math.round(m.price * (1 + m.delta / 100)));
+      });
+      if (manual) {
+        EQUITIES.forEach(eq => {
+          const swing = (Math.random() - 0.5) * 4;
+          eq.delta = Number((swing + (planetShocked && eq.ticker === 'CFMN' ? -14 : 0)).toFixed(1));
+          eq.price = Number(Math.max(5, eq.price * (1 + eq.delta / 100)).toFixed(2));
+        });
+      }
+      renderMarkets();
+    }
+
+    function togglePlanetShock() {
+      planetShocked = !planetShocked;
+      document.getElementById('shockBtn').textContent = planetShocked ? 'Reset Planet-04 Index' : 'Simulate Planet-04 Fracture';
+      if (planetShocked) {
+        EQUITIES[2].delta = -28.4; EQUITIES[2].price = Number((EQUITIES[2].price * 0.72).toFixed(2));
+        EQUITIES[1].delta = +16.2; EQUITIES[1].price = Number((EQUITIES[1].price * 1.16).toFixed(2));
+      } else {
+        EQUITIES[2].price = 212.0; EQUITIES[2].delta = -2.0;
+        EQUITIES[1].price = 58.7; EQUITIES[1].delta = +3.8;
+      }
+      renderMarkets();
+    }
+
+    function renderMarkets() {
+      document.getElementById('marketList').innerHTML = MARKETS.map(m => `
+        <div class="mkt-row">
+          <span><span class="badge" style="color:${m.exchange==='BLACK'?'#f59e0b':'#10b981'}">${m.exchange}</span> ${esc(m.name)}</span>
+          <span><strong>${m.price} cr</strong> <span class="${m.delta>=0?'delta-up':'delta-dn'}">${m.delta>=0?'+':''}${m.delta}%</span></span>
+        </div>`).join('');
+      document.getElementById('equitiesList').innerHTML = EQUITIES.map(eq => `
+        <div class="mkt-row">
+          <span><strong>${esc(eq.ticker)}</strong> · ${esc(eq.name)}</span>
+          <span><strong>${eq.price}</strong> <span class="${eq.delta>=0?'delta-up':'delta-dn'}">${eq.delta>=0?'+':''}${eq.delta}%</span></span>
+        </div>`).join('');
+      document.getElementById('pingStatusBox').textContent =
+`HOME HUB        : Hub-Alpha Reconstitution Pad #03
+POLICY STATUS   : 2 Entities PING'd (Vigil Skiff-IV, Thermal Arc Lance)
+HOURLY TICKER   : 18 cr / hr (Auto-deducted from Continuum Manifest credits)
+QUEUE ON DEATH  : Empty (Next fatal event dissolves PING'd items -> 1-Button Hub Restore)
+UN-PING'D CARGO : Stays adrift as sparse XYZ coords until proximity render`;
+    }
+
+    /* Manifest & Master Repo Docs Explorer */
+    const REPO_DOCS = [
+      { file: "index.html", tag: "Hub Gate", fallback: "Vigil Hub Access Conduit (v0.4): Per-session Legal Clickwrap -> Zero-Oracle Conduit Authenticator -> DOM Anti-Tamper Sentinel -> Token-Gated Hub Deck." },
+      { file: "README.md", tag: "Entry", fallback: "Endless Vigil (v0.4) front-door map linking Hub Access Gate, Continuum Monitor, Shard Flowchart, Authority Server, Charter, Standards, IP Ledger, and Parking Lot." },
+      { file: "PROJECT_CHARTER.md", tag: "Charter", fallback: "Defines Telemetry Shards, Vigil Hub, Continuum Manifest, PING, Zero-Trust AUTH Conduit, and disturbedLease Custody." },
+      { file: "ARCHITECTURE_STANDARDS.md", tag: "Specs", fallback: "Seed + Sparse Delta + Deflate + SHA-256 Envelope pipeline, Section 6 Multi-Resolution Gate, and Section 8 Zero-Trust AUTH + Anti-DevTools Token Security." },
+      { file: "COPYRIGHT_COMPLIANCE.md", tag: "IP Ledger", fallback: "Singular IP compliance audit: IP-01 through IP-11 covering Cuff-Slate, Arc Lance, Continuum Manifest, PING, and VIGIL-AUTH." },
+      { file: "LEGAL_DISCLAIMER.md", tag: "Legal", fallback: "Clickwrap Terms of Access, fictional interactive continuum notice, zero real-world liability waiver, and Read-Only Overwatch anti-injection guarantees." },
+      { file: "DESIGN_PARKING_LOT.md", tag: "Balance", fallback: "Anti-Snowball Telemetry Signature, disturbedLease suicide-courier revert, Trial vs. Chartered drop rules (GAP-006), and open Gaps GAP-002..GAP-006." },
+      { file: "GITHUB_WORKFLOW.md", tag: "Termux", fallback: "1-command Termux SHA-256 verify + unzip + audit + tag + push workflow (scripts/termux-push.sh) and immutable tag version rollback." },
+      { file: "REFRESH_MEMORY_PROTOCOL.md", tag: "RMP", fallback: "Under-25MB export bundle rules, Multi-Resolution Verification Gate, and AI-agnostic handoff prompt." },
+      { file: "data/graph-ledger.json", tag: "Graph JSON", fallback: "Canonical single-source-of-truth JSON defining all 10 Telemetry Shards, 47 decision nodes, and 86 branch edges." }
+    ];
+
+    function initDocsPanel() {
+      document.getElementById('manifestSummaryBox').textContent =
+`MANIFEST ID   : ev_manifest_0x44A1 (Survives operator/vessel changes)
+WORLD SEED    : 0x94F1A0028C77E11D
+CREDITS       : 4,820 cr   |   SIGNATURE EXPOSURE: 215 (Low Profile)
+SUIT STATE    : 47.5s O2   |   Leak: 0.35/s (Scrap-Plate Patched 70%)
+PING COVERAGE : Vigil Skiff-IV (PING'd), Arc Lance (PING'd)
+WORLD DELTAS  : crate_774 [45% cut], planet_04 [SHATTERED], sector_7g [JAMMED]`;
+
+      document.getElementById('docButtons').innerHTML = REPO_DOCS.map((d, i) => `
+        <button class="doc-btn" onclick="loadDoc(${i})">
+          <span><strong>${esc(d.file)}</strong></span>
+          <small>${esc(d.tag)} · View ▾</small>
+        </button>`).join('');
+    }
+
+    async function loadDoc(idx) {
+      const doc = REPO_DOCS[idx];
+      const box = document.getElementById('docViewerBox');
+      const badge = document.getElementById('docSourceBadge');
+      box.textContent = `Loading ${doc.file}...`;
+      try {
+        const res = await fetch(`./${doc.file}`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const txt = await res.text();
+        badge.textContent = `Live Repo File: ${doc.file}`;
+        box.textContent = txt.slice(0, 6000) + (txt.length > 6000 ? '\n\n... [Truncated for quick view — open raw file in GitHub for full text]' : '');
+      } catch (_) {
+        badge.textContent = `Embedded Snapshot (${doc.file})`;
+        box.textContent = `[Offline / Sandboxed Preview Fallback]\nFile: ${doc.file}\n\n${doc.fallback}`;
+      }
+    }
+
+    /* Init */
+    document.getElementById('sparseRecordsBox').textContent =
+`[01] sector: asteroid_00 | crate_774      | cutProgressPct: 45% | lock: pin4
+[02] sector: asteroid_00 | core_module_99 | PROVISIONAL_TRANSIT (reverts to anchor if carrier dies)
+[03] sector: asteroid_00 | drop_882       | SETTLED un-PING'd hull canister (0 idle 3D)
+[04] sector: planet_04   | status: SHATTERED | debrisSeed: 0xB309
+[05] sector: sector_7g   | jammerPrivacyActive: true (Overwatch blocked)`;
+
+    setMode(window.innerWidth <= 820 ? 'phone' : 'desk');
+    scanCoordinates();
+    renderMarkets();
+    initDocsPanel();
+    checkLegalGate();
+  </script>
+</body>
+</html>

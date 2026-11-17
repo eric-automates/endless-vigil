@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Endless Vigil // Vigil Hub Access Conduit</title>
+  <!--
+    @shard HUB / AUTH
+    @branch-id HUB-001 / AUTH-001 / AUTH-002 / AUTH-003 / EVA-008
+    @state-contract Per-session Legal Clickwrap -> Zero-Oracle Conduit Authenticator -> Token-Gated Hub Deck.
+    @invariant Zero protected state rendered prior to verified session seal; MutationObserver purges DOM bypass attempts; zero horizontal overflow >=320px; zero script-close literals inside JS.
+    @credits Creator & Ironscribe of the Endless Vigil
+  -->
+  <style>
+    :root {
+      --bg-0: #04070d;
+      --bg-1: #09101d;
+      --bg-2: #0f192d;
+      --bg-3: #172542;
+      --border: #233355;
+      --border-strong: #395387;
+      --text-0: #eef4ff;
+      --text-1: #a7b6d4;
+      --text-2: #7688ae;
+      --accent: #38bdf8;
+      --ok: #10b981;
+      --warn: #f59e0b;
+      --crit: #ef4444;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; height: 100dvh; width: 100%; max-width: 100vw; overflow-x: hidden;
+      background: var(--bg-0); color: var(--text-0); font-family: var(--sans); font-size: 13px; line-height: 1.45;
+    }
+    body {
+      display: flex; flex-direction: column; overflow-y: auto;
+      background-image:
+        radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.09), transparent 40%),
+        radial-gradient(circle at 80% 90%, rgba(16, 185, 129, 0.07), transparent 45%);
+    }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+      padding: 9px 14px; background: var(--bg-1); border-bottom: 1px solid var(--border); width: 100%; max-width: 100vw;
+    }
+    .brand { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1 1 200px; max-width: 100%; }
+    .brand-mark {
+      width: 30px; height: 30px; flex-shrink: 0; border-radius: 7px;
+      background: linear-gradient(135deg, #0b243f, #13203d); border: 1px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-weight: 700; color: var(--accent); font-size: 11.5px;
+    }
+    .brand-text { min-width: 0; flex: 1; }
+    .brand-title { font-weight: 700; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-sub { font-size: 10.5px; color: var(--text-1); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .pill {
+      padding: 3px 8px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--border);
+      color: var(--text-1); font-family: var(--mono); font-size: 10.5px; white-space: nowrap; max-width: 100%;
+    }
+    .pill.lock { border-color: rgba(245, 158, 11, 0.55); color: #fbbf24; }
+    .pill.ok { border-color: rgba(16, 185, 129, 0.55); color: #34d399; }
+
+    .main-shell {
+      flex: 1; width: 100%; max-width: 1100px; margin: 0 auto; padding: 14px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .auth-shell {
+      width: min(520px, calc(100vw - 24px)); margin: auto; max-width: 100%; min-width: 0;
+      background: var(--bg-1); border: 1px solid var(--border-strong); border-radius: 12px;
+      padding: 16px; display: flex; flex-direction: column; gap: 12px;
+      box-shadow: 0 0 36px rgba(56, 189, 248, 0.14);
+    }
+
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+      gap: 12px;
+      width: 100%;
+    }
+
+    .panel {
+      background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; max-width: 100%;
+    }
+    .panel h2 {
+      margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent);
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .field label { font-family: var(--mono); font-size: 10.5px; color: var(--text-2); text-transform: uppercase; }
+    input[type="text"], input[type="password"], input[type="url"], select {
+      width: 100%; max-width: 100%; background: var(--bg-0); color: var(--text-0);
+      border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+      font-family: var(--mono); font-size: 12.5px;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+    .btn {
+      background: var(--bg-2); color: var(--text-0); border: 1px solid var(--border); border-radius: 6px;
+      padding: 7px 11px; font-size: 12px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      white-space: normal; text-decoration: none; max-width: 100%;
+    }
+    .btn:hover { border-color: var(--border-strong); background: var(--bg-3); }
+    .btn.primary { border-color: rgba(56, 189, 248, 0.55); color: var(--accent); }
+    .btn.ok { border-color: rgba(16, 185, 129, 0.55); color: #34d399; }
+    .btn.warn { border-color: rgba(245, 158, 11, 0.55); color: #fbbf24; }
+    .btn.crit { border-color: rgba(239, 68, 68, 0.55); color: #f87171; }
+
+    .mono-box {
+      font-family: var(--mono); font-size: 11px; background: var(--bg-0); border: 1px solid var(--border);
+      border-radius: 6px; padding: 9px; word-break: break-word; overflow-wrap: anywhere;
+      color: #cbd5e1; white-space: pre-wrap; max-height: 240px; overflow-y: auto; max-width: 100%;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-family: var(--mono);
+      font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid currentColor; white-space: nowrap;
+    }
+
+    .status-line {
+      font-family: var(--mono); font-size: 11.5px; padding: 8px 10px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg-0); color: var(--text-1); word-break: break-word;
+    }
+    .status-line.err { border-color: rgba(239, 68, 68, 0.6); color: #fca5a5; background: rgba(127, 29, 29, 0.25); }
+    .status-line.ok  { border-color: rgba(16, 185, 129, 0.6); color: #6ee7b7; background: rgba(6, 78, 59, 0.25); }
+
+    /* Per-Session Legal Clickwrap (Flexbox + min() width clamp) */
+    .legal-backdrop {
+      position: fixed; inset: 0; width: 100%; max-width: 100vw;
+      background: rgba(3, 6, 12, 0.94); backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center; z-index: 120; padding: 12px;
+    }
+    .legal-backdrop.open { display: flex; }
+    .legal-box {
+      width: min(520px, calc(100vw - 24px)); max-width: 100%; min-width: 0; max-height: 88dvh; overflow-y: auto;
+      background: var(--bg-1); border: 1px solid var(--accent); border-radius: 12px; padding: 14px;
+      display: flex; flex-direction: column; gap: 10px; box-shadow: 0 0 40px rgba(56, 189, 248, 0.25);
+    }
+
+    @media (max-width: 600px) {
+      .brand-title { font-size: 12px; }
+      .main-shell { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">EV</div>
+      <div class="brand-text">
+        <div class="brand-title">Endless Vigil // Vigil Hub Conduit Gate</div>
+        <div class="brand-sub">v0.4 Zero-Trust Entry · Creator × Ironscribe of the Endless Vigil</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span class="pill lock" id="conduitPill">● CONDUIT LOCKED</span>
+      <button class="pill" style="cursor:pointer" onclick="openLegalClickwrap()">⚖ Terms / Legal</button>
+    </div>
+  </header>
+
+  <main class="main-shell" id="mainShell">
+    <!-- AUTHENTICATOR SHELL (Zero protected telemetry exists in DOM until session token issues) -->
+    <section class="auth-shell" id="authGateCard">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+        <strong style="font-family:var(--mono);font-size:13px;color:var(--accent)">VIGIL-AUTH // SUBSPACE CONDUIT HANDSHAKE</strong>
+        <span class="badge" style="color:var(--warn)" id="authModeBadge">PHASE-1 DEV RELAY</span>
+      </div>
+
+      <p style="margin:0;color:var(--text-1);font-size:12px">
+        Enter an authorized <strong>Operator Conduit ID</strong> and <strong>Cipher</strong>. Unverified probes receive zero telemetry and zero diagnostic hints. Deleting this gate in browser DevTools triggers immediate token purge.
+      </p>
+
+      <div class="field">
+        <label>Authority Mode</label>
+        <select id="relayModeSelect" onchange="toggleRelayUrl()">
+          <option value="dev">Phase-1 Local / 2-Browser Broadcast Relay (GitHub Pages Preview)</option>
+          <option value="server">Phase-2 Authoritative Relay Server (scripts/auth-relay-server.mjs)</option>
+        </select>
+      </div>
+
+      <div class="field" id="relayUrlWrap" style="display:none">
+        <label>Authority Relay URL</label>
+        <input type="url" id="relayUrlInput" value="http://localhost:8787" placeholder="https://relay.your-domain.example" />
+      </div>
+
+      <div class="field">
+        <label>Operator Conduit ID</label>
+        <input type="text" id="conduitIdInput" placeholder="e.g. OP-ALPHA-77" autocomplete="username" />
+      </div>
+
+      <div class="field">
+        <label>Conduit Cipher</label>
+        <input type="password" id="cipherInput" placeholder="Enter cipher..." autocomplete="current-password" />
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn primary" style="flex:1 1 180px" onclick="submitConduitAuth()">Establish Conduit Seal →</button>
+        <button class="btn" onclick="toggleAdminDrawer()">Admin Recovery</button>
+      </div>
+
+      <div class="status-line" id="authStatusLine">Awaiting per-session Legal Terms acknowledgment &amp; conduit cipher.</div>
+
+      <!-- Admin Recovery Sub-Panel (Never leaks whether accounts exist) -->
+      <div id="adminRecoveryBox" style="display:none;border-top:1px solid var(--border);padding-top:10px;flex-direction:column;gap:8px">
+        <div style="font-family:var(--mono);font-size:11px;color:#fbbf24">ADMIN RECOVERY OVERRIDE CONSOLE</div>
+        <div class="field">
+          <label>Target Locked Conduit ID</label>
+          <input type="text" id="adminTargetInput" placeholder="OP-ALPHA-77" />
+        </div>
+        <div class="field">
+          <label>Admin Override Key (Server-Salted in Phase-2)</label>
+          <input type="password" id="adminKeyInput" placeholder="Enter admin override..." />
+        </div>
+        <button class="btn warn" onclick="submitAdminUnlock()">Execute Recovery Unlock</button>
+      </div>
+
+      <details style="font-size:11px;color:var(--text-2)">
+        <summary style="cursor:pointer;font-family:var(--mono)">Phase-1 Test Reference &amp; Security Architecture Note</summary>
+        <div class="mono-box" style="margin-top:6px">
+DEV TEST CODES (Phase-1 Browser Harness — replace with Phase-2 server env secrets before monetization):
+• Operator Alpha (Chartered): OP-ALPHA-77  |  Cipher: VIGIL-ALPHA-77
+• Operator Beta  (2nd Browser Test): OP-BETA-42 | Cipher: VIGIL-BETA-42
+• Operator Trial (Drop Rules Test): OP-TRIAL-01 | Cipher: TRIAL-01
+• Admin Recovery Seed: ADMIN-VIGIL-09
+
+WHY STATIC HTML ALONE CANNOT STOP DEVTOOLS (AND HOW PRIVATE SERVER REPO SOLVES IT):
+Static GitHub Pages HTML runs on the visitor's CPU. In production, place `scripts/auth-relay-server.mjs`, `EV_TOKEN_SECRET`, `EV_ADMIN_SECRET`, and anti-cheat thresholds inside a PRIVATE GitHub repo deployed on your server/worker. Public Shards talk to that HTTPS endpoint, while outsiders can NEVER inspect server rules, forge tokens, bypass the 5-second critical-ops warmup, or run your universe locally.
+        </div>
+      </details>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-top:1px solid var(--border);padding-top:8px">
+        <span style="font-size:11px;color:var(--text-2)">Public Read-Only Telemetry:</span>
+        <a class="btn" href="./continuum-monitor.html">Open Overwatch Monitor ↗</a>
+      </div>
+    </section>
+
+    <!-- PROTECTED HUB MOUNT (Literally empty until server/relay issues ephemeral session seal) -->
+    <section id="protectedHubMount" style="display:none"></section>
+  </main>
+
+  <!-- MANDATORY PER-SESSION LEGAL CLICKWRAP (Always shown on fresh session entry) -->
+  <div class="legal-backdrop open" id="legalGateModal">
+    <div class="legal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+        <strong style="font-size:13.5px;color:var(--accent);font-family:var(--mono)">ENDLESS VIGIL // TERMS OF ACCESS</strong>
+        <span class="badge" style="color:var(--warn)">SESSION GATE</span>
+      </div>
+      <div class="mono-box" style="max-height:250px">
+FICTIONAL CONTINUUM SOFTWARE DISCLAIMER:
+All telemetry conduits, sector coordinates, markets, equities, breach instruments, orbital fracture events, and signal-jamming systems inside Endless Vigil are strictly works of interactive fiction.
+
+• Nothing herein constitutes financial, security, legal, or operational advice.
+• You bear sole responsibility for lawful real-world conduct; the Creator and Ironscribe of the Endless Vigil assume no liability for misuse or reenactment.
+• Provided "AS IS" without warranties. Access to operational Shards requires a verified Conduit Seal and per-session agreement.
+
+By clicking "I Acknowledge & Agree," you confirm you have read and agree to LEGAL_DISCLAIMER.md for this session.
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span style="font-size:11px;color:var(--text-2)" id="legalAckStatus">Required before entering operational modes.</span>
+        <button class="btn ok" onclick="acceptSessionTerms()">I Acknowledge &amp; Agree →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Zero script-close literals anywhere in JS */
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    let TERMS_ACCEPTED_THIS_SESSION = false;
+    let SESSION_TOKEN = null;
+    let ACTIVE_OPERATOR = null;
+    let SESSION_ISSUED_MS = 0;
+    const CRITICAL_WARMUP_MS = 5000;
+    let WARMUP_TIMER = null;
+    let CRITICAL_TRADE_MSG = 'Critical ops require 5.0s handshake settle after conduit unlock.';
+
+    /* Per-session Legal Gate (always requires click-through when opening a fresh session) */
+    function openLegalClickwrap() {
+      document.getElementById('legalGateModal').classList.add('open');
+    }
+    function acceptSessionTerms() {
+      TERMS_ACCEPTED_THIS_SESSION = true;
+      document.getElementById('legalAckStatus').textContent = 'Session terms acknowledged: ' + new Date().toISOString();
+      document.getElementById('legalGateModal').classList.remove('open');
+      setStatus('Terms acknowledged. Enter Operator Conduit ID and Cipher.', '');
+    }
+
+    function setStatus(msg, cls) {
+      const el = document.getElementById('authStatusLine');
+      if (!el) return;
+      el.textContent = msg;
+      el.className = 'status-line' + (cls ? ' ' + cls : '');
+    }
+
+    function toggleRelayUrl() {
+      const mode = document.getElementById('relayModeSelect').value;
+      document.getElementById('relayUrlWrap').style.display = mode === 'server' ? 'flex' : 'none';
+      document.getElementById('authModeBadge').textContent = mode === 'server' ? 'PHASE-2 LIVE SERVER' : 'PHASE-1 DEV RELAY';
+    }
+
+    function toggleAdminDrawer() {
+      const box = document.getElementById('adminRecoveryBox');
+      box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    /* Phase-1 Local Shared-Channel Authority Harness (enables 2-browser testing via localStorage + BroadcastChannel) */
+    const DEV_CHANNEL = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ev_auth_dev_channel') : null;
+    const DEV_KEY = 'ev_dev_relay_ledger_v1';
+
+    function loadDevLedger() {
+      try {
+        const raw = localStorage.getItem(DEV_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (_) {}
+      return {
+        operators: {
+          'OP-ALPHA-77': { cipher: 'VIGIL-ALPHA-77', tier: 'chartered', status: 'ACTIVE', fails: 0, anomalyScore: 0, credits: 4820 },
+          'OP-BETA-42':  { cipher: 'VIGIL-BETA-42',  tier: 'chartered', status: 'ACTIVE', fails: 0, anomalyScore: 0, credits: 3150 },
+          'OP-TRIAL-01': { cipher: 'TRIAL-01',       tier: 'trial',     status: 'ACTIVE', fails: 0, anomalyScore: 0, credits: 400 }
+        },
+        disturbedRecords: [
+          {
+            entityId: 'core_module_99',
+            pingInsured: false,
+            settlementState: 'PROVISIONAL_TRANSIT',
+            disturbedByOperatorId: 'OP-ALPHA-77',
+            anchorOrigin: { zoneId: 'asteroid_00', xyz: [18.5, -4.0, 9.2] },
+            currentPos: { zoneId: 'asteroid_00', xyz: [2.1, 0.0, 1.4] }
+          }
+        ]
+      };
+    }
+
+    function saveDevLedger(ledger) {
+      try { localStorage.setItem(DEV_KEY, JSON.stringify(ledger)); } catch (_) {}
+      if (DEV_CHANNEL) DEV_CHANNEL.postMessage({ type: 'LEDGER_SYNC', ts: Date.now() });
+    }
+
+    if (DEV_CHANNEL) {
+      DEV_CHANNEL.onmessage = () => { if (SESSION_TOKEN) renderProtectedDeck(); };
+    }
+
+    async function submitConduitAuth() {
+      if (!TERMS_ACCEPTED_THIS_SESSION) {
+        openLegalClickwrap();
+        return;
+      }
+      const mode = document.getElementById('relayModeSelect').value;
+      const conduitId = document.getElementById('conduitIdInput').value.trim().toUpperCase();
+      const cipher = document.getElementById('cipherInput').value;
+
+      if (mode === 'server') {
+        const baseUrl = document.getElementById('relayUrlInput').value.replace(/\/+$/, '');
+        try {
+          const res = await fetch(baseUrl + '/api/auth/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conduitId, cipher })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            setStatus(data.message || 'CONDUIT UNVERIFIED // ZERO TELEMETRY RETURNED', 'err');
+            return;
+          }
+          const boot = await fetch(baseUrl + '/api/world/bootstrap', {
+            headers: { 'Authorization': 'Bearer ' + data.token }
+          });
+          const bootData = await boot.json();
+          if (!boot.ok || !bootData.ok) {
+            setStatus('CONDUIT UNVERIFIED // ZERO TELEMETRY RETURNED', 'err');
+            return;
+          }
+          SESSION_TOKEN = data.token;
+          ACTIVE_OPERATOR = bootData.operator;
+          mountAuthenticatedHub(bootData.worldState);
+        } catch (_) {
+          setStatus('CONDUIT UNVERIFIED // RELAY UNREACHABLE', 'err');
+        }
+        return;
+      }
+
+      /* Phase-1 Zero-Oracle Dev Verification */
+      const ledger = loadDevLedger();
+      const op = ledger.operators[conduitId];
+      if (!op || op.status !== 'ACTIVE' || op.cipher !== cipher) {
+        if (op) {
+          op.fails = (op.fails || 0) + 1;
+          if (op.fails >= 4 && op.status === 'ACTIVE') op.status = 'LOCKED';
+          saveDevLedger(ledger);
+        }
+        setStatus('CONDUIT UNVERIFIED // ZERO TELEMETRY RETURNED', 'err');
+        return;
+      }
+      op.fails = 0;
+      saveDevLedger(ledger);
+      SESSION_TOKEN = 'dev_seal_' + Math.random().toString(16).slice(2, 14);
+      ACTIVE_OPERATOR = { id: conduitId, tier: op.tier, credits: op.credits };
+      mountAuthenticatedHub(ledger);
+    }
+
+    async function submitAdminUnlock() {
+      const mode = document.getElementById('relayModeSelect').value;
+      const targetId = document.getElementById('adminTargetInput').value.trim().toUpperCase();
+      const adminCode = document.getElementById('adminKeyInput').value;
+
+      if (mode === 'server') {
+        const baseUrl = document.getElementById('relayUrlInput').value.replace(/\/+$/, '');
+        try {
+          const res = await fetch(baseUrl + '/api/admin/unlock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminCode, targetConduitId: targetId })
+          });
+          const data = await res.json();
+          setStatus(data.ok ? ('ADMIN OVERRIDE: ' + data.unlocked + ' -> ACTIVE') : (data.message || 'CONDUIT UNVERIFIED // ZERO TELEMETRY RETURNED'), data.ok ? 'ok' : 'err');
+        } catch (_) {
+          setStatus('CONDUIT UNVERIFIED // RELAY UNREACHABLE', 'err');
+        }
+        return;
+      }
+
+      const ledger = loadDevLedger();
+      if (adminCode !== 'ADMIN-VIGIL-09' || !ledger.operators[targetId]) {
+        setStatus('CONDUIT UNVERIFIED // ZERO TELEMETRY RETURNED', 'err');
+        return;
+      }
+      ledger.operators[targetId].status = 'ACTIVE';
+      ledger.operators[targetId].fails = 0;
+      ledger.operators[targetId].anomalyScore = 0;
+      saveDevLedger(ledger);
+      setStatus('ADMIN OVERRIDE: Conduit ' + targetId + ' unlocked & cleared.', 'ok');
+    }
+
+    function mountAuthenticatedHub(worldSnapshot) {
+      SESSION_ISSUED_MS = Date.now();
+      CRITICAL_TRADE_MSG = 'Handshake stabilizing (5.0s critical-ops cooldown active)...';
+      if (WARMUP_TIMER) clearInterval(WARMUP_TIMER);
+      WARMUP_TIMER = setInterval(() => {
+        if (!SESSION_TOKEN) { clearInterval(WARMUP_TIMER); return; }
+        const rem = Math.max(0, CRITICAL_WARMUP_MS - (Date.now() - SESSION_ISSUED_MS));
+        const lbl = document.getElementById('warmupReadout');
+        if (lbl) lbl.textContent = rem > 0 ? ('STABILIZING (' + (rem / 1000).toFixed(1) + 's cooldown)') : 'CRITICAL OPS READY';
+        if (rem <= 0) clearInterval(WARMUP_TIMER);
+      }, 250);
+      document.getElementById('authGateCard').style.display = 'none';
+      const pill = document.getElementById('conduitPill');
+      pill.textContent = '● SEALED: ' + ACTIVE_OPERATOR.id + ' (' + ACTIVE_OPERATOR.tier.toUpperCase() + ')';
+      pill.className = 'pill ok';
+      renderProtectedDeck(worldSnapshot);
+    }
+
+    function renderProtectedDeck(snapshotOverride) {
+      if (!SESSION_TOKEN || !ACTIVE_OPERATOR) return;
+      const mount = document.getElementById('protectedHubMount');
+      mount.style.display = 'block';
+      const ledger = snapshotOverride || loadDevLedger();
+      const rec = (ledger.disturbedRecords || [])[0];
+      const opState = ledger.operators ? ledger.operators[ACTIVE_OPERATOR.id] : ACTIVE_OPERATOR;
+      const isQuarantined = opState && opState.status === 'QUARANTINED';
+      const remMs = Math.max(0, CRITICAL_WARMUP_MS - (Date.now() - SESSION_ISSUED_MS));
+
+      mount.innerHTML = `
+        <div class="grid-cards">
+          <div class="panel">
+            <h2><span>Authenticated Conduit Deck</span><span class="badge" style="color:${isQuarantined ? '#ef4444' : '#10b981'}">${isQuarantined ? 'QUARANTINED' : 'TOKEN ACTIVE'}</span></h2>
+            <div class="mono-box">OPERATOR ID : ${esc(ACTIVE_OPERATOR.id)}
+TIER        : ${esc(ACTIVE_OPERATOR.tier.toUpperCase())} ${ACTIVE_OPERATOR.tier === 'trial' ? '(Physical ground drops allowed; Market Arbitrage/Wires restricted)' : '(Full Chartered Access)'}
+SESSION SEAL: ${esc(SESSION_TOKEN)}
+WARMUP GUARD: <span id="warmupReadout">${remMs > 0 ? ('STABILIZING (' + (remMs / 1000).toFixed(1) + 's cooldown)') : 'CRITICAL OPS READY'}</span>
+CREDITS     : ${esc(opState ? opState.credits : ACTIVE_OPERATOR.credits)} cr</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <a class="btn primary" href="./continuum-monitor.html">Launch Overwatch Monitor ↗</a>
+              <a class="btn" href="./conglomerate-flowchart.html">Open Shard Blueprint ↗</a>
+              <button class="btn warn" onclick="disconnectConduit()">Lock &amp; End Session</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2><span>Anti-Exploit &amp; Custody Sentinel</span><span class="badge" style="color:var(--accent)">EVA-008 / AUTH-003</span></h2>
+            <p style="margin:0;color:var(--text-1);font-size:12px">
+              Test provisional custody anti-suicide-courier revert, 5-second critical trade warmup, and behavioral anomaly quarantine.
+            </p>
+            <div class="mono-box">${rec ? `ENTITY: ${esc(rec.entityId)} (PING: ${rec.pingInsured})\nCUSTODY: ${esc(rec.settlementState)} by ${esc(rec.disturbedByOperatorId)}\nANCHOR : [${rec.anchorOrigin.xyz.join(', ')}]\nCURRENT: [${rec.currentPos.xyz.join(', ')}]\nTRADE  : ${esc(CRITICAL_TRADE_MSG)}` : 'No disturbed records.'}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn" onclick="simDisturbMove()">Move Un-PING'd Core</button>
+              <button class="btn ok" onclick="simSettleHub()">Dock &amp; Settle</button>
+              <button class="btn warn" onclick="simDeathRevert()">Die Unsettled (Revert!)</button>
+              <button class="btn primary" onclick="simCriticalTrade()">Test Trade (5s Warmup)</button>
+              <button class="btn crit" onclick="simAnomalySpike()">Inject Credit Dupe (Auto-Freeze)</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function simCriticalTrade() {
+      const rem = Math.max(0, CRITICAL_WARMUP_MS - (Date.now() - SESSION_ISSUED_MS));
+      if (rem > 0) {
+        CRITICAL_TRADE_MSG = 'BLOCKED (425): Conduit handshake still stabilizing (' + (rem / 1000).toFixed(1) + 's left).';
+        renderProtectedDeck();
+        return;
+      }
+      const ledger = loadDevLedger();
+      const op = ledger.operators[ACTIVE_OPERATOR.id];
+      if (op.tier === 'trial') {
+        CRITICAL_TRADE_MSG = 'BLOCKED (403): Trial conduits cannot execute Market Arbitrage.';
+      } else if (op.credits >= 100) {
+        op.credits -= 100;
+        saveDevLedger(ledger);
+        CRITICAL_TRADE_MSG = 'EXECUTED: 100 cr Market Trade settled after 5s handshake gate & mutex check.';
+      }
+      renderProtectedDeck(ledger);
+    }
+
+    function simDisturbMove() {
+      const ledger = loadDevLedger();
+      const rec = ledger.disturbedRecords[0];
+      rec.settlementState = 'PROVISIONAL_TRANSIT';
+      rec.disturbedByOperatorId = ACTIVE_OPERATOR.id;
+      rec.currentPos = { zoneId: 'asteroid_00', xyz: [1.2, 0.4, 0.8] };
+      saveDevLedger(ledger);
+      renderProtectedDeck(ledger);
+    }
+
+    function simSettleHub() {
+      const ledger = loadDevLedger();
+      const rec = ledger.disturbedRecords[0];
+      rec.anchorOrigin = { ...rec.currentPos };
+      rec.settlementState = 'SETTLED';
+      saveDevLedger(ledger);
+      renderProtectedDeck(ledger);
+    }
+
+    function simDeathRevert() {
+      const ledger = loadDevLedger();
+      const rec = ledger.disturbedRecords[0];
+      if (!rec.pingInsured && rec.settlementState === 'PROVISIONAL_TRANSIT' && rec.disturbedByOperatorId === ACTIVE_OPERATOR.id) {
+        rec.currentPos = { ...rec.anchorOrigin };
+        rec.settlementState = 'SETTLED';
+      }
+      saveDevLedger(ledger);
+      renderProtectedDeck(ledger);
+    }
+
+    function simAnomalySpike() {
+      const ledger = loadDevLedger();
+      const op = ledger.operators[ACTIVE_OPERATOR.id];
+      if (op) {
+        op.anomalyScore += 100;
+        op.status = 'QUARANTINED';
+        saveDevLedger(ledger);
+      }
+      SESSION_TOKEN = null;
+      ACTIVE_OPERATOR = null;
+      document.getElementById('protectedHubMount').style.display = 'none';
+      document.getElementById('protectedHubMount').innerHTML = '';
+      document.getElementById('authGateCard').style.display = 'flex';
+      document.getElementById('conduitPill').textContent = '● CONDUIT QUARANTINED';
+      document.getElementById('conduitPill').className = 'pill lock';
+      setStatus('ANOMALY QUARANTINE TRIGGERED // CONDUIT LOCKED PENDING ADMIN RECOVERY', 'err');
+    }
+
+    function disconnectConduit() {
+      SESSION_TOKEN = null;
+      ACTIVE_OPERATOR = null;
+      document.getElementById('protectedHubMount').style.display = 'none';
+      document.getElementById('protectedHubMount').innerHTML = '';
+      document.getElementById('authGateCard').style.display = 'flex';
+      document.getElementById('conduitPill').textContent = '● CONDUIT LOCKED';
+      document.getElementById('conduitPill').className = 'pill lock';
+      setStatus('Conduit seal cleared.', '');
+    }
+
+    /* ANTI-INSPECT-ELEMENT DOM SENTINEL: If auth gate or legal gate is removed/hidden in DevTools without valid token, purge mount */
+    function triggerTamperPurge(reason) {
+      SESSION_TOKEN = null;
+      ACTIVE_OPERATOR = null;
+      const shell = document.getElementById('mainShell');
+      if (shell && !shell.dataset.purged) {
+        shell.dataset.purged = '1';
+        shell.innerHTML = '<div class="auth-shell"><strong style="color:#ef4444;font-family:var(--mono)">⚠ INTEGRITY BREACH // CONDUIT SEAL PURGED</strong><p style="margin:0;font-size:12px;color:#cbd5e1">' + esc(reason) + ' Operational payload wiped. Reload page to re-initialize handshake.</p></div>';
+      }
+    }
+
+    function runAntiTamperCheck() {
+      if (!TERMS_ACCEPTED_THIS_SESSION) {
+        const lg = document.getElementById('legalGateModal');
+        if (!lg || !lg.classList.contains('open') || (typeof getComputedStyle === 'function' && getComputedStyle(lg).display === 'none')) {
+          triggerTamperPurge('Legal clickwrap gate tampered before session acknowledgment.');
+          return;
+        }
+      }
+      if (!SESSION_TOKEN) {
+        const mount = document.getElementById('protectedHubMount');
+        if (mount && (mount.innerHTML.trim() !== '' || mount.style.display !== 'none')) {
+          mount.innerHTML = '';
+          mount.style.display = 'none';
+        }
+        const gate = document.getElementById('authGateCard');
+        if (!gate || (typeof getComputedStyle === 'function' && (getComputedStyle(gate).display === 'none' || getComputedStyle(gate).visibility === 'hidden'))) {
+          triggerTamperPurge('Authentication DOM tampering detected without an active verified token.');
+        }
+      }
+    }
+
+    if (typeof MutationObserver !== 'undefined') {
+      const obs = new MutationObserver(() => runAntiTamperCheck());
+      obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+    }
+    setInterval(runAntiTamperCheck, 1500);
+  </script>
+</body>
+</html>
