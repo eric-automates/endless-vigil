@@ -625,7 +625,7 @@
         <div class="brand-mark">EV</div>
         <div class="brand-text">
           <div class="brand-title">Endless Vigil // Continuum Shard Blueprint</div>
-          <div class="brand-sub">v0.5.0 · Creator × Ironscribe of the Endless Vigil</div>
+          <div class="brand-sub">v0.6.0-alpha · Creator × Ironscribe of the Endless Vigil</div>
         </div>
       </div>
 
@@ -643,12 +643,13 @@
       </div>
 
       <div class="stats-strip">
-        <span class="pill" id="statSummary">10S · 49N · 93E</span>
-        <button class="pill warn" id="gapJumpPill" onclick="jumpToGaps()">⚠ 2 Gaps</button>
+        <span class="pill" id="statSummary">10S · 54N · 100E</span>
+        <button class="pill warn" id="gapJumpPill" onclick="jumpToGaps()">⚠ 3 Gaps</button>
         <a class="pill" href="./index.html" style="color:#34d399;border-color:rgba(16,185,129,0.45)">Hub Gate ↗</a>
+        <a class="pill" href="./operator-forge.html" style="color:#f59e0b;border-color:rgba(245,158,11,0.45)">3D Forge ↗</a>
         <a class="pill" href="./cuff-slate.html" style="color:#4ade80;border-color:rgba(34,197,94,0.45)">Cuff-Slate ↗</a>
         <a class="pill" href="./continuum-monitor.html" target="_blank" style="color:#7dd3fc;border-color:rgba(56,189,248,0.45)">Overwatch ↗</a>
-        <span class="pill credit">Ironscribe v0.5</span>
+        <span class="pill credit">Ironscribe v0.6a</span>
       </div>
     </div>
   </header>
@@ -879,1662 +880,1791 @@
        EMBEDDED CANONICAL GRAPH LEDGER (Mirrors data/graph-ledger.json v0.5.0)
        ========================================================================= */
     const LEDGER = {
-          "meta": {
-                "project": "Endless Vigil",
-                "ledgerVersion": "0.5.0",
-                "coAuthors": [
-                      "Creator",
-                      "Ironscribe of the Endless Vigil"
-                ],
-                "shards": [
-                      {
-                            "id": "HUB",
-                            "name": "Vigil Hub Gateway & Med-Bay",
-                            "repo": "ev-hub",
-                            "role": "Single public entry URL, per-session Legal Gate, Continuum Manifest verification, Med-Bay reconstitution, and PING insurance kiosk.",
-                            "color": "#38bdf8",
-                            "ownedSlices": [
-                                  "meta",
-                                  "session",
-                                  "pingInsurance"
-                            ],
-                            "diegeticTransition": "Visor Initialization & Envelope Checksum Gate"
-                      },
-                      {
-                            "id": "EVA",
-                            "name": "EVA / Exterior Telemetry",
-                            "repo": "ev-shard-eva",
-                            "role": "First-person orbital survival on asteroids & wreckage, suit breach physics, lazy-loaded debris recovery, and disturbedLease custody tracking.",
-                            "color": "#f97316",
-                            "ownedSlices": [
-                                  "operator.pose",
-                                  "operator.suit",
-                                  "operator.carriedItemIds",
-                                  "disturbedRecords[]"
-                            ],
-                            "diegeticTransition": "Helmet Visor HUD Lock-In"
-                      },
-                      {
-                            "id": "PDA",
-                            "name": "Vigil Cuff-Slate (Wrist PDA)",
-                            "repo": "ev-shard-pda",
-                            "role": "Worn wrist-mounted diagnostics, first-boot tutorial layer, distress scans, live telemetry sync.",
-                            "color": "#22c55e",
-                            "ownedSlices": [
-                                  "pda.tutorialSeen",
-                                  "pda.casingWearPct",
-                                  "pda.batteryPct",
-                                  "pda.unreadAlerts"
-                            ],
-                            "diegeticTransition": "Arm Raise + OLED Cuff BIOS Handshake"
-                      },
-                      {
-                            "id": "TECH",
-                            "name": "Tech & Fabrication Lab",
-                            "repo": "ev-shard-tech",
-                            "role": "Blueprint reverse-engineering, salvage analysis, tool crafting (Thermal Arc Lance, Pulse Decoder, Jammer Cores).",
-                            "color": "#a855f7",
-                            "ownedSlices": [
-                                  "tech.unlockedBlueprints",
-                                  "tech.activeResearchId",
-                                  "tech.researchProgressPct"
-                            ],
-                            "diegeticTransition": "Schematic Projection Grid Boot"
-                      },
-                      {
-                            "id": "SEC",
-                            "name": "Physical Security & Breach",
-                            "repo": "ev-shard-security",
-                            "role": "Code-locked containers, persistent partial thermal cutting, cyber-breach module—zero arbitrary operator locks.",
-                            "color": "#eab308",
-                            "ownedSlices": [
-                                  "containers[]"
-                            ],
-                            "diegeticTransition": "Physical Lock / Seam Telemetry Zoom"
-                      },
-                      {
-                            "id": "SHIP",
-                            "name": "Shipwright & Vessel Ops",
-                            "repo": "ev-shard-ship",
-                            "role": "Derelict boarding, power/oxygen routing, multi-ship fleet registry, cargo bays, Hub reconstitution dock.",
-                            "color": "#06b6d4",
-                            "ownedSlices": [
-                                  "ships[]"
-                            ],
-                            "diegeticTransition": "Airlock Depressurization & Bulkhead Iris"
-                      },
-                      {
-                            "id": "MKT",
-                            "name": "Continuum Markets & PING Exchange",
-                            "repo": "ev-shard-markets",
-                            "role": "Always-running economy: Open Exchange, Black Market, Sector Equities, bulk-sell salvage, and PING upkeep ticker.",
-                            "color": "#10b981",
-                            "ownedSlices": [
-                                  "credits",
-                                  "markets",
-                                  "pingInsurance.rentPerHourCredits"
-                            ],
-                            "diegeticTransition": "Hub Trade Terminal & Bond Ticker"
-                      },
-                      {
-                            "id": "WORLD",
-                            "name": "World Forge & Sector Cartography",
-                            "repo": "ev-shard-world",
-                            "role": "Seeded star-sector coordinates, asteroid mining, privacy jammers, and permanent planetary fracture deltas.",
-                            "color": "#ec4899",
-                            "ownedSlices": [
-                                  "worldSeed",
-                                  "sectorDeltas"
-                            ],
-                            "diegeticTransition": "Orbital Holo-Table Projection"
-                      },
-                      {
-                            "id": "MON",
-                            "name": "Overwatch Continuum Monitor",
-                            "repo": "ev-continuum-monitor",
-                            "role": "Strictly read-only universe monitor: coordinate camera (respects paid sector jammers), markets, Manifest & Docs links.",
-                            "color": "#60a5fa",
-                            "ownedSlices": [],
-                            "diegeticTransition": "Read-Only Telemetry Overwatch Feed"
-                      },
-                      {
-                            "id": "AUTH",
-                            "name": "Zero-Trust Authority Relay & Authenticator",
-                            "repo": "ev-authority-relay",
-                            "role": "Zero-oracle conduit authenticator, server-issued ephemeral tokens, DOM anti-tamper lock, rate lockout, admin unlock, behavioral anomaly freeze & numeric sync.",
-                            "color": "#94a3b8",
-                            "ownedSlices": [
-                                  "operatorAccount",
-                                  "authoritativeLedger",
-                                  "conflictLocks"
-                            ],
-                            "diegeticTransition": "Subspace Conduit Handshake & Signed Token Gate"
-                      }
-                ]
+      "meta": {
+        "project": "Endless Vigil",
+        "ledgerVersion": "0.6.0",
+        "coAuthors": [
+          "Creator",
+          "Ironscribe of the Endless Vigil"
+        ],
+        "shards": [
+          {
+            "id": "HUB",
+            "name": "Vigil Hub Gateway & Med-Bay",
+            "repo": "ev-hub",
+            "role": "Single public entry URL, per-session Legal Gate, Continuum Manifest verification, Med-Bay reconstitution, and PING insurance kiosk.",
+            "color": "#38bdf8",
+            "ownedSlices": [
+              "meta",
+              "session",
+              "pingInsurance"
+            ],
+            "diegeticTransition": "Visor Initialization & Envelope Checksum Gate"
           },
-          "nodes": [
-                {
-                      "id": "HUB-001",
-                      "shard": "HUB",
-                      "phase": "BOOT",
-                      "title": "Entry Launch & Per-Session Legal Clickwrap",
-                      "summary": "Visitor opens Vigil Hub (index.html); per-session clickwrap Terms & Legal Disclaimer must be clicked through before any operational conduit boots.",
-                      "type": "entry",
-                      "expectedOutcomes": [
-                            "terms_accepted"
-                      ],
-                      "stateMutations": [
-                            "session.acknowledgedTermsUtc"
-                      ],
-                      "commentTag": "@branch-id HUB-001"
-                },
-                {
-                      "id": "AUTH-001",
-                      "shard": "AUTH",
-                      "phase": "BOOT",
-                      "title": "Sci-Fi Conduit Authenticator (Zero-Trust Gate)",
-                      "summary": "Realistic diegetic authenticator requests Operator Conduit Code. Protected world/shard payloads are withheld until server issues signed ephemeral session token.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "token_issued",
-                            "invalid_zero_oracle",
-                            "admin_unlock_flow",
-                            "open_overwatch"
-                      ],
-                      "stateMutations": [
-                            "operatorAccount.sessionId"
-                      ],
-                      "commentTag": "@branch-id AUTH-001"
-                },
-                {
-                      "id": "AUTH-002",
-                      "shard": "AUTH",
-                      "phase": "BOOT",
-                      "title": "Zero-Oracle Rejection & DOM Anti-Tamper Lock",
-                      "summary": "Bad code or DevTools modal removal returns uniform 'CONDUIT UNVERIFIED // ZERO TELEMETRY RETURNED' (no brute-force hints) and locks after N attempts.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "retry_window_open",
-                            "locked_out_tamper"
-                      ],
-                      "stateMutations": [
-                            "operatorAccount.authState"
-                      ],
-                      "commentTag": "@branch-id AUTH-002"
-                },
-                {
-                      "id": "AUTH-003",
-                      "shard": "AUTH",
-                      "phase": "SECURITY",
-                      "title": "Admin Recovery Console & Anomaly Auto-Freeze",
-                      "summary": "Server-salted Admin Recovery key unlocks locked codes; behavioral heuristics (velocity/dupe/credit spikes) auto-quarantine hostile codes.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "admin_unlocked",
-                            "quarantined_permanent"
-                      ],
-                      "stateMutations": [
-                            "operatorAccount.authState",
-                            "operatorAccount.anomalyScore"
-                      ],
-                      "commentTag": "@branch-id AUTH-003"
-                },
-                {
-                      "id": "AUTH-005",
-                      "shard": "AUTH",
-                      "phase": "SECURITY",
-                      "title": "Conduit Quarantined / Revoked",
-                      "summary": "Account frozen; bearer token invalidated across all Shards until explicit Admin recovery audit clears anomaly.",
-                      "type": "terminal",
-                      "expectedOutcomes": [],
-                      "stateMutations": [
-                            "operatorAccount.authState='QUARANTINED'"
-                      ],
-                      "commentTag": "@branch-id AUTH-005"
-                },
-                {
-                      "id": "HUB-002",
-                      "shard": "HUB",
-                      "phase": "BOOT",
-                      "title": "SHA-256 Checksum & Rev Gate",
-                      "summary": "Recompute SHA-256 on server-delivered or cached Continuum Manifest and verify monotonic rev + parentSha256.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "valid_sync",
-                            "new_operator_seed",
-                            "corrupt_checksum",
-                            "rev_fork_desync"
-                      ],
-                      "stateMutations": [
-                            "session.lastVerifiedSha256"
-                      ],
-                      "commentTag": "@branch-id HUB-002"
-                },
-                {
-                      "id": "HUB-003",
-                      "shard": "HUB",
-                      "phase": "BOOT",
-                      "title": "Auto-Rollback / 3-Way Merge",
-                      "summary": "Corrupt or forked Manifest Envelope detected; restore verified parent snapshot or merge entity deltas.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "recovered_resume"
-                      ],
-                      "stateMutations": [
-                            "session.recoveryUsed=true"
-                      ],
-                      "commentTag": "@branch-id HUB-003"
-                },
-                {
-                      "id": "HUB-004",
-                      "shard": "HUB",
-                      "phase": "BOOT",
-                      "title": "Procedural Origin & Co-Op Squad Link",
-                      "summary": "Roll fresh randomized Origin Crisis (Slum Amnesia Diary, Patrol Cruiser Rescue, Asteroid Leak) with optional Squad City Link & ORIGIN_BOUND anti-reroll gear.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "enter_eva_act0"
-                      ],
-                      "stateMutations": [
-                            "manifestId:init",
-                            "originScenario:roll",
-                            "suit.leakRatePerSec:init"
-                      ],
-                      "commentTag": "@branch-id HUB-004"
-                },
-                {
-                      "id": "MON-001",
-                      "shard": "MON",
-                      "phase": "OVERWATCH",
-                      "title": "Read-Only Continuum Monitor",
-                      "summary": "Public read-only watch terminal: view economy tickers, repo docs, Manifest checksums, or enter sector XYZ.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "inspect_clear_sector",
-                            "inspect_jammed_sector",
-                            "read_market_feeds"
-                      ],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id MON-001"
-                },
-                {
-                      "id": "MON-002",
-                      "shard": "MON",
-                      "phase": "OVERWATCH",
-                      "title": "Jammer Static Blockade",
-                      "summary": "Zooming into paid privatized coordinates displays RF static & 'SIGNAL INTERCEPT DENIED // SECTOR PRIVATIZED'.",
-                      "type": "terminal",
-                      "expectedOutcomes": [],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id MON-002"
-                },
-                {
-                      "id": "EVA-001",
-                      "shard": "EVA",
-                      "phase": "ACT_0_STRANDED",
-                      "title": "Wake Up: Suit Breach Venting Air",
-                      "summary": "Operator wakes stranded by crew on drifting Asteroid-0. Torso seam venting O2 rapidly.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "open_pda",
-                            "scavenge_debris",
-                            "ignore_wait"
-                      ],
-                      "stateMutations": [
-                            "o2Seconds:tick(-1.2/s)"
-                      ],
-                      "commentTag": "@branch-id EVA-001"
-                },
-                {
-                      "id": "PDA-001",
-                      "shard": "PDA",
-                      "phase": "ACT_0_STRANDED",
-                      "title": "First Boot: Battered Wrist-PDA Tutorial",
-                      "summary": "Separate PDA Shard loads via diegetic wrist-raise with live suit damage & tutorial layer active.",
-                      "type": "shard_jump",
-                      "expectedOutcomes": [
-                            "run_suit_diag",
-                            "scan_beacons",
-                            "open_tech_lab",
-                            "return_eva"
-                      ],
-                      "stateMutations": [
-                            "pda.tutorialSeen=true"
-                      ],
-                      "commentTag": "@branch-id PDA-001"
-                },
-                {
-                      "id": "PDA-002",
-                      "shard": "PDA",
-                      "phase": "ACT_0_STRANDED",
-                      "title": "Suit Diagnostics & Breach Locator",
-                      "summary": "Highlights seam leak rate, O2 countdown, and nearest salvageable wreckage.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "return_eva_equipped"
-                      ],
-                      "stateMutations": [
-                            "pda.unreadAlerts:ack"
-                      ],
-                      "commentTag": "@branch-id PDA-002"
-                },
-                {
-                      "id": "PDA-003",
-                      "shard": "PDA",
-                      "phase": "ACT_1_SALVAGE",
-                      "title": "Sector Distress & Derelict Scan",
-                      "summary": "Reveals locked supply crate & derelict shuttle beacon coords in asteroid cluster.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "mark_waypoints"
-                      ],
-                      "stateMutations": [
-                            "world.beacons:discovered"
-                      ],
-                      "commentTag": "@branch-id PDA-003"
-                },
-                {
-                      "id": "EVA-002",
-                      "shard": "EVA",
-                      "phase": "ACT_0_STRANDED",
-                      "title": "Scavenge Asteroid Wreckage Field",
-                      "summary": "Search floating crew debris for sealant tape, scrap plating, or abandoned tool kit.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "found_seal_tape",
-                            "found_raw_scrap",
-                            "nothing_found"
-                      ],
-                      "stateMutations": [
-                            "operator.carriedItemIds:push",
-                            "disturbedRecords:PROVISIONAL_TRANSIT"
-                      ],
-                      "commentTag": "@branch-id EVA-002"
-                },
-                {
-                      "id": "EVA-003",
-                      "shard": "EVA",
-                      "phase": "ACT_0_STRANDED",
-                      "title": "Apply Emergency Seal Tape",
-                      "summary": "Full temporary seal stops O2 venting immediately; preserves suit integrity.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "stabilized_eva"
-                      ],
-                      "stateMutations": [
-                            "operator.suit.leakRatePerSec=0",
-                            "item:consumed"
-                      ],
-                      "commentTag": "@branch-id EVA-003"
-                },
-                {
-                      "id": "EVA-004",
-                      "shard": "EVA",
-                      "phase": "ACT_0_STRANDED",
-                      "title": "Improvised Scrap-Plate Patch",
-                      "summary": "Reduces O2 leak by 70%; buys critical minutes to reach derelict airlock or craft polymer seal.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "stabilized_eva"
-                      ],
-                      "stateMutations": [
-                            "operator.suit.leakRatePerSec=0.35"
-                      ],
-                      "commentTag": "@branch-id EVA-004"
-                },
-                {
-                      "id": "EVA-005",
-                      "shard": "EVA",
-                      "phase": "ACT_0_STRANDED",
-                      "title": "Biological Termination (O2 Zero / Fatal)",
-                      "summary": "Operator expires; body nanoparticles broadcast termination pulse across sector for PING & disturbedLease settlement.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "ping_resolve_on_death"
-                      ],
-                      "stateMutations": [
-                            "operator.suit.o2Seconds=0"
-                      ],
-                      "commentTag": "@branch-id EVA-005"
-                },
-                {
-                      "id": "MED-001",
-                      "shard": "HUB",
-                      "phase": "RECONSTITUTION",
-                      "title": "Hub Med-Bay Respawn, PING & Custody Check",
-                      "summary": "Non-permadeath Hub Med-Bay reconstitution: PING'd assets dissolve to dock, settled drops remain, unsettled disturbed gear reverts.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "all_pingd_dissolve",
-                            "ship_pingd_cargo_unpingd",
-                            "unpingd_left_in_space",
-                            "provisional_disturbed_revert"
-                      ],
-                      "stateMutations": [
-                            "operator.pose:hub_medbay"
-                      ],
-                      "commentTag": "@branch-id MED-001"
-                },
-                {
-                      "id": "PING-001",
-                      "shard": "HUB",
-                      "phase": "RECONSTITUTION",
-                      "title": "One-Button Hub Hangar Reconstitution",
-                      "summary": "All PING'd gear & vessel dissolved on death into queue; walk to Hub dock & press 1 button to restore.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "resume_from_hub"
-                      ],
-                      "stateMutations": [
-                            "pingInsurance.reconstitutionQueueIds:empty",
-                            "ships[home]:spawn"
-                      ],
-                      "commentTag": "@branch-id PING-001"
-                },
-                {
-                      "id": "PING-002",
-                      "shard": "HUB",
-                      "phase": "RECONSTITUTION",
-                      "title": "Partial PING: Ship Restored, Cargo Adrift",
-                      "summary": "PING'd ship dissolved back to Hub queue while settled un-PING'd cargo stays floating at wreck coords for EVA salvage.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "eva_recovery_run"
-                      ],
-                      "stateMutations": [
-                            "ships[home]:queue",
-                            "sectorDeltas[wreck].uninsuredDropIds:push"
-                      ],
-                      "commentTag": "@branch-id PING-002"
-                },
-                {
-                      "id": "EVA-007",
-                      "shard": "EVA",
-                      "phase": "RECONSTITUTION",
-                      "title": "Lazy-Loaded Wreckage Recovery",
-                      "summary": "Settled un-PING'd gear sits as lightweight coords (zero 3D rendered) until someone enters visual proximity.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "back_to_cluster"
-                      ],
-                      "stateMutations": [
-                            "sectorDeltas[wreck].uninsuredDropIds:pop"
-                      ],
-                      "commentTag": "@branch-id EVA-007"
-                },
-                {
-                      "id": "EVA-008",
-                      "shard": "EVA",
-                      "phase": "RECONSTITUTION",
-                      "title": "Provisional Transit Snap-Revert (Anti-Suicide Courier)",
-                      "summary": "Un-PING'd items tagged PROVISIONAL_TRANSIT by deceased operator before Hub/Save checkpoint snap-revert to anchorOrigin.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "reverted_to_anchor"
-                      ],
-                      "stateMutations": [
-                            "disturbedRecords[id].xyz=anchorOrigin"
-                      ],
-                      "commentTag": "@branch-id EVA-008"
-                },
-                {
-                      "id": "EVA-006",
-                      "shard": "EVA",
-                      "phase": "ACT_1_SALVAGE",
-                      "title": "Suit Stabilized: Explore Cluster",
-                      "summary": "Traverse sector, use Cuff-Slate/Tech, breach crates, board ships, settle cargo & trade at Hub Markets, or deploy jammers.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "approach_crate",
-                            "approach_derelict",
-                            "open_tech_lab",
-                            "visit_markets",
-                            "save_sync"
-                      ],
-                      "stateMutations": [
-                            "disturbedRecords:SETTLED_AT_HUB"
-                      ],
-                      "commentTag": "@branch-id EVA-006"
-                },
-                {
-                      "id": "MKT-001",
-                      "shard": "MKT",
-                      "phase": "ECONOMY",
-                      "title": "Hub Markets & PING Insurance Desk",
-                      "summary": "Sell 80% salvage on Open/Black Exchange or Equities; Bulk-PING or Bulk-unPING kept gear (hourly rent ticker).",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "bulk_ping_manage",
-                            "trade_open_black_stock",
-                            "wealth_gravity_calc",
-                            "pilot_standing_drop",
-                            "exit_markets"
-                      ],
-                      "stateMutations": [
-                            "credits:delta",
-                            "pingInsurance.rentPerHourCredits:recalc"
-                      ],
-                      "commentTag": "@branch-id MKT-001"
-                },
-                {
-                      "id": "MKT-002",
-                      "shard": "MKT",
-                      "phase": "BALANCE",
-                      "title": "Wealth-Gravity Threat & NPC/Syndicate Hunts",
-                      "summary": "Wealth x Concentration calculates sector threat; lone rich operators radiate loud targets drawing Syndicate & NPC hunters so money circulates naturally.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "threat_updated"
-                      ],
-                      "stateMutations": [
-                            "telemetrySignatureScore:recalc"
-                      ],
-                      "commentTag": "@branch-id MKT-002"
-                },
-                {
-                      "id": "MKT-003",
-                      "shard": "MKT",
-                      "phase": "BALANCE",
-                      "title": "Pilot Standing Drops & Origin-Bound Anti-Farm",
-                      "summary": "Friends drop items freely within transparent flight-hour Pilot Standing limits; ORIGIN_BOUND starter gear blocks reroll farming.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "standing_checked"
-                      ],
-                      "stateMutations": [
-                            "pilotStanding.droppedTodayCr:+"
-                      ],
-                      "commentTag": "@branch-id MKT-003"
-                },
-                {
-                      "id": "TECH-001",
-                      "shard": "TECH",
-                      "phase": "ACT_1_SALVAGE",
-                      "title": "Tech & Reverse-Engineering Lab",
-                      "summary": "Separate Tech Shard hydrates salvage inventory, skill training queue, and blueprint unlocks.",
-                      "type": "shard_jump",
-                      "expectedOutcomes": [
-                            "unlock_arc_cutter",
-                            "unlock_pulse_decoder",
-                            "unlock_polymer_seal",
-                            "offline_skill_juryrig",
-                            "exit_to_eva"
-                      ],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id TECH-001"
-                },
-                {
-                      "id": "TECH-002",
-                      "shard": "TECH",
-                      "phase": "ACT_1_SALVAGE",
-                      "title": "Craft Thermal Arc Lance / Decoder",
-                      "summary": "Unlocks breach tools needed to cut or hack physical containers owned by anyone.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "return_eva_tooled"
-                      ],
-                      "stateMutations": [
-                            "tech.unlockedBlueprints:add",
-                            "operator.carriedItemIds:add"
-                      ],
-                      "commentTag": "@branch-id TECH-002"
-                },
-                {
-                      "id": "TECH-003",
-                      "shard": "TECH",
-                      "phase": "ACT_2_EXPANSION",
-                      "title": "Offline Skill Training, Espionage & 2% Jury-Rigging",
-                      "summary": "EVE-style offline skill training unlocks high-tech operation; untrained pilots can jury-rig cheap 2% scrap gear or acquire tools via corporate espionage/mechanics.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "skill_ready"
-                      ],
-                      "stateMutations": [
-                            "skills.activeTraining:set",
-                            "skills.juryRigYieldRatio=0.02"
-                      ],
-                      "commentTag": "@branch-id TECH-003"
-                },
-                {
-                      "id": "SEC-001",
-                      "shard": "SEC",
-                      "phase": "ACT_1_SALVAGE",
-                      "title": "Inspect Code-Locked Supply Box",
-                      "summary": "Physical container with 4-digit PIN hash & cuttable titanium seams. Zero arbitrary operator locks.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "enter_pin",
-                            "use_arc_cutter",
-                            "use_pulse_decoder",
-                            "walk_away"
-                      ],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id SEC-001"
-                },
-                {
-                      "id": "SEC-002",
-                      "shard": "SEC",
-                      "phase": "ACT_1_SALVAGE",
-                      "title": "PIN Entry Check",
-                      "summary": "Compare SHA-256 of entered code against container codeSha256.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "pin_valid",
-                            "pin_invalid"
-                      ],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id SEC-002"
-                },
-                {
-                      "id": "SEC-003",
-                      "shard": "SEC",
-                      "phase": "ACT_1_SALVAGE",
-                      "title": "Thermal Arc Lance Cutting Loop",
-                      "summary": "Progressively cuts box seams; partial cutProgressPct saves persistently to world delta!",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "cut_complete",
-                            "cut_aborted_partial"
-                      ],
-                      "stateMutations": [
-                            "containers[id].cutProgressPct:+",
-                            "containers[id].structureHp:-"
-                      ],
-                      "commentTag": "@branch-id SEC-003"
-                },
-                {
-                      "id": "SEC-004",
-                      "shard": "SEC",
-                      "phase": "ACT_1_SALVAGE",
-                      "title": "Pulse Decoder Cyber-Breach",
-                      "summary": "Signal frequency alignment mini-task bypasses PIN without damaging box structure.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "hack_success",
-                            "hack_trip_alarm"
-                      ],
-                      "stateMutations": [
-                            "containers[id].hackProgressPct:+"
-                      ],
-                      "commentTag": "@branch-id SEC-004"
-                },
-                {
-                      "id": "SEC-005",
-                      "shard": "SEC",
-                      "phase": "ACT_1_SALVAGE",
-                      "title": "Container Breached: Loot Physical Items",
-                      "summary": "Box opens permanently in world delta; contents become PROVISIONAL_TRANSIT world objects until settled.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "back_to_eva_looted"
-                      ],
-                      "stateMutations": [
-                            "containers[id].lockKind='none'",
-                            "operator.carriedItemIds:transfer"
-                      ],
-                      "commentTag": "@branch-id SEC-005"
-                },
-                {
-                      "id": "SEC-006",
-                      "shard": "SEC",
-                      "phase": "MULTIPLAYER",
-                      "title": "Beacon Heartbeat Loss & 2-5m Theft Deduction",
-                      "summary": "Installed Alarm Beacon stops pulsing on breach; PING refund signals destruction, whereas 'Policy Reassigned' after 2-5m lockout proves theft.",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "heartbeat_logged",
-                            "companion_app_future"
-                      ],
-                      "stateMutations": [
-                            "heartbeatBeacons[id].status='SIGNAL_LOST'"
-                      ],
-                      "commentTag": "@branch-id SEC-006"
-                },
-                {
-                      "id": "GAP-007",
-                      "shard": "PDA",
-                      "phase": "FUTURE_V06",
-                      "title": "UNPLANNED: Offline Companion App & Sleep Proximity Alerts",
-                      "summary": "Optional mobile companion/watch feed for ship stats, beacon heartbeat loss, and proximity alerts while sleeping.",
-                      "type": "gap",
-                      "expectedOutcomes": [],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id GAP-007"
-                },
-                {
-                      "id": "SHIP-001",
-                      "shard": "SHIP",
-                      "phase": "ACT_2_VESSEL",
-                      "title": "Airlock Entry: Board Derelict / Ship",
-                      "summary": "Diegetic airlock cycle loads Shipwright Shard, preserving inventory, PING status, and world state.",
-                      "type": "shard_jump",
-                      "expectedOutcomes": [
-                            "restore_aux_power",
-                            "switch_owned_ship",
-                            "undock_to_world",
-                            "boarding_event",
-                            "voxel_mesh_future",
-                            "exit_airlock"
-                      ],
-                      "stateMutations": [
-                            "operator.suit.o2Seconds:refill"
-                      ],
-                      "commentTag": "@branch-id SHIP-001"
-                },
-                {
-                      "id": "SHIP-002",
-                      "shard": "SHIP",
-                      "phase": "ACT_2_VESSEL",
-                      "title": "Subsystem Power & Life-Support Grid",
-                      "summary": "Route reactor kW across engines, oxygen scrubbers, cargo locks, and sensors.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "ship_operational"
-                      ],
-                      "stateMutations": [
-                            "ships[active].powerAvailableKw:allocated"
-                      ],
-                      "commentTag": "@branch-id SHIP-002"
-                },
-                {
-                      "id": "SHIP-003",
-                      "shard": "SHIP",
-                      "phase": "ACT_2_VESSEL",
-                      "title": "Multi-Ship Fleet Registry",
-                      "summary": "Switch active vessel among multiple acquired ships, inspect remote hulls & PING coverage.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "ship_selected"
-                      ],
-                      "stateMutations": [
-                            "ships.activeId:changed"
-                      ],
-                      "commentTag": "@branch-id SHIP-003"
-                },
-                {
-                      "id": "SHIP-004",
-                      "shard": "SHIP",
-                      "phase": "MULTIPLAYER",
-                      "title": "Open Boarding, Cargo Extraction & Disguise Leaks",
-                      "summary": "Boarders can haul crates out (risking hidden trackers) or hack bridge locks to hijack vessels; Syndicates sell rich pirates' disguises.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "board_outcome_resolved"
-                      ],
-                      "stateMutations": [
-                            "ships[active].ownershipState:contested"
-                      ],
-                      "commentTag": "@branch-id SHIP-004"
-                },
-                {
-                      "id": "GAP-008",
-                      "shard": "SHIP",
-                      "phase": "FUTURE_V06",
-                      "title": "UNPLANNED: 3D Greedy-Meshed Voxel Chunk Hull Rebaking",
-                      "summary": "v0.6+ WebGL architecture: assemble voxel ship parts, bake into unified solid mesh, and dynamically re-bake holes when cut.",
-                      "type": "gap",
-                      "expectedOutcomes": [],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id GAP-008"
-                },
-                {
-                      "id": "WORLD-001",
-                      "shard": "WORLD",
-                      "phase": "ACT_3_COSMOS",
-                      "title": "World Forge & Sector Holo-Map",
-                      "summary": "Separate World Shard renders seeded galaxy + sparse sectorDeltas for mining, jammers, & mega-events.",
-                      "type": "shard_jump",
-                      "expectedOutcomes": [
-                            "mine_asteroid",
-                            "deploy_jammer",
-                            "shatter_planet",
-                            "travel_sector",
-                            "commit_envelope"
-                      ],
-                      "stateMutations": [],
-                      "commentTag": "@branch-id WORLD-001"
-                },
-                {
-                      "id": "WORLD-002",
-                      "shard": "WORLD",
-                      "phase": "ACT_3_COSMOS",
-                      "title": "Industrial Asteroid Mining Delta",
-                      "summary": "Extracts ore into ship cargo and decrements asteroid massRemainingPct in sparse deltas (rate-verified by AUTH).",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "return_world_updated"
-                      ],
-                      "stateMutations": [
-                            "sectorDeltas[id].massRemainingPct:-"
-                      ],
-                      "commentTag": "@branch-id WORLD-002"
-                },
-                {
-                      "id": "JAM-001",
-                      "shard": "WORLD",
-                      "phase": "ACT_3_COSMOS",
-                      "title": "Deploy Paid Sector Privacy Jammer",
-                      "summary": "Privatizes sector coordinates; Overwatch Monitor cameras show RF static & access-denied alert.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "jammer_active_saved"
-                      ],
-                      "stateMutations": [
-                            "sectorDeltas[id].jammerPrivacyActive=true",
-                            "credits:-"
-                      ],
-                      "commentTag": "@branch-id JAM-001"
-                },
-                {
-                      "id": "WORLD-003",
-                      "shard": "WORLD",
-                      "phase": "ACT_3_COSMOS",
-                      "title": "Cataclysm: Shatter Planet Permanently",
-                      "summary": "Records permanent planetary fracture delta + debrisSeed; rocks Sector Equities & every Shard.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "planet_shattered_saved"
-                      ],
-                      "stateMutations": [
-                            "sectorDeltas[planet].status='shattered'",
-                            "sectorDeltas[planet].debrisSeed:set"
-                      ],
-                      "commentTag": "@branch-id WORLD-003"
-                },
-                {
-                      "id": "HUB-005",
-                      "shard": "HUB",
-                      "phase": "PERSISTENCE",
-                      "title": "Checkpoint Continuum Manifest & Sync",
-                      "summary": "Canonicalize deltas -> Settle PROVISIONAL_TRANSIT items -> Deflate -> SHA-256 checksum -> Commit to Relay.",
-                      "type": "action",
-                      "expectedOutcomes": [
-                            "relay_sync"
-                      ],
-                      "stateMutations": [
-                            "rev:+1",
-                            "parentSha256=prev",
-                            "payloadSha256=hash",
-                            "disturbedRecords:SETTLED"
-                      ],
-                      "commentTag": "@branch-id HUB-005"
-                },
-                {
-                      "id": "AUTH-004",
-                      "shard": "AUTH",
-                      "phase": "MULTIPLAYER",
-                      "title": "Authority Relay Numeric & Behavioral Audit Sync",
-                      "summary": "Server reconciles XYZ poses, ship positions, container CAS, market ticks, and anomaly scoring (flags weird spikes).",
-                      "type": "decision",
-                      "expectedOutcomes": [
-                            "sync_clean",
-                            "anomaly_flagged"
-                      ],
-                      "stateMutations": [
-                            "authoritativeLedger:committed"
-                      ],
-                      "commentTag": "@branch-id AUTH-004"
-                },
-                {
-                      "id": "AUTH-006",
-                      "shard": "AUTH",
-                      "phase": "MULTIPLAYER",
-                      "title": "World Consensus Committed",
-                      "summary": "Authoritative world state signed and broadcast to Shards + read-only Overwatch feed.",
-                      "type": "terminal",
-                      "expectedOutcomes": [],
-                      "stateMutations": [
-                            "authoritativeLedger:signed"
-                      ],
-                      "commentTag": "@branch-id AUTH-006"
-                }
+          {
+            "id": "EVA",
+            "name": "EVA / Exterior Telemetry",
+            "repo": "ev-shard-eva",
+            "role": "First-person orbital survival on asteroids & wreckage, suit breach physics, lazy-loaded debris recovery, and disturbedLease custody tracking.",
+            "color": "#f97316",
+            "ownedSlices": [
+              "operator.pose",
+              "operator.suit",
+              "operator.carriedItemIds",
+              "disturbedRecords[]"
+            ],
+            "diegeticTransition": "Helmet Visor HUD Lock-In"
+          },
+          {
+            "id": "PDA",
+            "name": "Vigil Cuff-Slate (Wrist PDA)",
+            "repo": "ev-shard-pda",
+            "role": "Worn wrist-mounted diagnostics, first-boot tutorial layer, distress scans, live telemetry sync.",
+            "color": "#22c55e",
+            "ownedSlices": [
+              "pda.tutorialSeen",
+              "pda.casingWearPct",
+              "pda.batteryPct",
+              "pda.unreadAlerts"
+            ],
+            "diegeticTransition": "Arm Raise + OLED Cuff BIOS Handshake"
+          },
+          {
+            "id": "TECH",
+            "name": "Tech & Fabrication Lab",
+            "repo": "ev-shard-tech",
+            "role": "Blueprint reverse-engineering, salvage analysis, tool crafting (Thermal Arc Lance, Pulse Decoder, Jammer Cores).",
+            "color": "#a855f7",
+            "ownedSlices": [
+              "tech.unlockedBlueprints",
+              "tech.activeResearchId",
+              "tech.researchProgressPct"
+            ],
+            "diegeticTransition": "Schematic Projection Grid Boot"
+          },
+          {
+            "id": "SEC",
+            "name": "Physical Security & Breach",
+            "repo": "ev-shard-security",
+            "role": "Code-locked containers, persistent partial thermal cutting, cyber-breach module—zero arbitrary operator locks.",
+            "color": "#eab308",
+            "ownedSlices": [
+              "containers[]"
+            ],
+            "diegeticTransition": "Physical Lock / Seam Telemetry Zoom"
+          },
+          {
+            "id": "SHIP",
+            "name": "Shipwright & Vessel Ops",
+            "repo": "ev-shard-ship",
+            "role": "Derelict boarding, power/oxygen routing, multi-ship fleet registry, cargo bays, Hub reconstitution dock.",
+            "color": "#06b6d4",
+            "ownedSlices": [
+              "ships[]"
+            ],
+            "diegeticTransition": "Airlock Depressurization & Bulkhead Iris"
+          },
+          {
+            "id": "MKT",
+            "name": "Continuum Markets & PING Exchange",
+            "repo": "ev-shard-markets",
+            "role": "Always-running economy: Open Exchange, Black Market, Sector Equities, bulk-sell salvage, and PING upkeep ticker.",
+            "color": "#10b981",
+            "ownedSlices": [
+              "credits",
+              "markets",
+              "pingInsurance.rentPerHourCredits"
+            ],
+            "diegeticTransition": "Hub Trade Terminal & Bond Ticker"
+          },
+          {
+            "id": "WORLD",
+            "name": "World Forge & Sector Cartography",
+            "repo": "ev-shard-world",
+            "role": "Seeded star-sector coordinates, asteroid mining, privacy jammers, and permanent planetary fracture deltas.",
+            "color": "#ec4899",
+            "ownedSlices": [
+              "worldSeed",
+              "sectorDeltas"
+            ],
+            "diegeticTransition": "Orbital Holo-Table Projection"
+          },
+          {
+            "id": "MON",
+            "name": "Overwatch Continuum Monitor",
+            "repo": "ev-continuum-monitor",
+            "role": "Strictly read-only universe monitor: coordinate camera (respects paid sector jammers), markets, Manifest & Docs links.",
+            "color": "#60a5fa",
+            "ownedSlices": [],
+            "diegeticTransition": "Read-Only Telemetry Overwatch Feed"
+          },
+          {
+            "id": "AUTH",
+            "name": "Zero-Trust Authority Relay & Authenticator",
+            "repo": "ev-authority-relay",
+            "role": "Zero-oracle conduit authenticator, server-issued ephemeral tokens, DOM anti-tamper lock, rate lockout, admin unlock, behavioral anomaly freeze & numeric sync.",
+            "color": "#94a3b8",
+            "ownedSlices": [
+              "operatorAccount",
+              "authoritativeLedger",
+              "conflictLocks"
+            ],
+            "diegeticTransition": "Subspace Conduit Handshake & Signed Token Gate"
+          }
+        ]
+      },
+      "nodes": [
+        {
+          "id": "HUB-001",
+          "shard": "HUB",
+          "phase": "BOOT",
+          "title": "Entry Launch & Per-Session Legal Clickwrap",
+          "summary": "Visitor opens Vigil Hub (index.html); per-session clickwrap Terms & Legal Disclaimer must be clicked through before any operational conduit boots.",
+          "type": "entry",
+          "expectedOutcomes": [
+            "terms_accepted"
           ],
-          "edges": [
-                {
-                      "id": "E-01",
-                      "from": "HUB-001",
-                      "to": "AUTH-001",
-                      "label": "Legal Clicked -> Auth Gate",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "terms_accepted"
-                },
-                {
-                      "id": "E-02",
-                      "from": "AUTH-001",
-                      "to": "HUB-002",
-                      "label": "Token Issued (Verified)",
-                      "branchType": "left",
-                      "outcomeKey": "token_issued"
-                },
-                {
-                      "id": "E-03",
-                      "from": "AUTH-001",
-                      "to": "AUTH-002",
-                      "label": "Invalid / DOM Tamper",
-                      "branchType": "right",
-                      "outcomeKey": "invalid_zero_oracle"
-                },
-                {
-                      "id": "E-04",
-                      "from": "AUTH-001",
-                      "to": "AUTH-003",
-                      "label": "Admin Console",
-                      "branchType": "multi",
-                      "outcomeKey": "admin_unlock_flow"
-                },
-                {
-                      "id": "E-05",
-                      "from": "AUTH-001",
-                      "to": "MON-001",
-                      "label": "Read-Only Overwatch",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "open_overwatch"
-                },
-                {
-                      "id": "E-06",
-                      "from": "AUTH-002",
-                      "to": "AUTH-001",
-                      "label": "Retry Window Open",
-                      "branchType": "left",
-                      "outcomeKey": "retry_window_open"
-                },
-                {
-                      "id": "E-07",
-                      "from": "AUTH-002",
-                      "to": "AUTH-003",
-                      "label": "4 Strikes -> Locked",
-                      "branchType": "right",
-                      "outcomeKey": "locked_out_tamper"
-                },
-                {
-                      "id": "E-08",
-                      "from": "AUTH-003",
-                      "to": "AUTH-001",
-                      "label": "Admin Override Unlock",
-                      "branchType": "left",
-                      "outcomeKey": "admin_unlocked"
-                },
-                {
-                      "id": "E-09",
-                      "from": "AUTH-003",
-                      "to": "AUTH-005",
-                      "label": "Anomaly Quarantine",
-                      "branchType": "right",
-                      "outcomeKey": "quarantined_permanent"
-                },
-                {
-                      "id": "E-10",
-                      "from": "MON-001",
-                      "to": "WORLD-001",
-                      "label": "View Unjammed Coords",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "inspect_clear_sector"
-                },
-                {
-                      "id": "E-11",
-                      "from": "MON-001",
-                      "to": "MON-002",
-                      "label": "Zoom Privatized Sector",
-                      "branchType": "right",
-                      "outcomeKey": "inspect_jammed_sector"
-                },
-                {
-                      "id": "E-12",
-                      "from": "MON-001",
-                      "to": "MKT-001",
-                      "label": "Read Market Tickers",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "read_market_feeds"
-                },
-                {
-                      "id": "E-13",
-                      "from": "HUB-002",
-                      "to": "EVA-001",
-                      "label": "Checksum OK (Hydrate)",
-                      "branchType": "left",
-                      "outcomeKey": "valid_sync"
-                },
-                {
-                      "id": "E-14",
-                      "from": "HUB-002",
-                      "to": "HUB-004",
-                      "label": "New Operator Seed",
-                      "branchType": "multi",
-                      "outcomeKey": "new_operator_seed"
-                },
-                {
-                      "id": "E-15",
-                      "from": "HUB-002",
-                      "to": "HUB-003",
-                      "label": "Checksum Corrupt",
-                      "branchType": "right",
-                      "outcomeKey": "corrupt_checksum"
-                },
-                {
-                      "id": "E-16",
-                      "from": "HUB-002",
-                      "to": "HUB-003",
-                      "label": "Rev Fork Desync",
-                      "branchType": "fallback",
-                      "outcomeKey": "rev_fork_desync"
-                },
-                {
-                      "id": "E-17",
-                      "from": "HUB-003",
-                      "to": "EVA-001",
-                      "label": "Recovered State",
-                      "branchType": "left",
-                      "outcomeKey": "recovered_resume"
-                },
-                {
-                      "id": "E-18",
-                      "from": "HUB-004",
-                      "to": "EVA-001",
-                      "label": "Spawn Stranded",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "enter_eva_act0"
-                },
-                {
-                      "id": "E-19",
-                      "from": "EVA-001",
-                      "to": "PDA-001",
-                      "label": "Click Wrist PDA",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "open_pda"
-                },
-                {
-                      "id": "E-20",
-                      "from": "EVA-001",
-                      "to": "EVA-002",
-                      "label": "Scavenge Wreckage",
-                      "branchType": "left",
-                      "outcomeKey": "scavenge_debris"
-                },
-                {
-                      "id": "E-21",
-                      "from": "EVA-001",
-                      "to": "EVA-005",
-                      "label": "Wait / O2 Runs Out",
-                      "branchType": "right",
-                      "outcomeKey": "ignore_wait"
-                },
-                {
-                      "id": "E-22",
-                      "from": "PDA-001",
-                      "to": "PDA-002",
-                      "label": "Suit Diagnostics",
-                      "branchType": "left",
-                      "outcomeKey": "run_suit_diag"
-                },
-                {
-                      "id": "E-23",
-                      "from": "PDA-001",
-                      "to": "PDA-003",
-                      "label": "Scan Signals",
-                      "branchType": "multi",
-                      "outcomeKey": "scan_beacons"
-                },
-                {
-                      "id": "E-24",
-                      "from": "PDA-001",
-                      "to": "TECH-001",
-                      "label": "Jump -> Tech Lab",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "open_tech_lab"
-                },
-                {
-                      "id": "E-25",
-                      "from": "PDA-001",
-                      "to": "EVA-002",
-                      "label": "Close PDA -> EVA",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "return_eva"
-                },
-                {
-                      "id": "E-26",
-                      "from": "PDA-002",
-                      "to": "EVA-002",
-                      "label": "Locate Seal Materials",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "return_eva_equipped"
-                },
-                {
-                      "id": "E-27",
-                      "from": "PDA-003",
-                      "to": "EVA-006",
-                      "label": "Waypoints Uploaded",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "mark_waypoints"
-                },
-                {
-                      "id": "E-28",
-                      "from": "EVA-002",
-                      "to": "EVA-003",
-                      "label": "Found Seal Tape",
-                      "branchType": "left",
-                      "outcomeKey": "found_seal_tape"
-                },
-                {
-                      "id": "E-29",
-                      "from": "EVA-002",
-                      "to": "EVA-004",
-                      "label": "Found Scrap Alloy",
-                      "branchType": "multi",
-                      "outcomeKey": "found_raw_scrap"
-                },
-                {
-                      "id": "E-30",
-                      "from": "EVA-002",
-                      "to": "EVA-005",
-                      "label": "Empty Search -> O2 Zero",
-                      "branchType": "right",
-                      "outcomeKey": "nothing_found"
-                },
-                {
-                      "id": "E-31",
-                      "from": "EVA-003",
-                      "to": "EVA-006",
-                      "label": "Leak Sealed 100%",
-                      "branchType": "left",
-                      "outcomeKey": "stabilized_eva"
-                },
-                {
-                      "id": "E-32",
-                      "from": "EVA-004",
-                      "to": "EVA-006",
-                      "label": "Leak Slowed 70%",
-                      "branchType": "left",
-                      "outcomeKey": "stabilized_eva"
-                },
-                {
-                      "id": "E-33",
-                      "from": "EVA-005",
-                      "to": "MED-001",
-                      "label": "Body Nano-Pulse -> Hub",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "ping_resolve_on_death"
-                },
-                {
-                      "id": "E-34",
-                      "from": "MED-001",
-                      "to": "PING-001",
-                      "label": "All Gear PING'd",
-                      "branchType": "left",
-                      "outcomeKey": "all_pingd_dissolve"
-                },
-                {
-                      "id": "E-35",
-                      "from": "MED-001",
-                      "to": "PING-002",
-                      "label": "Ship PING'd / Cargo Settled",
-                      "branchType": "multi",
-                      "outcomeKey": "ship_pingd_cargo_unpingd"
-                },
-                {
-                      "id": "E-36",
-                      "from": "MED-001",
-                      "to": "EVA-007",
-                      "label": "Settled Un-PING'd Adrift",
-                      "branchType": "right",
-                      "outcomeKey": "unpingd_left_in_space"
-                },
-                {
-                      "id": "E-37",
-                      "from": "MED-001",
-                      "to": "EVA-008",
-                      "label": "Unsettled Disturbed Revert",
-                      "branchType": "fallback",
-                      "outcomeKey": "provisional_disturbed_revert"
-                },
-                {
-                      "id": "E-38",
-                      "from": "PING-001",
-                      "to": "EVA-006",
-                      "label": "1-Button Spawn -> Resume",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "resume_from_hub"
-                },
-                {
-                      "id": "E-39",
-                      "from": "PING-002",
-                      "to": "EVA-007",
-                      "label": "EVA Back to Wreck Coords",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "eva_recovery_run"
-                },
-                {
-                      "id": "E-40",
-                      "from": "EVA-007",
-                      "to": "EVA-006",
-                      "label": "Uninsured Salvage Recovered",
-                      "branchType": "left",
-                      "outcomeKey": "back_to_cluster"
-                },
-                {
-                      "id": "E-41",
-                      "from": "EVA-008",
-                      "to": "EVA-006",
-                      "label": "Snap-Reverted to Anchor",
-                      "branchType": "left",
-                      "outcomeKey": "reverted_to_anchor"
-                },
-                {
-                      "id": "E-42",
-                      "from": "EVA-006",
-                      "to": "SEC-001",
-                      "label": "Inspect Locked Box",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "approach_crate"
-                },
-                {
-                      "id": "E-43",
-                      "from": "EVA-006",
-                      "to": "SHIP-001",
-                      "label": "Board Derelict Ship",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "approach_derelict"
-                },
-                {
-                      "id": "E-44",
-                      "from": "EVA-006",
-                      "to": "TECH-001",
-                      "label": "Open Tech Lab",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "open_tech_lab"
-                },
-                {
-                      "id": "E-45",
-                      "from": "EVA-006",
-                      "to": "MKT-001",
-                      "label": "Dock -> Settle & Trade",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "visit_markets"
-                },
-                {
-                      "id": "E-46",
-                      "from": "EVA-006",
-                      "to": "HUB-005",
-                      "label": "Checkpoint & Save Manifest",
-                      "branchType": "fallback",
-                      "outcomeKey": "save_sync"
-                },
-                {
-                      "id": "E-47",
-                      "from": "MKT-001",
-                      "to": "MKT-001",
-                      "label": "Bulk PING / Un-PING",
-                      "branchType": "left",
-                      "outcomeKey": "bulk_ping_manage"
-                },
-                {
-                      "id": "E-48",
-                      "from": "MKT-001",
-                      "to": "MKT-001",
-                      "label": "Open / Black / Stock Trade",
-                      "branchType": "multi",
-                      "outcomeKey": "trade_open_black_stock"
-                },
-                {
-                      "id": "E-49",
-                      "from": "MKT-001",
-                      "to": "MKT-002",
-                      "label": "Wealth-Gravity Threat Calc",
-                      "branchType": "left",
-                      "outcomeKey": "wealth_gravity_calc"
-                },
-                {
-                      "id": "E-50",
-                      "from": "MKT-001",
-                      "to": "MKT-003",
-                      "label": "Pilot Standing & Drops",
-                      "branchType": "multi",
-                      "outcomeKey": "pilot_standing_drop"
-                },
-                {
-                      "id": "E-51",
-                      "from": "MKT-001",
-                      "to": "EVA-006",
-                      "label": "Undock to Sector",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "exit_markets"
-                },
-                {
-                      "id": "E-87",
-                      "from": "MKT-002",
-                      "to": "MKT-001",
-                      "label": "NPC Threat Radiated",
-                      "branchType": "left",
-                      "outcomeKey": "threat_updated"
-                },
-                {
-                      "id": "E-88",
-                      "from": "MKT-003",
-                      "to": "MKT-001",
-                      "label": "Drop Ledger Verified",
-                      "branchType": "left",
-                      "outcomeKey": "standing_checked"
-                },
-                {
-                      "id": "E-52",
-                      "from": "TECH-001",
-                      "to": "TECH-002",
-                      "label": "Unlock Arc Lance",
-                      "branchType": "left",
-                      "outcomeKey": "unlock_arc_cutter"
-                },
-                {
-                      "id": "E-53",
-                      "from": "TECH-001",
-                      "to": "TECH-002",
-                      "label": "Unlock Pulse Decoder",
-                      "branchType": "multi",
-                      "outcomeKey": "unlock_pulse_decoder"
-                },
-                {
-                      "id": "E-54",
-                      "from": "TECH-001",
-                      "to": "TECH-002",
-                      "label": "Unlock Polymer Seal",
-                      "branchType": "multi",
-                      "outcomeKey": "unlock_polymer_seal"
-                },
-                {
-                      "id": "E-55",
-                      "from": "TECH-001",
-                      "to": "TECH-003",
-                      "label": "Skill Queue / 2% Jury-Rig",
-                      "branchType": "left",
-                      "outcomeKey": "offline_skill_juryrig"
-                },
-                {
-                      "id": "E-56",
-                      "from": "TECH-001",
-                      "to": "EVA-006",
-                      "label": "Return to EVA",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "exit_to_eva"
-                },
-                {
-                      "id": "E-57",
-                      "from": "TECH-002",
-                      "to": "EVA-006",
-                      "label": "Equip New Tool",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "return_eva_tooled"
-                },
-                {
-                      "id": "E-89",
-                      "from": "TECH-003",
-                      "to": "TECH-001",
-                      "label": "Skill Sync / Scrap Ready",
-                      "branchType": "left",
-                      "outcomeKey": "skill_ready"
-                },
-                {
-                      "id": "E-58",
-                      "from": "SEC-001",
-                      "to": "SEC-002",
-                      "label": "Enter 4-Digit PIN",
-                      "branchType": "left",
-                      "outcomeKey": "enter_pin"
-                },
-                {
-                      "id": "E-59",
-                      "from": "SEC-001",
-                      "to": "SEC-003",
-                      "label": "Cut w/ Arc Lance",
-                      "branchType": "multi",
-                      "outcomeKey": "use_arc_cutter"
-                },
-                {
-                      "id": "E-60",
-                      "from": "SEC-001",
-                      "to": "SEC-004",
-                      "label": "Hack w/ Decoder",
-                      "branchType": "multi",
-                      "outcomeKey": "use_pulse_decoder"
-                },
-                {
-                      "id": "E-61",
-                      "from": "SEC-001",
-                      "to": "EVA-006",
-                      "label": "Leave Locked",
-                      "branchType": "right",
-                      "outcomeKey": "walk_away"
-                },
-                {
-                      "id": "E-62",
-                      "from": "SEC-002",
-                      "to": "SEC-005",
-                      "label": "Valid PIN",
-                      "branchType": "left",
-                      "outcomeKey": "pin_valid"
-                },
-                {
-                      "id": "E-63",
-                      "from": "SEC-002",
-                      "to": "SEC-001",
-                      "label": "Wrong PIN (Retry)",
-                      "branchType": "right",
-                      "outcomeKey": "pin_invalid"
-                },
-                {
-                      "id": "E-64",
-                      "from": "SEC-003",
-                      "to": "SEC-005",
-                      "label": "Cut 100% -> Open",
-                      "branchType": "left",
-                      "outcomeKey": "cut_complete"
-                },
-                {
-                      "id": "E-65",
-                      "from": "SEC-003",
-                      "to": "EVA-006",
-                      "label": "Stop Early (Saves %)",
-                      "branchType": "right",
-                      "outcomeKey": "cut_aborted_partial"
-                },
-                {
-                      "id": "E-66",
-                      "from": "SEC-004",
-                      "to": "SEC-005",
-                      "label": "Cipher Bypassed",
-                      "branchType": "left",
-                      "outcomeKey": "hack_success"
-                },
-                {
-                      "id": "E-67",
-                      "from": "SEC-004",
-                      "to": "SEC-006",
-                      "label": "Beacon Heartbeat Lost",
-                      "branchType": "right",
-                      "outcomeKey": "hack_trip_alarm"
-                },
-                {
-                      "id": "E-68",
-                      "from": "SEC-005",
-                      "to": "EVA-006",
-                      "label": "Claim / Carry Items",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "back_to_eva_looted"
-                },
-                {
-                      "id": "E-90",
-                      "from": "SEC-006",
-                      "to": "PDA-001",
-                      "label": "Pulse Loss -> PDA Alert",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "heartbeat_logged"
-                },
-                {
-                      "id": "E-91",
-                      "from": "SEC-006",
-                      "to": "GAP-007",
-                      "label": "Watch / Sleep Alerts (v0.6+)",
-                      "branchType": "unplanned",
-                      "outcomeKey": "companion_app_future"
-                },
-                {
-                      "id": "E-69",
-                      "from": "SHIP-001",
-                      "to": "SHIP-002",
-                      "label": "Restore Aux Power",
-                      "branchType": "left",
-                      "outcomeKey": "restore_aux_power"
-                },
-                {
-                      "id": "E-70",
-                      "from": "SHIP-001",
-                      "to": "SHIP-003",
-                      "label": "Switch Owned Ship",
-                      "branchType": "multi",
-                      "outcomeKey": "switch_owned_ship"
-                },
-                {
-                      "id": "E-71",
-                      "from": "SHIP-001",
-                      "to": "WORLD-001",
-                      "label": "Undock -> World Map",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "undock_to_world"
-                },
-                {
-                      "id": "E-72",
-                      "from": "SHIP-001",
-                      "to": "SHIP-004",
-                      "label": "Boarding & Disguise Leak",
-                      "branchType": "multi",
-                      "outcomeKey": "boarding_event"
-                },
-                {
-                      "id": "E-73",
-                      "from": "SHIP-001",
-                      "to": "EVA-006",
-                      "label": "EVA Spacewalk",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "exit_airlock"
-                },
-                {
-                      "id": "E-74",
-                      "from": "SHIP-002",
-                      "to": "SHIP-001",
-                      "label": "Systems Online",
-                      "branchType": "left",
-                      "outcomeKey": "ship_operational"
-                },
-                {
-                      "id": "E-75",
-                      "from": "SHIP-003",
-                      "to": "SHIP-001",
-                      "label": "Vessel Active",
-                      "branchType": "left",
-                      "outcomeKey": "ship_selected"
-                },
-                {
-                      "id": "E-92",
-                      "from": "SHIP-001",
-                      "to": "GAP-008",
-                      "label": "Baked Voxel Hull (v0.6+)",
-                      "branchType": "unplanned",
-                      "outcomeKey": "voxel_mesh_future"
-                },
-                {
-                      "id": "E-93",
-                      "from": "SHIP-004",
-                      "to": "EVA-006",
-                      "label": "Loot / Hijack / Tracker",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "board_outcome_resolved"
-                },
-                {
-                      "id": "E-76",
-                      "from": "WORLD-001",
-                      "to": "WORLD-002",
-                      "label": "Mine Asteroid",
-                      "branchType": "left",
-                      "outcomeKey": "mine_asteroid"
-                },
-                {
-                      "id": "E-77",
-                      "from": "WORLD-001",
-                      "to": "JAM-001",
-                      "label": "Deploy Privacy Jammer",
-                      "branchType": "multi",
-                      "outcomeKey": "deploy_jammer"
-                },
-                {
-                      "id": "E-78",
-                      "from": "WORLD-001",
-                      "to": "WORLD-003",
-                      "label": "Shatter Planet",
-                      "branchType": "multi",
-                      "outcomeKey": "shatter_planet"
-                },
-                {
-                      "id": "E-79",
-                      "from": "WORLD-001",
-                      "to": "SHIP-001",
-                      "label": "Drop to Ship Helm",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "travel_sector"
-                },
-                {
-                      "id": "E-80",
-                      "from": "WORLD-001",
-                      "to": "HUB-005",
-                      "label": "Save World Manifest",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "commit_envelope"
-                },
-                {
-                      "id": "E-81",
-                      "from": "WORLD-002",
-                      "to": "WORLD-001",
-                      "label": "Sector Ore Logged",
-                      "branchType": "left",
-                      "outcomeKey": "return_world_updated"
-                },
-                {
-                      "id": "E-82",
-                      "from": "JAM-001",
-                      "to": "MON-002",
-                      "label": "Blocks Monitor Feed",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "jammer_active_saved"
-                },
-                {
-                      "id": "E-83",
-                      "from": "WORLD-003",
-                      "to": "HUB-005",
-                      "label": "Commit Planet Delta",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "planet_shattered_saved"
-                },
-                {
-                      "id": "E-84",
-                      "from": "HUB-005",
-                      "to": "AUTH-004",
-                      "label": "Relay & Anomaly Audit",
-                      "branchType": "shard_jump",
-                      "outcomeKey": "relay_sync"
-                },
-                {
-                      "id": "E-85",
-                      "from": "AUTH-004",
-                      "to": "AUTH-006",
-                      "label": "Checks Clean -> Sign",
-                      "branchType": "left",
-                      "outcomeKey": "sync_clean"
-                },
-                {
-                      "id": "E-86",
-                      "from": "AUTH-004",
-                      "to": "AUTH-003",
-                      "label": "Exploit / Temporal Spike",
-                      "branchType": "right",
-                      "outcomeKey": "anomaly_flagged"
-                }
-          ]
+          "stateMutations": [
+            "session.acknowledgedTermsUtc"
+          ],
+          "commentTag": "@branch-id HUB-001"
+        },
+        {
+          "id": "AUTH-001",
+          "shard": "AUTH",
+          "phase": "BOOT",
+          "title": "Sci-Fi Conduit Authenticator (Zero-Trust Gate)",
+          "summary": "Realistic diegetic authenticator requests Operator Conduit Code. Protected world/shard payloads are withheld until server issues signed ephemeral session token.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "token_issued",
+            "invalid_zero_oracle",
+            "admin_unlock_flow",
+            "open_overwatch"
+          ],
+          "stateMutations": [
+            "operatorAccount.sessionId"
+          ],
+          "commentTag": "@branch-id AUTH-001"
+        },
+        {
+          "id": "AUTH-002",
+          "shard": "AUTH",
+          "phase": "BOOT",
+          "title": "Zero-Oracle Rejection & DOM Anti-Tamper Lock",
+          "summary": "Bad code or DevTools modal removal returns uniform 'CONDUIT UNVERIFIED // ZERO TELEMETRY RETURNED' (no brute-force hints) and locks after N attempts.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "retry_window_open",
+            "locked_out_tamper"
+          ],
+          "stateMutations": [
+            "operatorAccount.authState"
+          ],
+          "commentTag": "@branch-id AUTH-002"
+        },
+        {
+          "id": "AUTH-003",
+          "shard": "AUTH",
+          "phase": "SECURITY",
+          "title": "Admin Recovery Console & Anomaly Auto-Freeze",
+          "summary": "Server-salted Admin Recovery key unlocks locked codes; behavioral heuristics (velocity/dupe/credit spikes) auto-quarantine hostile codes.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "admin_unlocked",
+            "quarantined_permanent"
+          ],
+          "stateMutations": [
+            "operatorAccount.authState",
+            "operatorAccount.anomalyScore"
+          ],
+          "commentTag": "@branch-id AUTH-003"
+        },
+        {
+          "id": "AUTH-005",
+          "shard": "AUTH",
+          "phase": "SECURITY",
+          "title": "Conduit Quarantined / Revoked",
+          "summary": "Account frozen; bearer token invalidated across all Shards until explicit Admin recovery audit clears anomaly.",
+          "type": "terminal",
+          "expectedOutcomes": [],
+          "stateMutations": [
+            "operatorAccount.authState='QUARANTINED'"
+          ],
+          "commentTag": "@branch-id AUTH-005"
+        },
+        {
+          "id": "HUB-002",
+          "shard": "HUB",
+          "phase": "BOOT",
+          "title": "SHA-256 Checksum & Rev Gate",
+          "summary": "Recompute SHA-256 on server-delivered or cached Continuum Manifest and verify monotonic rev + parentSha256.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "valid_sync",
+            "new_operator_seed",
+            "corrupt_checksum",
+            "rev_fork_desync"
+          ],
+          "stateMutations": [
+            "session.lastVerifiedSha256"
+          ],
+          "commentTag": "@branch-id HUB-002"
+        },
+        {
+          "id": "HUB-003",
+          "shard": "HUB",
+          "phase": "BOOT",
+          "title": "Auto-Rollback / 3-Way Merge",
+          "summary": "Corrupt or forked Manifest Envelope detected; restore verified parent snapshot or merge entity deltas.",
+          "type": "action",
+          "expectedOutcomes": [
+            "recovered_resume"
+          ],
+          "stateMutations": [
+            "session.recoveryUsed=true"
+          ],
+          "commentTag": "@branch-id HUB-003"
+        },
+        {
+          "id": "HUB-004",
+          "shard": "HUB",
+          "phase": "BOOT",
+          "title": "Procedural Origin & Co-Op Squad Link",
+          "summary": "Roll fresh randomized Origin Crisis (Slum Amnesia Diary, Patrol Cruiser Rescue, Asteroid Leak) with optional Squad City Link & ORIGIN_BOUND anti-reroll gear.",
+          "type": "action",
+          "expectedOutcomes": [
+            "sculpt_operator"
+          ],
+          "stateMutations": [
+            "manifestId:init",
+            "originScenario:roll",
+            "suit.leakRatePerSec:init"
+          ],
+          "commentTag": "@branch-id HUB-004"
+        },
+        {
+          "id": "FORGE-001",
+          "shard": "HUB",
+          "phase": "BOOT",
+          "title": "3D Body, Face, Hair & Scar-Mask Sculptor",
+          "summary": "Direct-drag & macro-slider 3D avatar builder with movable/rotatable gray streaks & scars that carve beard/eyebrow hair masks, optional zero-storage photo ratio import, and live Helmet Visor HUD portrait.",
+          "type": "action",
+          "expectedOutcomes": [
+            "enter_eva_act0",
+            "future_v06b_scene"
+          ],
+          "stateMutations": [
+            "operatorProfile:saved"
+          ],
+          "commentTag": "@branch-id FORGE-001"
+        },
+        {
+          "id": "GAP-009",
+          "shard": "EVA",
+          "phase": "FUTURE_V06B",
+          "title": "UNPLANNED: v0.6b 3D Yacht-Asteroid Demo, Crashed Satellite & Betrayed Vessel",
+          "summary": "Mobile-first free-orbit isometric 3D voxel slice: 75s bullet-breach rescue, NASA pressure-decay check, Earth-era satellite reveal, betrayed Firefly-scale wreck, and optional self-hosted MediaPipe 478-point photo auto-snap.",
+          "type": "gap",
+          "expectedOutcomes": [],
+          "stateMutations": [],
+          "commentTag": "@branch-id GAP-009"
+        },
+        {
+          "id": "MON-001",
+          "shard": "MON",
+          "phase": "OVERWATCH",
+          "title": "Read-Only Continuum Monitor",
+          "summary": "Public read-only watch terminal: view economy tickers, repo docs, Manifest checksums, or enter sector XYZ.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "inspect_clear_sector",
+            "inspect_jammed_sector",
+            "read_market_feeds"
+          ],
+          "stateMutations": [],
+          "commentTag": "@branch-id MON-001"
+        },
+        {
+          "id": "MON-002",
+          "shard": "MON",
+          "phase": "OVERWATCH",
+          "title": "Jammer Static Blockade",
+          "summary": "Zooming into paid privatized coordinates displays RF static & 'SIGNAL INTERCEPT DENIED // SECTOR PRIVATIZED'.",
+          "type": "terminal",
+          "expectedOutcomes": [],
+          "stateMutations": [],
+          "commentTag": "@branch-id MON-002"
+        },
+        {
+          "id": "EVA-001",
+          "shard": "EVA",
+          "phase": "ACT_0_STRANDED",
+          "title": "Wake Up: Suit Bullet Breach (75s Atmosphere)",
+          "summary": "Seasoned veteran wakes stranded on yacht-sized asteroid after crew mutiny; bullet puncture venting O2 rapidly while Helmet Visor HUD tracks vitals.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "open_pda",
+            "open_cardboard_log",
+            "scavenge_debris",
+            "ignore_wait"
+          ],
+          "stateMutations": [
+            "o2Seconds:tick(-1.2/s)"
+          ],
+          "commentTag": "@branch-id EVA-001"
+        },
+        {
+          "id": "LOG-001",
+          "shard": "PDA",
+          "phase": "ACT_0_STRANDED",
+          "title": "Diegetic Cardboard & Cuff-Slate Log Entry",
+          "summary": "Self-authored short HUD tag + long detail log ('LOG: STARTING OVER' scribbled on torn crate cardboard until ship/map hardware is recovered).",
+          "type": "action",
+          "expectedOutcomes": [
+            "return_eva_log"
+          ],
+          "stateMutations": [
+            "logEntries:viewed"
+          ],
+          "commentTag": "@branch-id LOG-001"
+        },
+        {
+          "id": "PDA-001",
+          "shard": "PDA",
+          "phase": "ACT_0_STRANDED",
+          "title": "First Boot: Battered Wrist-PDA Tutorial",
+          "summary": "Separate PDA Shard loads via diegetic wrist-raise with live suit damage & tutorial layer active.",
+          "type": "shard_jump",
+          "expectedOutcomes": [
+            "run_suit_diag",
+            "scan_beacons",
+            "open_tech_lab",
+            "return_eva"
+          ],
+          "stateMutations": [
+            "pda.tutorialSeen=true"
+          ],
+          "commentTag": "@branch-id PDA-001"
+        },
+        {
+          "id": "PDA-002",
+          "shard": "PDA",
+          "phase": "ACT_0_STRANDED",
+          "title": "Suit Diagnostics & Breach Locator",
+          "summary": "Highlights seam leak rate, O2 countdown, and nearest salvageable wreckage.",
+          "type": "action",
+          "expectedOutcomes": [
+            "return_eva_equipped"
+          ],
+          "stateMutations": [
+            "pda.unreadAlerts:ack"
+          ],
+          "commentTag": "@branch-id PDA-002"
+        },
+        {
+          "id": "PDA-003",
+          "shard": "PDA",
+          "phase": "ACT_1_SALVAGE",
+          "title": "Sector Distress & Derelict Scan",
+          "summary": "Reveals locked supply crate & derelict shuttle beacon coords in asteroid cluster.",
+          "type": "action",
+          "expectedOutcomes": [
+            "mark_waypoints"
+          ],
+          "stateMutations": [
+            "world.beacons:discovered"
+          ],
+          "commentTag": "@branch-id PDA-003"
+        },
+        {
+          "id": "EVA-002",
+          "shard": "EVA",
+          "phase": "ACT_0_STRANDED",
+          "title": "Scavenge Asteroid Wreckage Field",
+          "summary": "Search floating crew debris for sealant tape, scrap plating, or abandoned tool kit.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "found_seal_tape",
+            "found_raw_scrap",
+            "nothing_found"
+          ],
+          "stateMutations": [
+            "operator.carriedItemIds:push",
+            "disturbedRecords:PROVISIONAL_TRANSIT"
+          ],
+          "commentTag": "@branch-id EVA-002"
+        },
+        {
+          "id": "EVA-003",
+          "shard": "EVA",
+          "phase": "ACT_0_STRANDED",
+          "title": "Apply Emergency Seal Tape",
+          "summary": "Full temporary seal stops O2 venting immediately; preserves suit integrity.",
+          "type": "action",
+          "expectedOutcomes": [
+            "stabilized_eva"
+          ],
+          "stateMutations": [
+            "operator.suit.leakRatePerSec=0",
+            "item:consumed"
+          ],
+          "commentTag": "@branch-id EVA-003"
+        },
+        {
+          "id": "EVA-004",
+          "shard": "EVA",
+          "phase": "ACT_0_STRANDED",
+          "title": "Improvised Scrap-Plate Patch",
+          "summary": "Reduces O2 leak by 70%; buys critical minutes to reach derelict airlock or craft polymer seal.",
+          "type": "action",
+          "expectedOutcomes": [
+            "stabilized_eva"
+          ],
+          "stateMutations": [
+            "operator.suit.leakRatePerSec=0.35"
+          ],
+          "commentTag": "@branch-id EVA-004"
+        },
+        {
+          "id": "EVA-005",
+          "shard": "EVA",
+          "phase": "ACT_0_STRANDED",
+          "title": "Vitals Collapse (Sarcastic Last Line -> Blackout)",
+          "summary": "Oxygen or blood loss hits zero; veteran mutters one dry sarcastic remark and collapses unconscious without pausing the world.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "unconscious_bleedout"
+          ],
+          "stateMutations": [
+            "operator.suit.o2Seconds=0"
+          ],
+          "commentTag": "@branch-id EVA-005"
+        },
+        {
+          "id": "EVA-009",
+          "shard": "EVA",
+          "phase": "RECONSTITUTION",
+          "title": "Unconscious Bleed-Out & Rescue / Grit Roll",
+          "summary": "World keeps ticking live: checks if squadmates approach, reachable stabilizers exist, or hidden grit/luck revives pulse—otherwise checks clone pod.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "ping_clone_exists",
+            "no_clone_fatal",
+            "rescued_lucky"
+          ],
+          "stateMutations": [
+            "cloneBackupStatus:checked"
+          ],
+          "commentTag": "@branch-id EVA-009"
+        },
+        {
+          "id": "EVA-010",
+          "shard": "EVA",
+          "phase": "RECONSTITUTION",
+          "title": "No Backup Clone Detected (Terminal Loss)",
+          "summary": "Crew stole your ship & onboard Med-Bay pod and you bought zero off-world clone coverage. Vital telemetry terminates permanently for this run.",
+          "type": "terminal",
+          "expectedOutcomes": [],
+          "stateMutations": [
+            "operatorAccount.runEnded=true"
+          ],
+          "commentTag": "@branch-id EVA-010"
+        },
+        {
+          "id": "MED-001",
+          "shard": "HUB",
+          "phase": "RECONSTITUTION",
+          "title": "Hub Med-Bay Respawn, PING & Custody Check",
+          "summary": "Non-permadeath Hub Med-Bay reconstitution: PING'd assets dissolve to dock, settled drops remain, unsettled disturbed gear reverts.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "all_pingd_dissolve",
+            "ship_pingd_cargo_unpingd",
+            "unpingd_left_in_space",
+            "provisional_disturbed_revert"
+          ],
+          "stateMutations": [
+            "operator.pose:hub_medbay"
+          ],
+          "commentTag": "@branch-id MED-001"
+        },
+        {
+          "id": "PING-001",
+          "shard": "HUB",
+          "phase": "RECONSTITUTION",
+          "title": "One-Button Hub Hangar Reconstitution",
+          "summary": "All PING'd gear & vessel dissolved on death into queue; walk to Hub dock & press 1 button to restore.",
+          "type": "action",
+          "expectedOutcomes": [
+            "resume_from_hub"
+          ],
+          "stateMutations": [
+            "pingInsurance.reconstitutionQueueIds:empty",
+            "ships[home]:spawn"
+          ],
+          "commentTag": "@branch-id PING-001"
+        },
+        {
+          "id": "PING-002",
+          "shard": "HUB",
+          "phase": "RECONSTITUTION",
+          "title": "Partial PING: Ship Restored, Cargo Adrift",
+          "summary": "PING'd ship dissolved back to Hub queue while settled un-PING'd cargo stays floating at wreck coords for EVA salvage.",
+          "type": "action",
+          "expectedOutcomes": [
+            "eva_recovery_run"
+          ],
+          "stateMutations": [
+            "ships[home]:queue",
+            "sectorDeltas[wreck].uninsuredDropIds:push"
+          ],
+          "commentTag": "@branch-id PING-002"
+        },
+        {
+          "id": "EVA-007",
+          "shard": "EVA",
+          "phase": "RECONSTITUTION",
+          "title": "Lazy-Loaded Wreckage Recovery",
+          "summary": "Settled un-PING'd gear sits as lightweight coords (zero 3D rendered) until someone enters visual proximity.",
+          "type": "action",
+          "expectedOutcomes": [
+            "back_to_cluster"
+          ],
+          "stateMutations": [
+            "sectorDeltas[wreck].uninsuredDropIds:pop"
+          ],
+          "commentTag": "@branch-id EVA-007"
+        },
+        {
+          "id": "EVA-008",
+          "shard": "EVA",
+          "phase": "RECONSTITUTION",
+          "title": "Provisional Transit Snap-Revert (Anti-Suicide Courier)",
+          "summary": "Un-PING'd items tagged PROVISIONAL_TRANSIT by deceased operator before Hub/Save checkpoint snap-revert to anchorOrigin.",
+          "type": "action",
+          "expectedOutcomes": [
+            "reverted_to_anchor"
+          ],
+          "stateMutations": [
+            "disturbedRecords[id].xyz=anchorOrigin"
+          ],
+          "commentTag": "@branch-id EVA-008"
+        },
+        {
+          "id": "EVA-006",
+          "shard": "EVA",
+          "phase": "ACT_1_SALVAGE",
+          "title": "Suit Stabilized: Explore Cluster",
+          "summary": "Traverse sector, use Cuff-Slate/Tech, breach crates, board ships, settle cargo & trade at Hub Markets, or deploy jammers.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "approach_crate",
+            "approach_derelict",
+            "open_tech_lab",
+            "visit_markets",
+            "save_sync"
+          ],
+          "stateMutations": [
+            "disturbedRecords:SETTLED_AT_HUB"
+          ],
+          "commentTag": "@branch-id EVA-006"
+        },
+        {
+          "id": "MKT-001",
+          "shard": "MKT",
+          "phase": "ECONOMY",
+          "title": "Hub Markets & PING Insurance Desk",
+          "summary": "Sell 80% salvage on Open/Black Exchange or Equities; Bulk-PING or Bulk-unPING kept gear (hourly rent ticker).",
+          "type": "decision",
+          "expectedOutcomes": [
+            "bulk_ping_manage",
+            "trade_open_black_stock",
+            "wealth_gravity_calc",
+            "pilot_standing_drop",
+            "exit_markets"
+          ],
+          "stateMutations": [
+            "credits:delta",
+            "pingInsurance.rentPerHourCredits:recalc"
+          ],
+          "commentTag": "@branch-id MKT-001"
+        },
+        {
+          "id": "MKT-002",
+          "shard": "MKT",
+          "phase": "BALANCE",
+          "title": "Wealth-Gravity Threat & NPC/Syndicate Hunts",
+          "summary": "Wealth x Concentration calculates sector threat; lone rich operators radiate loud targets drawing Syndicate & NPC hunters so money circulates naturally.",
+          "type": "action",
+          "expectedOutcomes": [
+            "threat_updated"
+          ],
+          "stateMutations": [
+            "telemetrySignatureScore:recalc"
+          ],
+          "commentTag": "@branch-id MKT-002"
+        },
+        {
+          "id": "MKT-003",
+          "shard": "MKT",
+          "phase": "BALANCE",
+          "title": "Pilot Standing Drops & Origin-Bound Anti-Farm",
+          "summary": "Friends drop items freely within transparent flight-hour Pilot Standing limits; ORIGIN_BOUND starter gear blocks reroll farming.",
+          "type": "action",
+          "expectedOutcomes": [
+            "standing_checked"
+          ],
+          "stateMutations": [
+            "pilotStanding.droppedTodayCr:+"
+          ],
+          "commentTag": "@branch-id MKT-003"
+        },
+        {
+          "id": "TECH-001",
+          "shard": "TECH",
+          "phase": "ACT_1_SALVAGE",
+          "title": "Tech & Reverse-Engineering Lab",
+          "summary": "Separate Tech Shard hydrates salvage inventory, skill training queue, and blueprint unlocks.",
+          "type": "shard_jump",
+          "expectedOutcomes": [
+            "unlock_arc_cutter",
+            "unlock_pulse_decoder",
+            "unlock_polymer_seal",
+            "offline_skill_juryrig",
+            "exit_to_eva"
+          ],
+          "stateMutations": [],
+          "commentTag": "@branch-id TECH-001"
+        },
+        {
+          "id": "TECH-002",
+          "shard": "TECH",
+          "phase": "ACT_1_SALVAGE",
+          "title": "Craft Thermal Arc Lance / Decoder",
+          "summary": "Unlocks breach tools needed to cut or hack physical containers owned by anyone.",
+          "type": "action",
+          "expectedOutcomes": [
+            "return_eva_tooled"
+          ],
+          "stateMutations": [
+            "tech.unlockedBlueprints:add",
+            "operator.carriedItemIds:add"
+          ],
+          "commentTag": "@branch-id TECH-002"
+        },
+        {
+          "id": "TECH-003",
+          "shard": "TECH",
+          "phase": "ACT_2_EXPANSION",
+          "title": "Offline Skill Training, Espionage & 2% Jury-Rigging",
+          "summary": "EVE-style offline skill training unlocks high-tech operation; untrained pilots can jury-rig cheap 2% scrap gear or acquire tools via corporate espionage/mechanics.",
+          "type": "action",
+          "expectedOutcomes": [
+            "skill_ready"
+          ],
+          "stateMutations": [
+            "skills.activeTraining:set",
+            "skills.juryRigYieldRatio=0.02"
+          ],
+          "commentTag": "@branch-id TECH-003"
+        },
+        {
+          "id": "SEC-001",
+          "shard": "SEC",
+          "phase": "ACT_1_SALVAGE",
+          "title": "Inspect Code-Locked Supply Box",
+          "summary": "Physical container with 4-digit PIN hash & cuttable titanium seams. Zero arbitrary operator locks.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "enter_pin",
+            "use_arc_cutter",
+            "use_pulse_decoder",
+            "walk_away"
+          ],
+          "stateMutations": [],
+          "commentTag": "@branch-id SEC-001"
+        },
+        {
+          "id": "SEC-002",
+          "shard": "SEC",
+          "phase": "ACT_1_SALVAGE",
+          "title": "PIN Entry Check",
+          "summary": "Compare SHA-256 of entered code against container codeSha256.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "pin_valid",
+            "pin_invalid"
+          ],
+          "stateMutations": [],
+          "commentTag": "@branch-id SEC-002"
+        },
+        {
+          "id": "SEC-003",
+          "shard": "SEC",
+          "phase": "ACT_1_SALVAGE",
+          "title": "Thermal Arc Lance Cutting Loop",
+          "summary": "Progressively cuts box seams; partial cutProgressPct saves persistently to world delta!",
+          "type": "decision",
+          "expectedOutcomes": [
+            "cut_complete",
+            "cut_aborted_partial"
+          ],
+          "stateMutations": [
+            "containers[id].cutProgressPct:+",
+            "containers[id].structureHp:-"
+          ],
+          "commentTag": "@branch-id SEC-003"
+        },
+        {
+          "id": "SEC-004",
+          "shard": "SEC",
+          "phase": "ACT_1_SALVAGE",
+          "title": "Pulse Decoder Cyber-Breach",
+          "summary": "Signal frequency alignment mini-task bypasses PIN without damaging box structure.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "hack_success",
+            "hack_trip_alarm"
+          ],
+          "stateMutations": [
+            "containers[id].hackProgressPct:+"
+          ],
+          "commentTag": "@branch-id SEC-004"
+        },
+        {
+          "id": "SEC-005",
+          "shard": "SEC",
+          "phase": "ACT_1_SALVAGE",
+          "title": "Container Breached: Loot Physical Items",
+          "summary": "Box opens permanently in world delta; contents become PROVISIONAL_TRANSIT world objects until settled.",
+          "type": "action",
+          "expectedOutcomes": [
+            "back_to_eva_looted"
+          ],
+          "stateMutations": [
+            "containers[id].lockKind='none'",
+            "operator.carriedItemIds:transfer"
+          ],
+          "commentTag": "@branch-id SEC-005"
+        },
+        {
+          "id": "SEC-006",
+          "shard": "SEC",
+          "phase": "MULTIPLAYER",
+          "title": "Beacon Heartbeat Loss & 2-5m Theft Deduction",
+          "summary": "Installed Alarm Beacon stops pulsing on breach; PING refund signals destruction, whereas 'Policy Reassigned' after 2-5m lockout proves theft.",
+          "type": "decision",
+          "expectedOutcomes": [
+            "heartbeat_logged",
+            "companion_app_future"
+          ],
+          "stateMutations": [
+            "heartbeatBeacons[id].status='SIGNAL_LOST'"
+          ],
+          "commentTag": "@branch-id SEC-006"
+        },
+        {
+          "id": "GAP-007",
+          "shard": "PDA",
+          "phase": "FUTURE_V06",
+          "title": "UNPLANNED: Offline Companion App & Sleep Proximity Alerts",
+          "summary": "Optional mobile companion/watch feed for ship stats, beacon heartbeat loss, and proximity alerts while sleeping.",
+          "type": "gap",
+          "expectedOutcomes": [],
+          "stateMutations": [],
+          "commentTag": "@branch-id GAP-007"
+        },
+        {
+          "id": "SHIP-001",
+          "shard": "SHIP",
+          "phase": "ACT_2_VESSEL",
+          "title": "Airlock Entry: Board Derelict / Ship",
+          "summary": "Diegetic airlock cycle loads Shipwright Shard, preserving inventory, PING status, and world state.",
+          "type": "shard_jump",
+          "expectedOutcomes": [
+            "restore_aux_power",
+            "switch_owned_ship",
+            "undock_to_world",
+            "boarding_event",
+            "voxel_mesh_future",
+            "exit_airlock"
+          ],
+          "stateMutations": [
+            "operator.suit.o2Seconds:refill"
+          ],
+          "commentTag": "@branch-id SHIP-001"
+        },
+        {
+          "id": "SHIP-002",
+          "shard": "SHIP",
+          "phase": "ACT_2_VESSEL",
+          "title": "Subsystem Power & Life-Support Grid",
+          "summary": "Route reactor kW across engines, oxygen scrubbers, cargo locks, and sensors.",
+          "type": "action",
+          "expectedOutcomes": [
+            "ship_operational"
+          ],
+          "stateMutations": [
+            "ships[active].powerAvailableKw:allocated"
+          ],
+          "commentTag": "@branch-id SHIP-002"
+        },
+        {
+          "id": "SHIP-003",
+          "shard": "SHIP",
+          "phase": "ACT_2_VESSEL",
+          "title": "Multi-Ship Fleet Registry",
+          "summary": "Switch active vessel among multiple acquired ships, inspect remote hulls & PING coverage.",
+          "type": "action",
+          "expectedOutcomes": [
+            "ship_selected"
+          ],
+          "stateMutations": [
+            "ships.activeId:changed"
+          ],
+          "commentTag": "@branch-id SHIP-003"
+        },
+        {
+          "id": "SHIP-004",
+          "shard": "SHIP",
+          "phase": "MULTIPLAYER",
+          "title": "Open Boarding, Cargo Extraction & Disguise Leaks",
+          "summary": "Boarders can haul crates out (risking hidden trackers) or hack bridge locks to hijack vessels; Syndicates sell rich pirates' disguises.",
+          "type": "action",
+          "expectedOutcomes": [
+            "board_outcome_resolved"
+          ],
+          "stateMutations": [
+            "ships[active].ownershipState:contested"
+          ],
+          "commentTag": "@branch-id SHIP-004"
+        },
+        {
+          "id": "GAP-008",
+          "shard": "SHIP",
+          "phase": "FUTURE_V06",
+          "title": "UNPLANNED: 3D Greedy-Meshed Voxel Chunk Hull Rebaking",
+          "summary": "v0.6+ WebGL architecture: assemble voxel ship parts, bake into unified solid mesh, and dynamically re-bake holes when cut.",
+          "type": "gap",
+          "expectedOutcomes": [],
+          "stateMutations": [],
+          "commentTag": "@branch-id GAP-008"
+        },
+        {
+          "id": "WORLD-001",
+          "shard": "WORLD",
+          "phase": "ACT_3_COSMOS",
+          "title": "World Forge & Sector Holo-Map",
+          "summary": "Separate World Shard renders seeded galaxy + sparse sectorDeltas for mining, jammers, & mega-events.",
+          "type": "shard_jump",
+          "expectedOutcomes": [
+            "mine_asteroid",
+            "deploy_jammer",
+            "shatter_planet",
+            "travel_sector",
+            "commit_envelope"
+          ],
+          "stateMutations": [],
+          "commentTag": "@branch-id WORLD-001"
+        },
+        {
+          "id": "WORLD-002",
+          "shard": "WORLD",
+          "phase": "ACT_3_COSMOS",
+          "title": "Industrial Asteroid Mining Delta",
+          "summary": "Extracts ore into ship cargo and decrements asteroid massRemainingPct in sparse deltas (rate-verified by AUTH).",
+          "type": "action",
+          "expectedOutcomes": [
+            "return_world_updated"
+          ],
+          "stateMutations": [
+            "sectorDeltas[id].massRemainingPct:-"
+          ],
+          "commentTag": "@branch-id WORLD-002"
+        },
+        {
+          "id": "JAM-001",
+          "shard": "WORLD",
+          "phase": "ACT_3_COSMOS",
+          "title": "Deploy Paid Sector Privacy Jammer",
+          "summary": "Privatizes sector coordinates; Overwatch Monitor cameras show RF static & access-denied alert.",
+          "type": "action",
+          "expectedOutcomes": [
+            "jammer_active_saved"
+          ],
+          "stateMutations": [
+            "sectorDeltas[id].jammerPrivacyActive=true",
+            "credits:-"
+          ],
+          "commentTag": "@branch-id JAM-001"
+        },
+        {
+          "id": "WORLD-003",
+          "shard": "WORLD",
+          "phase": "ACT_3_COSMOS",
+          "title": "Cataclysm: Shatter Planet Permanently",
+          "summary": "Records permanent planetary fracture delta + debrisSeed; rocks Sector Equities & every Shard.",
+          "type": "action",
+          "expectedOutcomes": [
+            "planet_shattered_saved"
+          ],
+          "stateMutations": [
+            "sectorDeltas[planet].status='shattered'",
+            "sectorDeltas[planet].debrisSeed:set"
+          ],
+          "commentTag": "@branch-id WORLD-003"
+        },
+        {
+          "id": "HUB-005",
+          "shard": "HUB",
+          "phase": "PERSISTENCE",
+          "title": "Checkpoint Continuum Manifest & Sync",
+          "summary": "Canonicalize deltas -> Settle PROVISIONAL_TRANSIT items -> Deflate -> SHA-256 checksum -> Commit to Relay.",
+          "type": "action",
+          "expectedOutcomes": [
+            "relay_sync"
+          ],
+          "stateMutations": [
+            "rev:+1",
+            "parentSha256=prev",
+            "payloadSha256=hash",
+            "disturbedRecords:SETTLED"
+          ],
+          "commentTag": "@branch-id HUB-005"
+        },
+        {
+          "id": "AUTH-004",
+          "shard": "AUTH",
+          "phase": "MULTIPLAYER",
+          "title": "Authority Relay Numeric & Behavioral Audit Sync",
+          "summary": "Server reconciles XYZ poses, ship positions, container CAS, market ticks, and anomaly scoring (flags weird spikes).",
+          "type": "decision",
+          "expectedOutcomes": [
+            "sync_clean",
+            "anomaly_flagged"
+          ],
+          "stateMutations": [
+            "authoritativeLedger:committed"
+          ],
+          "commentTag": "@branch-id AUTH-004"
+        },
+        {
+          "id": "AUTH-006",
+          "shard": "AUTH",
+          "phase": "MULTIPLAYER",
+          "title": "World Consensus Committed",
+          "summary": "Authoritative world state signed and broadcast to Shards + read-only Overwatch feed.",
+          "type": "terminal",
+          "expectedOutcomes": [],
+          "stateMutations": [
+            "authoritativeLedger:signed"
+          ],
+          "commentTag": "@branch-id AUTH-006"
+        }
+      ],
+      "edges": [
+        {
+          "id": "E-01",
+          "from": "HUB-001",
+          "to": "AUTH-001",
+          "label": "Legal Clicked -> Auth Gate",
+          "branchType": "shard_jump",
+          "outcomeKey": "terms_accepted"
+        },
+        {
+          "id": "E-02",
+          "from": "AUTH-001",
+          "to": "HUB-002",
+          "label": "Token Issued (Verified)",
+          "branchType": "left",
+          "outcomeKey": "token_issued"
+        },
+        {
+          "id": "E-03",
+          "from": "AUTH-001",
+          "to": "AUTH-002",
+          "label": "Invalid / DOM Tamper",
+          "branchType": "right",
+          "outcomeKey": "invalid_zero_oracle"
+        },
+        {
+          "id": "E-04",
+          "from": "AUTH-001",
+          "to": "AUTH-003",
+          "label": "Admin Console",
+          "branchType": "multi",
+          "outcomeKey": "admin_unlock_flow"
+        },
+        {
+          "id": "E-05",
+          "from": "AUTH-001",
+          "to": "MON-001",
+          "label": "Read-Only Overwatch",
+          "branchType": "shard_jump",
+          "outcomeKey": "open_overwatch"
+        },
+        {
+          "id": "E-06",
+          "from": "AUTH-002",
+          "to": "AUTH-001",
+          "label": "Retry Window Open",
+          "branchType": "left",
+          "outcomeKey": "retry_window_open"
+        },
+        {
+          "id": "E-07",
+          "from": "AUTH-002",
+          "to": "AUTH-003",
+          "label": "4 Strikes -> Locked",
+          "branchType": "right",
+          "outcomeKey": "locked_out_tamper"
+        },
+        {
+          "id": "E-08",
+          "from": "AUTH-003",
+          "to": "AUTH-001",
+          "label": "Admin Override Unlock",
+          "branchType": "left",
+          "outcomeKey": "admin_unlocked"
+        },
+        {
+          "id": "E-09",
+          "from": "AUTH-003",
+          "to": "AUTH-005",
+          "label": "Anomaly Quarantine",
+          "branchType": "right",
+          "outcomeKey": "quarantined_permanent"
+        },
+        {
+          "id": "E-10",
+          "from": "MON-001",
+          "to": "WORLD-001",
+          "label": "View Unjammed Coords",
+          "branchType": "shard_jump",
+          "outcomeKey": "inspect_clear_sector"
+        },
+        {
+          "id": "E-11",
+          "from": "MON-001",
+          "to": "MON-002",
+          "label": "Zoom Privatized Sector",
+          "branchType": "right",
+          "outcomeKey": "inspect_jammed_sector"
+        },
+        {
+          "id": "E-12",
+          "from": "MON-001",
+          "to": "MKT-001",
+          "label": "Read Market Tickers",
+          "branchType": "shard_jump",
+          "outcomeKey": "read_market_feeds"
+        },
+        {
+          "id": "E-13",
+          "from": "HUB-002",
+          "to": "EVA-001",
+          "label": "Checksum OK (Hydrate)",
+          "branchType": "left",
+          "outcomeKey": "valid_sync"
+        },
+        {
+          "id": "E-14",
+          "from": "HUB-002",
+          "to": "HUB-004",
+          "label": "New Operator Seed",
+          "branchType": "multi",
+          "outcomeKey": "new_operator_seed"
+        },
+        {
+          "id": "E-15",
+          "from": "HUB-002",
+          "to": "HUB-003",
+          "label": "Checksum Corrupt",
+          "branchType": "right",
+          "outcomeKey": "corrupt_checksum"
+        },
+        {
+          "id": "E-16",
+          "from": "HUB-002",
+          "to": "HUB-003",
+          "label": "Rev Fork Desync",
+          "branchType": "fallback",
+          "outcomeKey": "rev_fork_desync"
+        },
+        {
+          "id": "E-17",
+          "from": "HUB-003",
+          "to": "EVA-001",
+          "label": "Recovered State",
+          "branchType": "left",
+          "outcomeKey": "recovered_resume"
+        },
+        {
+          "id": "E-18",
+          "from": "HUB-004",
+          "to": "FORGE-001",
+          "label": "Sculpt Operator Body/Face",
+          "branchType": "shard_jump",
+          "outcomeKey": "sculpt_operator"
+        },
+        {
+          "id": "E-94",
+          "from": "FORGE-001",
+          "to": "EVA-001",
+          "label": "Drop Stranded (Visor HUD)",
+          "branchType": "shard_jump",
+          "outcomeKey": "enter_eva_act0"
+        },
+        {
+          "id": "E-100",
+          "from": "FORGE-001",
+          "to": "GAP-009",
+          "label": "v0.6b 3D Asteroid/Wreck",
+          "branchType": "unplanned",
+          "outcomeKey": "future_v06b_scene"
+        },
+        {
+          "id": "E-19",
+          "from": "EVA-001",
+          "to": "PDA-001",
+          "label": "Click Wrist PDA",
+          "branchType": "shard_jump",
+          "outcomeKey": "open_pda"
+        },
+        {
+          "id": "E-95",
+          "from": "EVA-001",
+          "to": "LOG-001",
+          "label": "Read Cardboard Log",
+          "branchType": "shard_jump",
+          "outcomeKey": "open_cardboard_log"
+        },
+        {
+          "id": "E-20",
+          "from": "EVA-001",
+          "to": "EVA-002",
+          "label": "Scavenge Wreckage",
+          "branchType": "left",
+          "outcomeKey": "scavenge_debris"
+        },
+        {
+          "id": "E-21",
+          "from": "EVA-001",
+          "to": "EVA-005",
+          "label": "Wait / O2 Runs Out",
+          "branchType": "right",
+          "outcomeKey": "ignore_wait"
+        },
+        {
+          "id": "E-96",
+          "from": "LOG-001",
+          "to": "EVA-001",
+          "label": "Pocket Cardboard Log",
+          "branchType": "left",
+          "outcomeKey": "return_eva_log"
+        },
+        {
+          "id": "E-22",
+          "from": "PDA-001",
+          "to": "PDA-002",
+          "label": "Suit Diagnostics",
+          "branchType": "left",
+          "outcomeKey": "run_suit_diag"
+        },
+        {
+          "id": "E-23",
+          "from": "PDA-001",
+          "to": "PDA-003",
+          "label": "Scan Signals",
+          "branchType": "multi",
+          "outcomeKey": "scan_beacons"
+        },
+        {
+          "id": "E-24",
+          "from": "PDA-001",
+          "to": "TECH-001",
+          "label": "Jump -> Tech Lab",
+          "branchType": "shard_jump",
+          "outcomeKey": "open_tech_lab"
+        },
+        {
+          "id": "E-25",
+          "from": "PDA-001",
+          "to": "EVA-002",
+          "label": "Close PDA -> EVA",
+          "branchType": "shard_jump",
+          "outcomeKey": "return_eva"
+        },
+        {
+          "id": "E-26",
+          "from": "PDA-002",
+          "to": "EVA-002",
+          "label": "Locate Seal Materials",
+          "branchType": "shard_jump",
+          "outcomeKey": "return_eva_equipped"
+        },
+        {
+          "id": "E-27",
+          "from": "PDA-003",
+          "to": "EVA-006",
+          "label": "Waypoints Uploaded",
+          "branchType": "shard_jump",
+          "outcomeKey": "mark_waypoints"
+        },
+        {
+          "id": "E-28",
+          "from": "EVA-002",
+          "to": "EVA-003",
+          "label": "Found Seal Tape",
+          "branchType": "left",
+          "outcomeKey": "found_seal_tape"
+        },
+        {
+          "id": "E-29",
+          "from": "EVA-002",
+          "to": "EVA-004",
+          "label": "Found Scrap Alloy",
+          "branchType": "multi",
+          "outcomeKey": "found_raw_scrap"
+        },
+        {
+          "id": "E-30",
+          "from": "EVA-002",
+          "to": "EVA-005",
+          "label": "Empty Search -> O2 Zero",
+          "branchType": "right",
+          "outcomeKey": "nothing_found"
+        },
+        {
+          "id": "E-31",
+          "from": "EVA-003",
+          "to": "EVA-006",
+          "label": "Leak Sealed 100%",
+          "branchType": "left",
+          "outcomeKey": "stabilized_eva"
+        },
+        {
+          "id": "E-32",
+          "from": "EVA-004",
+          "to": "EVA-006",
+          "label": "Leak Slowed 70%",
+          "branchType": "left",
+          "outcomeKey": "stabilized_eva"
+        },
+        {
+          "id": "E-33",
+          "from": "EVA-005",
+          "to": "EVA-009",
+          "label": "Collapse Unconscious (Live)",
+          "branchType": "left",
+          "outcomeKey": "unconscious_bleedout"
+        },
+        {
+          "id": "E-97",
+          "from": "EVA-009",
+          "to": "MED-001",
+          "label": "Off-World Clone Pod Exists",
+          "branchType": "shard_jump",
+          "outcomeKey": "ping_clone_exists"
+        },
+        {
+          "id": "E-98",
+          "from": "EVA-009",
+          "to": "EVA-010",
+          "label": "No Backup Clone (Crew Stole Ship)",
+          "branchType": "right",
+          "outcomeKey": "no_clone_fatal"
+        },
+        {
+          "id": "E-99",
+          "from": "EVA-009",
+          "to": "EVA-006",
+          "label": "Rescued / Grit Revive",
+          "branchType": "multi",
+          "outcomeKey": "rescued_lucky"
+        },
+        {
+          "id": "E-34",
+          "from": "MED-001",
+          "to": "PING-001",
+          "label": "All Gear PING'd",
+          "branchType": "left",
+          "outcomeKey": "all_pingd_dissolve"
+        },
+        {
+          "id": "E-35",
+          "from": "MED-001",
+          "to": "PING-002",
+          "label": "Ship PING'd / Cargo Settled",
+          "branchType": "multi",
+          "outcomeKey": "ship_pingd_cargo_unpingd"
+        },
+        {
+          "id": "E-36",
+          "from": "MED-001",
+          "to": "EVA-007",
+          "label": "Settled Un-PING'd Adrift",
+          "branchType": "right",
+          "outcomeKey": "unpingd_left_in_space"
+        },
+        {
+          "id": "E-37",
+          "from": "MED-001",
+          "to": "EVA-008",
+          "label": "Unsettled Disturbed Revert",
+          "branchType": "fallback",
+          "outcomeKey": "provisional_disturbed_revert"
+        },
+        {
+          "id": "E-38",
+          "from": "PING-001",
+          "to": "EVA-006",
+          "label": "1-Button Spawn -> Resume",
+          "branchType": "shard_jump",
+          "outcomeKey": "resume_from_hub"
+        },
+        {
+          "id": "E-39",
+          "from": "PING-002",
+          "to": "EVA-007",
+          "label": "EVA Back to Wreck Coords",
+          "branchType": "shard_jump",
+          "outcomeKey": "eva_recovery_run"
+        },
+        {
+          "id": "E-40",
+          "from": "EVA-007",
+          "to": "EVA-006",
+          "label": "Uninsured Salvage Recovered",
+          "branchType": "left",
+          "outcomeKey": "back_to_cluster"
+        },
+        {
+          "id": "E-41",
+          "from": "EVA-008",
+          "to": "EVA-006",
+          "label": "Snap-Reverted to Anchor",
+          "branchType": "left",
+          "outcomeKey": "reverted_to_anchor"
+        },
+        {
+          "id": "E-42",
+          "from": "EVA-006",
+          "to": "SEC-001",
+          "label": "Inspect Locked Box",
+          "branchType": "shard_jump",
+          "outcomeKey": "approach_crate"
+        },
+        {
+          "id": "E-43",
+          "from": "EVA-006",
+          "to": "SHIP-001",
+          "label": "Board Derelict Ship",
+          "branchType": "shard_jump",
+          "outcomeKey": "approach_derelict"
+        },
+        {
+          "id": "E-44",
+          "from": "EVA-006",
+          "to": "TECH-001",
+          "label": "Open Tech Lab",
+          "branchType": "shard_jump",
+          "outcomeKey": "open_tech_lab"
+        },
+        {
+          "id": "E-45",
+          "from": "EVA-006",
+          "to": "MKT-001",
+          "label": "Dock -> Settle & Trade",
+          "branchType": "shard_jump",
+          "outcomeKey": "visit_markets"
+        },
+        {
+          "id": "E-46",
+          "from": "EVA-006",
+          "to": "HUB-005",
+          "label": "Checkpoint & Save Manifest",
+          "branchType": "fallback",
+          "outcomeKey": "save_sync"
+        },
+        {
+          "id": "E-47",
+          "from": "MKT-001",
+          "to": "MKT-001",
+          "label": "Bulk PING / Un-PING",
+          "branchType": "left",
+          "outcomeKey": "bulk_ping_manage"
+        },
+        {
+          "id": "E-48",
+          "from": "MKT-001",
+          "to": "MKT-001",
+          "label": "Open / Black / Stock Trade",
+          "branchType": "multi",
+          "outcomeKey": "trade_open_black_stock"
+        },
+        {
+          "id": "E-49",
+          "from": "MKT-001",
+          "to": "MKT-002",
+          "label": "Wealth-Gravity Threat Calc",
+          "branchType": "left",
+          "outcomeKey": "wealth_gravity_calc"
+        },
+        {
+          "id": "E-50",
+          "from": "MKT-001",
+          "to": "MKT-003",
+          "label": "Pilot Standing & Drops",
+          "branchType": "multi",
+          "outcomeKey": "pilot_standing_drop"
+        },
+        {
+          "id": "E-51",
+          "from": "MKT-001",
+          "to": "EVA-006",
+          "label": "Undock to Sector",
+          "branchType": "shard_jump",
+          "outcomeKey": "exit_markets"
+        },
+        {
+          "id": "E-87",
+          "from": "MKT-002",
+          "to": "MKT-001",
+          "label": "NPC Threat Radiated",
+          "branchType": "left",
+          "outcomeKey": "threat_updated"
+        },
+        {
+          "id": "E-88",
+          "from": "MKT-003",
+          "to": "MKT-001",
+          "label": "Drop Ledger Verified",
+          "branchType": "left",
+          "outcomeKey": "standing_checked"
+        },
+        {
+          "id": "E-52",
+          "from": "TECH-001",
+          "to": "TECH-002",
+          "label": "Unlock Arc Lance",
+          "branchType": "left",
+          "outcomeKey": "unlock_arc_cutter"
+        },
+        {
+          "id": "E-53",
+          "from": "TECH-001",
+          "to": "TECH-002",
+          "label": "Unlock Pulse Decoder",
+          "branchType": "multi",
+          "outcomeKey": "unlock_pulse_decoder"
+        },
+        {
+          "id": "E-54",
+          "from": "TECH-001",
+          "to": "TECH-002",
+          "label": "Unlock Polymer Seal",
+          "branchType": "multi",
+          "outcomeKey": "unlock_polymer_seal"
+        },
+        {
+          "id": "E-55",
+          "from": "TECH-001",
+          "to": "TECH-003",
+          "label": "Skill Queue / 2% Jury-Rig",
+          "branchType": "left",
+          "outcomeKey": "offline_skill_juryrig"
+        },
+        {
+          "id": "E-56",
+          "from": "TECH-001",
+          "to": "EVA-006",
+          "label": "Return to EVA",
+          "branchType": "shard_jump",
+          "outcomeKey": "exit_to_eva"
+        },
+        {
+          "id": "E-57",
+          "from": "TECH-002",
+          "to": "EVA-006",
+          "label": "Equip New Tool",
+          "branchType": "shard_jump",
+          "outcomeKey": "return_eva_tooled"
+        },
+        {
+          "id": "E-89",
+          "from": "TECH-003",
+          "to": "TECH-001",
+          "label": "Skill Sync / Scrap Ready",
+          "branchType": "left",
+          "outcomeKey": "skill_ready"
+        },
+        {
+          "id": "E-58",
+          "from": "SEC-001",
+          "to": "SEC-002",
+          "label": "Enter 4-Digit PIN",
+          "branchType": "left",
+          "outcomeKey": "enter_pin"
+        },
+        {
+          "id": "E-59",
+          "from": "SEC-001",
+          "to": "SEC-003",
+          "label": "Cut w/ Arc Lance",
+          "branchType": "multi",
+          "outcomeKey": "use_arc_cutter"
+        },
+        {
+          "id": "E-60",
+          "from": "SEC-001",
+          "to": "SEC-004",
+          "label": "Hack w/ Decoder",
+          "branchType": "multi",
+          "outcomeKey": "use_pulse_decoder"
+        },
+        {
+          "id": "E-61",
+          "from": "SEC-001",
+          "to": "EVA-006",
+          "label": "Leave Locked",
+          "branchType": "right",
+          "outcomeKey": "walk_away"
+        },
+        {
+          "id": "E-62",
+          "from": "SEC-002",
+          "to": "SEC-005",
+          "label": "Valid PIN",
+          "branchType": "left",
+          "outcomeKey": "pin_valid"
+        },
+        {
+          "id": "E-63",
+          "from": "SEC-002",
+          "to": "SEC-001",
+          "label": "Wrong PIN (Retry)",
+          "branchType": "right",
+          "outcomeKey": "pin_invalid"
+        },
+        {
+          "id": "E-64",
+          "from": "SEC-003",
+          "to": "SEC-005",
+          "label": "Cut 100% -> Open",
+          "branchType": "left",
+          "outcomeKey": "cut_complete"
+        },
+        {
+          "id": "E-65",
+          "from": "SEC-003",
+          "to": "EVA-006",
+          "label": "Stop Early (Saves %)",
+          "branchType": "right",
+          "outcomeKey": "cut_aborted_partial"
+        },
+        {
+          "id": "E-66",
+          "from": "SEC-004",
+          "to": "SEC-005",
+          "label": "Cipher Bypassed",
+          "branchType": "left",
+          "outcomeKey": "hack_success"
+        },
+        {
+          "id": "E-67",
+          "from": "SEC-004",
+          "to": "SEC-006",
+          "label": "Beacon Heartbeat Lost",
+          "branchType": "right",
+          "outcomeKey": "hack_trip_alarm"
+        },
+        {
+          "id": "E-68",
+          "from": "SEC-005",
+          "to": "EVA-006",
+          "label": "Claim / Carry Items",
+          "branchType": "shard_jump",
+          "outcomeKey": "back_to_eva_looted"
+        },
+        {
+          "id": "E-90",
+          "from": "SEC-006",
+          "to": "PDA-001",
+          "label": "Pulse Loss -> PDA Alert",
+          "branchType": "shard_jump",
+          "outcomeKey": "heartbeat_logged"
+        },
+        {
+          "id": "E-91",
+          "from": "SEC-006",
+          "to": "GAP-007",
+          "label": "Watch / Sleep Alerts (v0.6+)",
+          "branchType": "unplanned",
+          "outcomeKey": "companion_app_future"
+        },
+        {
+          "id": "E-69",
+          "from": "SHIP-001",
+          "to": "SHIP-002",
+          "label": "Restore Aux Power",
+          "branchType": "left",
+          "outcomeKey": "restore_aux_power"
+        },
+        {
+          "id": "E-70",
+          "from": "SHIP-001",
+          "to": "SHIP-003",
+          "label": "Switch Owned Ship",
+          "branchType": "multi",
+          "outcomeKey": "switch_owned_ship"
+        },
+        {
+          "id": "E-71",
+          "from": "SHIP-001",
+          "to": "WORLD-001",
+          "label": "Undock -> World Map",
+          "branchType": "shard_jump",
+          "outcomeKey": "undock_to_world"
+        },
+        {
+          "id": "E-72",
+          "from": "SHIP-001",
+          "to": "SHIP-004",
+          "label": "Boarding & Disguise Leak",
+          "branchType": "multi",
+          "outcomeKey": "boarding_event"
+        },
+        {
+          "id": "E-73",
+          "from": "SHIP-001",
+          "to": "EVA-006",
+          "label": "EVA Spacewalk",
+          "branchType": "shard_jump",
+          "outcomeKey": "exit_airlock"
+        },
+        {
+          "id": "E-74",
+          "from": "SHIP-002",
+          "to": "SHIP-001",
+          "label": "Systems Online",
+          "branchType": "left",
+          "outcomeKey": "ship_operational"
+        },
+        {
+          "id": "E-75",
+          "from": "SHIP-003",
+          "to": "SHIP-001",
+          "label": "Vessel Active",
+          "branchType": "left",
+          "outcomeKey": "ship_selected"
+        },
+        {
+          "id": "E-92",
+          "from": "SHIP-001",
+          "to": "GAP-008",
+          "label": "Baked Voxel Hull (v0.6+)",
+          "branchType": "unplanned",
+          "outcomeKey": "voxel_mesh_future"
+        },
+        {
+          "id": "E-93",
+          "from": "SHIP-004",
+          "to": "EVA-006",
+          "label": "Loot / Hijack / Tracker",
+          "branchType": "shard_jump",
+          "outcomeKey": "board_outcome_resolved"
+        },
+        {
+          "id": "E-76",
+          "from": "WORLD-001",
+          "to": "WORLD-002",
+          "label": "Mine Asteroid",
+          "branchType": "left",
+          "outcomeKey": "mine_asteroid"
+        },
+        {
+          "id": "E-77",
+          "from": "WORLD-001",
+          "to": "JAM-001",
+          "label": "Deploy Privacy Jammer",
+          "branchType": "multi",
+          "outcomeKey": "deploy_jammer"
+        },
+        {
+          "id": "E-78",
+          "from": "WORLD-001",
+          "to": "WORLD-003",
+          "label": "Shatter Planet",
+          "branchType": "multi",
+          "outcomeKey": "shatter_planet"
+        },
+        {
+          "id": "E-79",
+          "from": "WORLD-001",
+          "to": "SHIP-001",
+          "label": "Drop to Ship Helm",
+          "branchType": "shard_jump",
+          "outcomeKey": "travel_sector"
+        },
+        {
+          "id": "E-80",
+          "from": "WORLD-001",
+          "to": "HUB-005",
+          "label": "Save World Manifest",
+          "branchType": "shard_jump",
+          "outcomeKey": "commit_envelope"
+        },
+        {
+          "id": "E-81",
+          "from": "WORLD-002",
+          "to": "WORLD-001",
+          "label": "Sector Ore Logged",
+          "branchType": "left",
+          "outcomeKey": "return_world_updated"
+        },
+        {
+          "id": "E-82",
+          "from": "JAM-001",
+          "to": "MON-002",
+          "label": "Blocks Monitor Feed",
+          "branchType": "shard_jump",
+          "outcomeKey": "jammer_active_saved"
+        },
+        {
+          "id": "E-83",
+          "from": "WORLD-003",
+          "to": "HUB-005",
+          "label": "Commit Planet Delta",
+          "branchType": "shard_jump",
+          "outcomeKey": "planet_shattered_saved"
+        },
+        {
+          "id": "E-84",
+          "from": "HUB-005",
+          "to": "AUTH-004",
+          "label": "Relay & Anomaly Audit",
+          "branchType": "shard_jump",
+          "outcomeKey": "relay_sync"
+        },
+        {
+          "id": "E-85",
+          "from": "AUTH-004",
+          "to": "AUTH-006",
+          "label": "Checks Clean -> Sign",
+          "branchType": "left",
+          "outcomeKey": "sync_clean"
+        },
+        {
+          "id": "E-86",
+          "from": "AUTH-004",
+          "to": "AUTH-003",
+          "label": "Exploit / Temporal Spike",
+          "branchType": "right",
+          "outcomeKey": "anomaly_flagged"
+        }
+      ]
     };
 
     const shardById = new Map(LEDGER.meta.shards.map(s => [s.id, s]));
@@ -3204,7 +3334,7 @@
         const rawBytes = new TextEncoder().encode(JSON.stringify(parsed));
         const { bytes: compBytes, encoding } = await compressBytes(rawBytes);
         const hash = await sha256Hex(compBytes);
-        currentEnvelope = { magic: 'EVIGIL', schemaVersion: '1.3.0', rev: (currentEnvelope ? currentEnvelope.rev : 41) + 1, timestampUtc: new Date().toISOString(), originShard: 'EVA', parentSha256: currentEnvelope ? currentEnvelope.payloadSha256 : null, payloadSha256: hash, encoding, payload: toBase64Url(compBytes) };
+        currentEnvelope = { magic: 'EVIGIL', schemaVersion: '1.4.0', rev: (currentEnvelope ? currentEnvelope.rev : 41) + 1, timestampUtc: new Date().toISOString(), originShard: 'EVA', parentSha256: currentEnvelope ? currentEnvelope.payloadSha256 : null, payloadSha256: hash, encoding, payload: toBase64Url(compBytes) };
         lastGoodEnvelope = JSON.parse(JSON.stringify(currentEnvelope));
         const savingsPct = Math.round((1 - compBytes.length / rawBytes.length) * 100);
         document.getElementById('mRawBytes').textContent = `${rawBytes.length} B`;

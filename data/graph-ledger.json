@@ -1,7 +1,7 @@
 {
   "meta": {
     "project": "Endless Vigil",
-    "ledgerVersion": "0.5.0",
+    "ledgerVersion": "0.6.0",
     "coAuthors": ["Creator", "Ironscribe of the Endless Vigil"],
     "shards": [
       {
@@ -181,9 +181,31 @@
       "title": "Procedural Origin & Co-Op Squad Link",
       "summary": "Roll fresh randomized Origin Crisis (Slum Amnesia Diary, Patrol Cruiser Rescue, Asteroid Leak) with optional Squad City Link & ORIGIN_BOUND anti-reroll gear.",
       "type": "action",
-      "expectedOutcomes": ["enter_eva_act0"],
+      "expectedOutcomes": ["sculpt_operator"],
       "stateMutations": ["manifestId:init", "originScenario:roll", "suit.leakRatePerSec:init"],
       "commentTag": "@branch-id HUB-004"
+    },
+    {
+      "id": "FORGE-001",
+      "shard": "HUB",
+      "phase": "BOOT",
+      "title": "3D Body, Face, Hair & Scar-Mask Sculptor",
+      "summary": "Direct-drag & macro-slider 3D avatar builder with movable/rotatable gray streaks & scars that carve beard/eyebrow hair masks, optional zero-storage photo ratio import, and live Helmet Visor HUD portrait.",
+      "type": "action",
+      "expectedOutcomes": ["enter_eva_act0", "future_v06b_scene"],
+      "stateMutations": ["operatorProfile:saved"],
+      "commentTag": "@branch-id FORGE-001"
+    },
+    {
+      "id": "GAP-009",
+      "shard": "EVA",
+      "phase": "FUTURE_V06B",
+      "title": "UNPLANNED: v0.6b 3D Yacht-Asteroid Demo, Crashed Satellite & Betrayed Vessel",
+      "summary": "Mobile-first free-orbit isometric 3D voxel slice: 75s bullet-breach rescue, NASA pressure-decay check, Earth-era satellite reveal, betrayed Firefly-scale wreck, and optional self-hosted MediaPipe 478-point photo auto-snap.",
+      "type": "gap",
+      "expectedOutcomes": [],
+      "stateMutations": [],
+      "commentTag": "@branch-id GAP-009"
     },
     {
       "id": "MON-001",
@@ -211,12 +233,23 @@
       "id": "EVA-001",
       "shard": "EVA",
       "phase": "ACT_0_STRANDED",
-      "title": "Wake Up: Suit Breach Venting Air",
-      "summary": "Operator wakes stranded by crew on drifting Asteroid-0. Torso seam venting O2 rapidly.",
+      "title": "Wake Up: Suit Bullet Breach (75s Atmosphere)",
+      "summary": "Seasoned veteran wakes stranded on yacht-sized asteroid after crew mutiny; bullet puncture venting O2 rapidly while Helmet Visor HUD tracks vitals.",
       "type": "decision",
-      "expectedOutcomes": ["open_pda", "scavenge_debris", "ignore_wait"],
+      "expectedOutcomes": ["open_pda", "open_cardboard_log", "scavenge_debris", "ignore_wait"],
       "stateMutations": ["o2Seconds:tick(-1.2/s)"],
       "commentTag": "@branch-id EVA-001"
+    },
+    {
+      "id": "LOG-001",
+      "shard": "PDA",
+      "phase": "ACT_0_STRANDED",
+      "title": "Diegetic Cardboard & Cuff-Slate Log Entry",
+      "summary": "Self-authored short HUD tag + long detail log ('LOG: STARTING OVER' scribbled on torn crate cardboard until ship/map hardware is recovered).",
+      "type": "action",
+      "expectedOutcomes": ["return_eva_log"],
+      "stateMutations": ["logEntries:viewed"],
+      "commentTag": "@branch-id LOG-001"
     },
     {
       "id": "PDA-001",
@@ -288,12 +321,34 @@
       "id": "EVA-005",
       "shard": "EVA",
       "phase": "ACT_0_STRANDED",
-      "title": "Biological Termination (O2 Zero / Fatal)",
-      "summary": "Operator expires; body nanoparticles broadcast termination pulse across sector for PING & disturbedLease settlement.",
+      "title": "Vitals Collapse (Sarcastic Last Line -> Blackout)",
+      "summary": "Oxygen or blood loss hits zero; veteran mutters one dry sarcastic remark and collapses unconscious without pausing the world.",
       "type": "decision",
-      "expectedOutcomes": ["ping_resolve_on_death"],
+      "expectedOutcomes": ["unconscious_bleedout"],
       "stateMutations": ["operator.suit.o2Seconds=0"],
       "commentTag": "@branch-id EVA-005"
+    },
+    {
+      "id": "EVA-009",
+      "shard": "EVA",
+      "phase": "RECONSTITUTION",
+      "title": "Unconscious Bleed-Out & Rescue / Grit Roll",
+      "summary": "World keeps ticking live: checks if squadmates approach, reachable stabilizers exist, or hidden grit/luck revives pulse—otherwise checks clone pod.",
+      "type": "decision",
+      "expectedOutcomes": ["ping_clone_exists", "no_clone_fatal", "rescued_lucky"],
+      "stateMutations": ["cloneBackupStatus:checked"],
+      "commentTag": "@branch-id EVA-009"
+    },
+    {
+      "id": "EVA-010",
+      "shard": "EVA",
+      "phase": "RECONSTITUTION",
+      "title": "No Backup Clone Detected (Terminal Loss)",
+      "summary": "Crew stole your ship & onboard Med-Bay pod and you bought zero off-world clone coverage. Vital telemetry terminates permanently for this run.",
+      "type": "terminal",
+      "expectedOutcomes": [],
+      "stateMutations": ["operatorAccount.runEnded=true"],
+      "commentTag": "@branch-id EVA-010"
     },
     {
       "id": "MED-001",
@@ -657,11 +712,15 @@
     { "id": "E-15", "from": "HUB-002", "to": "HUB-003", "label": "Checksum Corrupt", "branchType": "right", "outcomeKey": "corrupt_checksum" },
     { "id": "E-16", "from": "HUB-002", "to": "HUB-003", "label": "Rev Fork Desync", "branchType": "fallback", "outcomeKey": "rev_fork_desync" },
     { "id": "E-17", "from": "HUB-003", "to": "EVA-001", "label": "Recovered State", "branchType": "left", "outcomeKey": "recovered_resume" },
-    { "id": "E-18", "from": "HUB-004", "to": "EVA-001", "label": "Spawn Stranded", "branchType": "shard_jump", "outcomeKey": "enter_eva_act0" },
+    { "id": "E-18", "from": "HUB-004", "to": "FORGE-001", "label": "Sculpt Operator Body/Face", "branchType": "shard_jump", "outcomeKey": "sculpt_operator" },
+    { "id": "E-94", "from": "FORGE-001", "to": "EVA-001", "label": "Drop Stranded (Visor HUD)", "branchType": "shard_jump", "outcomeKey": "enter_eva_act0" },
+    { "id": "E-100", "from": "FORGE-001", "to": "GAP-009", "label": "v0.6b 3D Asteroid/Wreck", "branchType": "unplanned", "outcomeKey": "future_v06b_scene" },
 
     { "id": "E-19", "from": "EVA-001", "to": "PDA-001", "label": "Click Wrist PDA", "branchType": "shard_jump", "outcomeKey": "open_pda" },
+    { "id": "E-95", "from": "EVA-001", "to": "LOG-001", "label": "Read Cardboard Log", "branchType": "shard_jump", "outcomeKey": "open_cardboard_log" },
     { "id": "E-20", "from": "EVA-001", "to": "EVA-002", "label": "Scavenge Wreckage", "branchType": "left", "outcomeKey": "scavenge_debris" },
     { "id": "E-21", "from": "EVA-001", "to": "EVA-005", "label": "Wait / O2 Runs Out", "branchType": "right", "outcomeKey": "ignore_wait" },
+    { "id": "E-96", "from": "LOG-001", "to": "EVA-001", "label": "Pocket Cardboard Log", "branchType": "left", "outcomeKey": "return_eva_log" },
 
     { "id": "E-22", "from": "PDA-001", "to": "PDA-002", "label": "Suit Diagnostics", "branchType": "left", "outcomeKey": "run_suit_diag" },
     { "id": "E-23", "from": "PDA-001", "to": "PDA-003", "label": "Scan Signals", "branchType": "multi", "outcomeKey": "scan_beacons" },
@@ -676,7 +735,10 @@
     { "id": "E-31", "from": "EVA-003", "to": "EVA-006", "label": "Leak Sealed 100%", "branchType": "left", "outcomeKey": "stabilized_eva" },
     { "id": "E-32", "from": "EVA-004", "to": "EVA-006", "label": "Leak Slowed 70%", "branchType": "left", "outcomeKey": "stabilized_eva" },
 
-    { "id": "E-33", "from": "EVA-005", "to": "MED-001", "label": "Body Nano-Pulse -> Hub", "branchType": "shard_jump", "outcomeKey": "ping_resolve_on_death" },
+    { "id": "E-33", "from": "EVA-005", "to": "EVA-009", "label": "Collapse Unconscious (Live)", "branchType": "left", "outcomeKey": "unconscious_bleedout" },
+    { "id": "E-97", "from": "EVA-009", "to": "MED-001", "label": "Off-World Clone Pod Exists", "branchType": "shard_jump", "outcomeKey": "ping_clone_exists" },
+    { "id": "E-98", "from": "EVA-009", "to": "EVA-010", "label": "No Backup Clone (Crew Stole Ship)", "branchType": "right", "outcomeKey": "no_clone_fatal" },
+    { "id": "E-99", "from": "EVA-009", "to": "EVA-006", "label": "Rescued / Grit Revive", "branchType": "multi", "outcomeKey": "rescued_lucky" },
     { "id": "E-34", "from": "MED-001", "to": "PING-001", "label": "All Gear PING'd", "branchType": "left", "outcomeKey": "all_pingd_dissolve" },
     { "id": "E-35", "from": "MED-001", "to": "PING-002", "label": "Ship PING'd / Cargo Settled", "branchType": "multi", "outcomeKey": "ship_pingd_cargo_unpingd" },
     { "id": "E-36", "from": "MED-001", "to": "EVA-007", "label": "Settled Un-PING'd Adrift", "branchType": "right", "outcomeKey": "unpingd_left_in_space" },

@@ -16,7 +16,7 @@
   ],
   "properties": {
     "magic": { "const": "EVIGIL" },
-    "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "examples": ["1.3.0"] },
+    "schemaVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "examples": ["1.4.0"] },
     "rev": { "type": "integer", "minimum": 1 },
     "timestampUtc": { "type": "string", "format": "date-time" },
     "originShard": {
@@ -184,6 +184,63 @@
             "flightHours": { "type": "number", "minimum": 0 },
             "dailyDropAllowanceCr": { "type": "number", "minimum": 0 },
             "droppedTodayCr": { "type": "number", "minimum": 0 }
+          }
+        },
+        "operatorProfile": {
+          "type": "object",
+          "description": "v0.6a 3D parametric body/face/hair/scar profile & zero-storage photo ratio metadata.",
+          "properties": {
+            "body": {
+              "type": "object",
+              "properties": {
+                "height": { "type": "number" },
+                "shoulders": { "type": "number" },
+                "bulk": { "type": "number" },
+                "waist": { "type": "number" }
+              }
+            },
+            "face": {
+              "type": "object",
+              "properties": {
+                "jawWidth": { "type": "number" },
+                "cheekWidth": { "type": "number" },
+                "chinLength": { "type": "number" },
+                "browRidge": { "type": "number" },
+                "noseLength": { "type": "number" },
+                "noseWidth": { "type": "number" },
+                "eyeSpacing": { "type": "number" },
+                "mouthWidth": { "type": "number" },
+                "skinHex": { "type": "string" },
+                "eyeHex": { "type": "string" },
+                "hairHex": { "type": "string" },
+                "hairStyle": { "type": "string" },
+                "beardStyle": { "type": "string" },
+                "grayStreaks": { "type": "array", "items": { "type": "object" } },
+                "marks": { "type": "array", "items": { "type": "object" } }
+              }
+            }
+          }
+        },
+        "logEntries": {
+          "type": "array",
+          "description": "Self-authored operator logs (cardboard scrap at demo start; OLED slate once powered hardware recovered).",
+          "items": {
+            "type": "object",
+            "required": ["logId", "shortLabel", "fullText", "medium"],
+            "properties": {
+              "logId": { "type": "string" },
+              "shortLabel": { "type": "string" },
+              "fullText": { "type": "string" },
+              "medium": { "type": "string", "enum": ["cardboard", "slate"] },
+              "requiresMapHardware": { "type": "boolean" }
+            }
+          }
+        },
+        "cloneBackupStatus": {
+          "type": "object",
+          "properties": {
+            "hasActiveClonePod": { "type": "boolean" },
+            "cloneStationId": { "type": ["string", "null"] }
           }
         },
         "heartbeatBeacons": {

@@ -59,9 +59,18 @@
 
 ---
 
-## 5. Active Future Engineering Stubs (`data/graph-ledger.json` `0.5.0`)
+## 5. Active `v0.6.0-alpha` Milestone & Future Engineering Ledger (`data/graph-ledger.json` `0.6.0`)
 
-| Gap ID | Shard | Future Target (`v0.6+`) |
+### Locked `v0.6.0-alpha` (`v0.6a` — Implemented)
+- **3D Body, Face, Hair & Scar-Mask Sculptor (`FORGE-001` / `operator-forge.html`):** Direct-drag face zone sculpting + compact macro sliders + movable/rotatable gray streaks & scars/blemishes/freckles where scars carve hairless gaps out of eyebrows & beards (`cutsHair`), plus D1 CAS persistence (`POST /api/v06/avatar/save`, `avatar_json`).
+- **Zero-Storage Photo Ratio Reader:** Extracts 3D proportions & skin tone in browser RAM and immediately wipes image bytes; keeps optional client-only MediaPipe 478-point auto-snap hook cleanly wired.
+- **Corner Helmet Visor HUD Portrait:** Real-time Doom/Stark corner portrait synced to sculpted face/scars/hair and reacting to O2 loss, patch squeals, smirks, and blackout.
+- **Cardboard Log (`LOG-001`) & Hardware-Gated Maps:** Diegetic `"LOG: STARTING OVER"` short HUD tag + long cardboard detail; no magic radar until mapping hardware is recovered.
+- **Unconscious Bleed-Out (`EVA-009`) & Uninsured Clone Loss (`EVA-010`):** Non-pausing `DayZ`-style blackout checking live rescue/grit odds before reporting missing clone coverage from crew theft.
+
+### Next Milestone (`v0.6b`) & Shelved Items
+| Gap ID | Shard | Status & Target |
 | :--- | :--- | :--- |
-| **`GAP-007`** | `PDA` | Optional Mobile/Watch Companion App & Sleeping Bunk Proximity Alert Feed for real-time Beacon Heartbeat notifications. |
-| **`GAP-008`** | `SHIP` | 3D WebGL Ship Construction using **Baked Voxel-Chunk Greedy Meshing / CSG Rebaking** so cut hulls dynamically display clean breaches. |
+| **`GAP-009`** | `EVA` | **NEXT (`v0.6b`):** Mobile-first free-orbit isometric 3D voxel asteroid (`75s` breach, cold patch fail -> NASA `4.3 psid` hold test, crashed Earth-era satellite wing, betrayed Firefly-scale derelict ship + guard bot combat) & optional self-hosted MediaPipe 478-point auto-snap. |
+| **`GAP-008`** | `SHIP` | **ACTIVE SPEC (`v0.6+`):** 3D WebGL Ship Construction using **Baked Voxel-Chunk Greedy Meshing / CSG Rebaking** so cut hulls dynamically display clean breaches. |
+| **`GAP-007`** | `PDA` | **SHELVED:** Optional Mobile/Watch Companion App & Sleeping Bunk Proximity Alert Feed (alongside active `temporal-lab.html` balance tuning). |

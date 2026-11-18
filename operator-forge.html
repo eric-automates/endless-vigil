@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Endless Vigil // 3D Operator Forge &amp; Visor HUD (v0.6a)</title>
+  <!--
+    @shard HUB / EVA
+    @branch-id FORGE-001 / LOG-001 / EVA-009 / EVA-010
+    @state-contract Hydrates & persists operatorProfile { body, face, grayStreaks, marks } against Cloudflare D1 (/api/v06/avatar/save) or local sandbox fixture.
+    @invariant Zero external CDNs; zero uploaded/stored photo bytes (wipes canvas + ObjectURL immediately after ratio extraction); zero script-close literals; zero horizontal overflow >=320px; strictly diegetic public wording.
+    @credits Creator & Ironscribe of the Endless Vigil
+  -->
+  <style>
+    :root {
+      --bg-0: #04070d;
+      --bg-1: #09101d;
+      --bg-2: #0f192d;
+      --bg-3: #182746;
+      --border: #233659;
+      --border-strong: #3c5d94;
+      --text-0: #eef4ff;
+      --text-1: #a7b9d6;
+      --text-2: #768ab0;
+      --accent: #38bdf8;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --crit: #ef4444;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; height: 100dvh; width: 100%; max-width: 100vw; overflow-x: hidden;
+      background: var(--bg-0); color: var(--text-0); font-family: var(--sans); font-size: 13px; line-height: 1.45;
+    }
+    body {
+      display: flex; flex-direction: column; overflow-y: auto;
+      background-image:
+        radial-gradient(circle at 22% 10%, rgba(56, 189, 248, 0.09), transparent 42%),
+        radial-gradient(circle at 80% 90%, rgba(34, 197, 94, 0.06), transparent 45%);
+    }
+
+    .topbar {
+      display: flex; flex-direction: column; gap: 6px; padding: 8px 12px;
+      background: var(--bg-1); border-bottom: 1px solid var(--border); width: 100%; max-width: 100vw;
+    }
+    .top-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; min-width: 0;
+    }
+    .brand { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1 1 200px; max-width: 100%; }
+    .brand-mark {
+      width: 30px; height: 30px; flex-shrink: 0; border-radius: 7px;
+      background: linear-gradient(135deg, #0b243f, #112a22); border: 1px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-weight: 700; color: var(--accent); font-size: 11px;
+    }
+    .brand-text { min-width: 0; flex: 1; }
+    .brand-title { font-weight: 700; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-sub { font-size: 10.5px; color: var(--text-1); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; max-width: 100%; }
+    .pill {
+      padding: 3px 8px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--border);
+      color: var(--text-1); font-family: var(--mono); font-size: 10.5px; white-space: nowrap; text-decoration: none;
+    }
+    .pill.ok { border-color: rgba(34, 197, 94, 0.55); color: #4ade80; }
+    .pill.warn { border-color: rgba(245, 158, 11, 0.55); color: #fbbf24; }
+
+    .layout-grid {
+      flex: 1; width: 100%; max-width: 1260px; margin: 0 auto; padding: 10px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+      gap: 12px; align-items: start;
+    }
+
+    .stage-panel {
+      background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; max-width: 100%;
+    }
+    .viewport-box {
+      position: relative; width: 100%; height: min(440px, 56dvh); min-height: 290px;
+      border-radius: 8px; border: 1px solid var(--border-strong); overflow: hidden;
+      background: radial-gradient(circle at 50% 35%, #111c33 0%, #050811 75%);
+      touch-action: none;
+    }
+    #glCanvas { width: 100%; height: 100%; display: block; }
+
+    /* Live Doom/Tony-Stark Corner Helmet Visor HUD */
+    .visor-hud {
+      position: absolute; top: 8px; left: 8px; display: flex; align-items: flex-start; gap: 7px;
+      pointer-events: none; max-width: calc(100% - 16px);
+    }
+    .visor-frame {
+      width: 78px; height: 92px; flex-shrink: 0; border-radius: 8px;
+      border: 1.5px solid rgba(56, 189, 248, 0.7); background: rgba(4, 9, 18, 0.85);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.25); overflow: hidden; display: flex; flex-direction: column;
+    }
+    .visor-frame.crit { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 18px rgba(239, 68, 68, 0.4); }
+    #visorHudCanvas { width: 78px; height: 74px; display: block; }
+    .visor-o2-bar {
+      height: 16px; background: #04080f; border-top: 1px solid rgba(56, 189, 248, 0.35);
+      font-family: var(--mono); font-size: 9.5px; font-weight: 700; display: flex;
+      align-items: center; justify-content: space-between; padding: 0 4px; color: #7dd3fc;
+    }
+
+    .hud-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .hud-log-pill {
+      pointer-events: auto; cursor: pointer; background: rgba(185, 146, 93, 0.92); color: #1b1206;
+      border: 1px solid #6b4c24; border-radius: 5px; padding: 3px 7px;
+      font-family: var(--mono); font-size: 10px; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+      max-width: 190px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hud-quip {
+      background: rgba(5, 10, 20, 0.82); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 5px;
+      padding: 4px 7px; font-family: var(--mono); font-size: 10px; color: #dbeafe; max-width: 215px;
+      line-height: 1.3;
+    }
+
+    .sculpt-badge {
+      position: absolute; bottom: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between;
+      align-items: center; gap: 6px; flex-wrap: wrap; pointer-events: none;
+    }
+    .sculpt-tag {
+      background: rgba(5, 9, 17, 0.84); border: 1px solid var(--border-strong); border-radius: 5px;
+      padding: 3px 7px; font-family: var(--mono); font-size: 10px; color: var(--accent);
+    }
+
+    /* Unconscious / Bleed-out DayZ Overlay (Non-pausing world feel) */
+    .blackout-veil {
+      position: absolute; inset: 0; background: radial-gradient(circle, rgba(20,0,0,0.68) 10%, rgba(2,2,4,0.97) 85%);
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px;
+      text-align: center; z-index: 20;
+    }
+    .blackout-veil.open { display: flex; }
+
+    /* Diegetic Cardboard Log Modal (Flex + min() safe) */
+    .modal-backdrop {
+      position: fixed; inset: 0; width: 100%; max-width: 100vw; background: rgba(2, 5, 11, 0.88);
+      display: none; align-items: center; justify-content: center; z-index: 120; padding: 12px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .cardboard-box {
+      width: min(460px, calc(100vw - 24px)); max-width: 100%; min-width: 0; max-height: 88dvh; overflow-y: auto;
+      background: linear-gradient(160deg, #b88e56, #9c7440); color: #1c1308; border: 2px dashed #4f3618;
+      border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 9px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
+    }
+    .photo-box {
+      width: min(500px, calc(100vw - 24px)); max-width: 100%; min-width: 0; max-height: 90dvh; overflow-y: auto;
+      background: var(--bg-1); border: 1px solid var(--accent); border-radius: 10px; padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+
+    .controls-panel {
+      background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0; max-width: 100%;
+    }
+    .tabs { display: flex; gap: 5px; flex-wrap: wrap; min-width: 0; }
+    .tab-btn {
+      border: 1px solid var(--border); background: var(--bg-2); color: var(--text-1);
+      padding: 6px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;
+    }
+    .tab-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(56, 189, 248, 0.14); }
+    .tab-pane { display: none; flex-direction: column; gap: 9px; min-width: 0; }
+    .tab-pane.active { display: flex; }
+
+    .slider-row {
+      display: flex; flex-direction: column; gap: 3px; background: var(--bg-0);
+      border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; min-width: 0;
+    }
+    .slider-head {
+      display: flex; justify-content: space-between; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 10.5px; color: var(--text-1);
+    }
+    input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    input[type="color"] { width: 42px; height: 28px; border: 1px solid var(--border); background: var(--bg-0); border-radius: 4px; cursor: pointer; }
+    select, input[type="text"] {
+      width: 100%; max-width: 100%; background: var(--bg-0); color: var(--text-0);
+      border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; font-family: var(--mono); font-size: 12px;
+    }
+
+    .btn {
+      background: var(--bg-2); color: var(--text-0); border: 1px solid var(--border); border-radius: 6px;
+      padding: 6px 10px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      white-space: normal; text-decoration: none; max-width: 100%;
+    }
+    .btn:hover { border-color: var(--border-strong); background: var(--bg-3); }
+    .btn.primary { border-color: rgba(56, 189, 248, 0.55); color: var(--accent); }
+    .btn.ok { border-color: rgba(34, 197, 94, 0.55); color: #4ade80; }
+    .btn.warn { border-color: rgba(245, 158, 11, 0.55); color: #fbbf24; }
+    .btn.crit { border-color: rgba(239, 68, 68, 0.55); color: #f87171; }
+    .btn.active { background: rgba(56, 189, 248, 0.18); border-color: var(--accent); color: var(--accent); }
+
+    .face-pad-wrap {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      background: var(--bg-0); border: 1px solid var(--border); border-radius: 8px; padding: 9px;
+    }
+    #markPadCanvas {
+      width: 164px; height: 164px; flex-shrink: 0; border-radius: 8px;
+      border: 1px solid var(--border-strong); background: #070d18; cursor: crosshair; touch-action: none;
+    }
+    #photoAlignCanvas {
+      width: min(290px, calc(100vw - 64px)); height: 290px; border-radius: 8px;
+      border: 1px solid var(--border-strong); background: #04080f; margin: 0 auto; touch-action: none; display: block;
+    }
+    .status-line {
+      font-family: var(--mono); font-size: 11px; padding: 7px 9px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg-0); color: var(--text-1); word-break: break-word;
+    }
+    .status-line.ok { border-color: rgba(34, 197, 94, 0.6); color: #86efac; }
+    .status-line.warn { border-color: rgba(245, 158, 11, 0.6); color: #fde68a; }
+    .status-line.crit { border-color: rgba(239, 68, 68, 0.65); color: #fecaca; }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="top-row">
+      <div class="brand">
+        <div class="brand-mark">3D</div>
+        <div class="brand-text">
+          <div class="brand-title">Endless Vigil // 3D Operator Forge &amp; Visor HUD</div>
+          <div class="brand-sub">v0.6.0-alpha · Body + Face + Hair/Scar Mask + Zero-Storage Photo Ratio</div>
+        </div>
+      </div>
+
+      <div class="strip">
+        <span class="pill warn" id="d1SyncPill">● SANDBOX FIXTURE</span>
+        <a class="pill" href="./index.html" style="color:#38bdf8;border-color:rgba(56,189,248,0.45)">Hub Gate ↗</a>
+        <a class="pill" href="./cuff-slate.html" style="color:#4ade80;border-color:rgba(34,197,94,0.45)">Cuff-Slate ↗</a>
+        <a class="pill" href="./conglomerate-flowchart.html" style="color:#7dd3fc;border-color:rgba(56,189,248,0.45)">Flowchart ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout-grid">
+    <!-- LEFT: REAL-TIME 3D WEBGL OPERATOR STAGE + LIVE VISOR PORTRAIT HUD -->
+    <section class="stage-panel">
+      <div class="strip" style="justify-content:space-between">
+        <div class="strip">
+          <button class="btn active" id="btnModeOrbit" onclick="setDragMode('orbit')">1-Finger Orbit</button>
+          <button class="btn" id="btnModeSculpt" onclick="setDragMode('sculpt')">Direct Drag Face</button>
+        </div>
+        <div class="strip">
+          <button class="btn" onclick="setCamPreset('body')">Full Body</button>
+          <button class="btn primary" onclick="setCamPreset('face')">Face Zoom</button>
+          <button class="btn" id="btnHelmet" onclick="cycleHelmetMode()">Helmet: Open</button>
+        </div>
+      </div>
+
+      <div class="viewport-box" id="stageContainer">
+        <canvas id="glCanvas"></canvas>
+
+        <!-- Corner Helmet Portrait HUD -->
+        <div class="visor-hud">
+          <div class="visor-frame" id="visorFrameBox">
+            <canvas id="visorHudCanvas" width="96" height="92"></canvas>
+            <div class="visor-o2-bar">
+              <span id="hudO2Txt">O2 75s</span>
+              <span id="hudPsiTxt">4.3 PSI</span>
+            </div>
+          </div>
+          <div class="hud-meta">
+            <button class="hud-log-pill" onclick="openCardboardLog()" title="Tap to inspect full Cardboard Log">
+              📦 LOG: STARTING OVER ▾
+            </button>
+            <div class="hud-quip" id="hudQuipBox">"Bullet punctured the chest seam. Keep breathing."</div>
+          </div>
+        </div>
+
+        <div class="sculpt-badge">
+          <span class="sculpt-tag" id="sculptStatusTag">ORBIT MODE // DRAG TO SPIN · ZOOM TO INSPECT</span>
+          <span class="sculpt-tag" id="renderEngineTag">WebGL 3D Active</span>
+        </div>
+
+        <!-- DayZ-Style Non-Pausing Unconscious Bleed-Out Veil -->
+        <div class="blackout-veil" id="blackoutVeil">
+          <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:#f87171" id="blackoutTitle">
+            UNCONSCIOUS // VITALS BLEEDING OUT
+          </div>
+          <div style="font-family:var(--mono);font-size:11px;color:#fecaca;max-width:340px" id="blackoutDetail">
+            World timer active... Scanning sector for approaching squadmates, local stabilizers, or faint grit recovery...
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px" id="blackoutActions"></div>
+        </div>
+      </div>
+
+      <!-- Visor Emotion & Demo Vital State Testers -->
+      <div class="strip">
+        <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-2)">HUD TEST:</span>
+        <button class="btn ok" onclick="setMood('calm')">Veteran Calm</button>
+        <button class="btn warn" onclick="setMood('gasp')">Gasping (75s)</button>
+        <button class="btn primary" onclick="setMood('smirk')">Dry Smirk</button>
+        <button class="btn warn" onclick="setMood('popped')">Patch Squeal!</button>
+        <button class="btn crit" onclick="triggerUnconsciousTest()">Bleed-Out (No Clone)</button>
+      </div>
+
+      <div class="status-line" id="forgeStatusLine">
+        Sculpt body, drag facial proportions, layer scars that carve eyebrows/beards, or import face proportions from a local photo (zero upload/storage).
+      </div>
+    </section>
+
+    <!-- RIGHT: COMPACT MOBILE-FIRST CUSTOMIZATION TABS -->
+    <section class="controls-panel">
+      <div class="tabs" role="tablist">
+        <button class="tab-btn active" data-tab="body" onclick="openTab('body')">1. Body</button>
+        <button class="tab-btn" data-tab="face" onclick="openTab('face')">2. Face &amp; Photo</button>
+        <button class="tab-btn" data-tab="hair" onclick="openTab('hair')">3. Hair &amp; Streaks</button>
+        <button class="tab-btn" data-tab="scars" onclick="openTab('scars')">4. Scars &amp; Mask</button>
+      </div>
+
+      <!-- TAB 1: BODY BUILD & SAVE TO D1 -->
+      <div class="tab-pane active" id="tab-body">
+        <div class="slider-row">
+          <div class="slider-head"><span>Height</span><span id="valHeight">1.00</span></div>
+          <input type="range" id="inHeight" min="0.85" max="1.18" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Shoulder Breadth</span><span id="valShoulders">1.04</span></div>
+          <input type="range" id="inShoulders" min="0.82" max="1.25" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Chest &amp; Muscle Bulk</span><span id="valBulk">1.00</span></div>
+          <input type="range" id="inBulk" min="0.80" max="1.28" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Waist Taper</span><span id="valWaist">0.96</span></div>
+          <input type="range" id="inWaist" min="0.80" max="1.22" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="strip" style="padding-top:4px">
+          <button class="btn primary" onclick="randomizeOperator()">Randomize Captain</button>
+          <button class="btn ok" onclick="saveProfileToD1()">Save Profile (D1 CAS) →</button>
+        </div>
+      </div>
+
+      <!-- TAB 2: HIGH-IMPACT FACE RATIOS + ZERO-STORAGE PHOTO RATIO IMPORTER -->
+      <div class="tab-pane" id="tab-face">
+        <div class="strip" style="justify-content:space-between;background:var(--bg-0);padding:8px;border-radius:7px;border:1px solid var(--border)">
+          <div style="font-size:11.5px;color:var(--text-1)">
+            <strong>Zero-Storage Photo to 3D:</strong> Read facial ratios in RAM &amp; wipe photo immediately.
+          </div>
+          <button class="btn primary" onclick="openPhotoModal()">📷 Import Photo Ratios</button>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-head"><span>Jaw Width</span><span id="valJawWidth">1.02</span></div>
+          <input type="range" id="inJawWidth" min="0.78" max="1.24" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Cheekbone Width</span><span id="valCheekWidth">1.00</span></div>
+          <input type="range" id="inCheekWidth" min="0.82" max="1.22" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Chin Length</span><span id="valChinLength">1.00</span></div>
+          <input type="range" id="inChinLength" min="0.82" max="1.24" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Brow Ridge Depth</span><span id="valBrowRidge">1.05</span></div>
+          <input type="range" id="inBrowRidge" min="0.80" max="1.28" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Nose Length</span><span id="valNoseLength">1.00</span></div>
+          <input type="range" id="inNoseLength" min="0.80" max="1.25" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Nose Width</span><span id="valNoseWidth">1.00</span></div>
+          <input type="range" id="inNoseWidth" min="0.78" max="1.25" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Eye Spacing</span><span id="valEyeSpacing">1.00</span></div>
+          <input type="range" id="inEyeSpacing" min="0.84" max="1.18" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Mouth Width</span><span id="valMouthWidth">1.00</span></div>
+          <input type="range" id="inMouthWidth" min="0.82" max="1.22" step="0.01" oninput="updateFromInputs()" />
+        </div>
+        <div class="strip" style="justify-content:space-between;background:var(--bg-0);padding:8px;border-radius:6px;border:1px solid var(--border)">
+          <label style="font-family:var(--mono);font-size:10.5px;display:flex;align-items:center;gap:6px">Skin <input type="color" id="inSkinHex" oninput="updateFromInputs()" /></label>
+          <label style="font-family:var(--mono);font-size:10.5px;display:flex;align-items:center;gap:6px">Eyes <input type="color" id="inEyeHex" oninput="updateFromInputs()" /></label>
+          <label style="font-family:var(--mono);font-size:10.5px;display:flex;align-items:center;gap:6px">Hair <input type="color" id="inHairHex" oninput="updateFromInputs()" /></label>
+        </div>
+      </div>
+
+      <!-- TAB 3: HAIR, BEARD & MOVABLE ROTATABLE GRAY STREAKS -->
+      <div class="tab-pane" id="tab-hair">
+        <div class="slider-row">
+          <div class="slider-head"><span>Scalp Hair Style</span></div>
+          <select id="inHairStyle" onchange="updateFromInputs()">
+            <option value="swept">Swept Veteran</option>
+            <option value="buzz">Military Buzz</option>
+            <option value="parted">Side-Parted</option>
+            <option value="mohawk">Salvager Crest</option>
+            <option value="bald">Clean Shaved</option>
+          </select>
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span>Beard / Facial Hair</span></div>
+          <select id="inBeardStyle" onchange="updateFromInputs()">
+            <option value="short_beard">Short Trimmed Beard</option>
+            <option value="full_beard">Heavy Frontier Beard</option>
+            <option value="goatee">Captain Goatee + Stache</option>
+            <option value="stubble">Five-O'Clock Stubble</option>
+            <option value="clean">Clean Shaven</option>
+          </select>
+        </div>
+
+        <div class="strip" style="justify-content:space-between">
+          <strong style="font-family:var(--mono);font-size:11px;color:var(--accent)">MOVABLE GRAY STREAKS</strong>
+          <button class="btn ok" onclick="addGrayStreak()">+ Add Gray Streak</button>
+        </div>
+
+        <div id="streakControlsWrap" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+
+      <!-- TAB 4: LAYERED SCARS, BLEMISHES & HAIR-MASK CARVING -->
+      <div class="tab-pane" id="tab-scars">
+        <div class="strip" style="justify-content:space-between">
+          <button class="btn warn" onclick="addMark('scar')">+ Add Scar (Carves Hair)</button>
+          <button class="btn" onclick="addMark('blemish')">+ Blemish / Mole</button>
+          <button class="btn" onclick="addMark('freckle')">+ Freckles</button>
+        </div>
+
+        <div class="face-pad-wrap">
+          <canvas id="markPadCanvas" width="164" height="164"></canvas>
+          <div style="flex:1;min-width:140px;display:flex;flex-direction:column;gap:6px" id="markInspectorBox">
+            <div style="font-size:11px;color:var(--text-1)">Tap &amp; drag on the face map to place scars right across an eyebrow or beard—scars carve hair cleanly away underneath.</div>
+          </div>
+        </div>
+        <div id="markListChips" class="strip"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- DIEGETIC CARDBOARD LOG MODAL -->
+  <div class="modal-backdrop" id="cardboardModal">
+    <div class="cardboard-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <strong style="font-family:var(--mono);font-size:13px">📦 LOG: STARTING OVER</strong>
+        <button class="btn" style="background:#543a1a;color:#fef3c7;border-color:#3a2710" onclick="closeCardboardLog()">Close ✕</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;line-height:1.5;border-top:1px dashed #5e411d;padding-top:8px;white-space:pre-wrap">SHORT HUD TAG: PATCH SUIT // 4.3 PSI HOLD
+
+DETAILED ENTRY (Scribbled on torn crate cardboard — your mutinous crew took your ship and your actual logbook):
+• Bullet clipped the torso seal. 75 seconds of O2 left. Keep breathing steady.
+• Strip adhesive fabric off the pickaxe handle or find proper space tape in wreckage—watch out, cold glue pops off under 4.3 psid delta pressure.
+• Run an actual pressure-decay hold check before trusting any seal.
+• NO SECTOR MAP / NO RADAR: Hardware lost with stolen ship. Look around manually once breathing settles.</div>
+    </div>
+  </div>
+
+  <!-- ZERO-STORAGE LOCAL PHOTO PROPORTION EXTRACTION MODAL -->
+  <div class="modal-backdrop" id="photoModal">
+    <div class="photo-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <strong style="font-family:var(--mono);font-size:12.5px;color:var(--accent)">ZERO-STORAGE PHOTO TO 3D RATIOS</strong>
+        <button class="btn" onclick="closePhotoModal()">Close ✕</button>
+      </div>
+      <p style="margin:0;font-size:11.5px;color:var(--text-1)">
+        Select a selfie/portrait locally. Your photo stays <strong>100% in browser RAM</strong> (never uploaded, never saved). Align the 5 markers over your eyes, nose, jaw &amp; chin—we copy the 3D proportions &amp; tones directly to your captain and <strong>immediately wipe the photo</strong>.
+      </p>
+      <input type="file" id="photoFileInput" accept="image/*" onchange="handlePhotoSelected(event)" />
+      <canvas id="photoAlignCanvas" width="290" height="290"></canvas>
+      <div class="strip" style="justify-content:space-between">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text-2)">Optional auto-snap slot: MediaPipe FaceLandmarker ready</span>
+        <button class="btn ok" onclick="extractAndWipePhoto()">Apply 3D Proportions &amp; Wipe Photo →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Zero script-close literals anywhere in JS */
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    const PROD_AUTHORITY_URL = 'https://ev-authority.ericautomates.workers.dev';
+    let SEAL_CTX = null;
+    let LIVE_D1_REV = 1;
+
+    let PROFILE = {
+      body: { height: 1.0, shoulders: 1.04, bulk: 1.0, waist: 0.96 },
+      face: {
+        jawWidth: 1.02, cheekWidth: 1.0, chinLength: 1.0, browRidge: 1.05,
+        noseLength: 1.0, noseWidth: 1.0, eyeSpacing: 1.0, mouthWidth: 1.0,
+        skinHex: '#c89572', eyeHex: '#4f7a94', hairHex: '#2f241d',
+        hairStyle: 'swept', beardStyle: 'short_beard',
+        grayStreaks: [{ id: 'streak_1', zone: 'temple_left', offsetX: -0.24, offsetY: -0.22, angleDeg: -18, scale: 1.0 }],
+        marks: [{ id: 'scar_1', kind: 'scar', x: -0.17, y: -0.18, angleDeg: 28, scale: 1.05, cutsHair: true }]
+      }
+    };
+
+    let selectedMarkId = 'scar_1';
+    let selectedStreakId = 'streak_1';
+    let dragMode = 'orbit';
+    let helmetMode = 1; // 0 = Bare, 1 = Open Collar, 2 = Sealed Visor
+    let currentMood = 'calm';
+    let o2Sec = 75;
+    let camYaw = 0.25;
+    let camPitch = 0.08;
+    let camZoom = 2.65;
+    let camTargetY = 1.02;
+    let blinkTimer = 0;
+
+    // Texture Atlas Canvases (Face + Offscreen Hair Mask for Scar-Cutting!)
+    const atlasCanvas = document.createElement('canvas');
+    atlasCanvas.width = 1024;
+    atlasCanvas.height = 512;
+    const atlasCtx = atlasCanvas.getContext('2d');
+
+    const hairMaskCanvas = document.createElement('canvas');
+    hairMaskCanvas.width = 1024;
+    hairMaskCanvas.height = 512;
+    const hairCtx = hairMaskCanvas.getContext('2d');
+
+    function setForgeStatus(msg, cls) {
+      const el = document.getElementById('forgeStatusLine');
+      el.textContent = msg;
+      el.className = 'status-line' + (cls ? ' ' + cls : '');
+    }
+
+    function openTab(name) {
+      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
+      document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('active', p.id === 'tab-' + name));
+    }
+
+    function setDragMode(m) {
+      dragMode = m;
+      document.getElementById('btnModeOrbit').classList.toggle('active', m === 'orbit');
+      document.getElementById('btnModeSculpt').classList.toggle('active', m === 'sculpt');
+      document.getElementById('sculptStatusTag').textContent = m === 'orbit'
+        ? 'ORBIT MODE // DRAG TO SPIN · ZOOM TO INSPECT'
+        : 'DIRECT SCULPT // DRAG BROW, EYES, NOSE, CHEEKS, JAW OR CHIN';
+    }
+
+    function setCamPreset(preset) {
+      if (preset === 'face') { camZoom = 1.15; camTargetY = 1.38; camYaw = 0.14; camPitch = 0.04; }
+      else { camZoom = 2.85; camTargetY = 0.85; camYaw = 0.25; camPitch = 0.10; }
+    }
+
+    function cycleHelmetMode() {
+      helmetMode = (helmetMode + 1) % 3;
+      const labels = ['Helmet: Off', 'Helmet: Open', 'Helmet: Visor Sealed'];
+      document.getElementById('btnHelmet').textContent = labels[helmetMode];
+    }
+
+    function setMood(mood) {
+      currentMood = mood;
+      const quips = {
+        calm: '"Bullet punctured the chest seam. Keep breathing."',
+        gasp: '"75s on the clock... salvage crew owes me an air tank."',
+        smirk: '"Half the sector wants me dead. Good thing I keep receipts."',
+        popped: '"*SQUEAL* ...Knew that cold patch was a half-assed attempt anyway."'
+      };
+      o2Sec = mood === 'gasp' ? 38 : mood === 'popped' ? 52 : 75;
+      document.getElementById('hudO2Txt').textContent = 'O2 ' + o2Sec + 's';
+      document.getElementById('hudPsiTxt').textContent = mood === 'popped' ? '1.1 PSI!' : '4.3 PSI';
+      document.getElementById('visorFrameBox').classList.toggle('crit', mood === 'gasp' || mood === 'popped');
+      document.getElementById('hudQuipBox').textContent = quips[mood] || quips.calm;
+      document.getElementById('blackoutVeil').classList.remove('open');
+      paintFaceTexture();
+      drawCornerVisorHud();
+    }
+
+    /* DayZ-Style Non-Pausing Unconscious Bleed-Out + No-Clone Check */
+    let bleedInterval = null;
+    function triggerUnconsciousTest() {
+      currentMood = 'unconscious';
+      paintFaceTexture();
+      drawCornerVisorHud();
+      const veil = document.getElementById('blackoutVeil');
+      const title = document.getElementById('blackoutTitle');
+      const detail = document.getElementById('blackoutDetail');
+      const actions = document.getElementById('blackoutActions');
+      veil.classList.add('open');
+      actions.innerHTML = '';
+      title.textContent = 'VITALS COLLAPSING // BLACKOUT';
+      detail.textContent = '"Great... died on a rock the size of a cheap yacht." (Unconscious — world clock still ticking. Checking approaching rescue / grit recovery...)';
+      let sec = 4;
+      if (bleedInterval) clearInterval(bleedInterval);
+      bleedInterval = setInterval(() => {
+        sec -= 1;
+        if (sec > 0) {
+          detail.textContent = `Checking sector rescue proximity & survival odds... (${sec}s — world unpaused)`;
+          return;
+        }
+        clearInterval(bleedInterval);
+        title.textContent = 'BIOLOGICAL SIGNAL LOST';
+        detail.textContent = 'Zero squadmates or rescue beacons in range. Hit Restart to verify clone pod registry.';
+        actions.innerHTML = '<button class="btn warn" onclick="showNoCloneNotice()">Restart Demo →</button>';
+      }, 1000);
+    }
+
+    function showNoCloneNotice() {
+      document.getElementById('blackoutTitle').textContent = 'NO BACKUP NANOPARTICLE CLONE DETECTED';
+      document.getElementById('blackoutDetail').textContent =
+        'Your mutinous crew took your ship—along with the Med-Bay pod tied to your biometrics—and you skipped black-market off-world clone coverage. Next time, secure a backup clone or stay breathing.';
+      document.getElementById('blackoutActions').innerHTML = '<button class="btn ok" onclick="setMood(\'calm\')">Wake Back Up on Ridge</button>';
+    }
+
+    function openCardboardLog() { document.getElementById('cardboardModal').classList.add('open'); }
+    function closeCardboardLog() { document.getElementById('cardboardModal').classList.remove('open'); }
+
+    /* =========================================================================
+       FACIAL TEXTURE COMPOSITOR (SCARS ACTUALLY CARVE EYEBROWS & BEARD HAIR!)
+       ========================================================================= */
+    function shadeHex(hex, factor) {
+      const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '#c89572');
+      if (!m) return '#9c6e50';
+      const r = Math.max(0, Math.min(255, Math.round(parseInt(m[1], 16) * factor)));
+      const g = Math.max(0, Math.min(255, Math.round(parseInt(m[2], 16) * factor)));
+      const b = Math.max(0, Math.min(255, Math.round(parseInt(m[3], 16) * factor)));
+      return `rgb(${r},${g},${b})`;
+    }
+
+    function paintFaceTexture() {
+      const W = 1024, H = 512;
+      const f = PROFILE.face;
+      // 1. Base Skin + Anatomical Shading
+      atlasCtx.clearRect(0, 0, W, H);
+      atlasCtx.fillStyle = f.skinHex;
+      atlasCtx.fillRect(0, 0, W, H);
+
+      const cx = W * 0.5;
+      // Subtle cheekbone/nasal shadow & brow warm highlight
+      const cheekGrad = atlasCtx.createRadialGradient(cx, H * 0.48, 25, cx, H * 0.52, 220);
+      cheekGrad.addColorStop(0, shadeHex(f.skinHex, 1.07));
+      cheekGrad.addColorStop(0.7, f.skinHex);
+      cheekGrad.addColorStop(1, shadeHex(f.skinHex, 0.80));
+      atlasCtx.fillStyle = cheekGrad;
+      atlasCtx.fillRect(0, 0, W, H);
+
+      // Nostril crease & nose bridge shading
+      atlasCtx.fillStyle = shadeHex(f.skinHex, 0.72);
+      const nw = 18 * f.noseWidth;
+      const ny = H * (0.52 + (f.noseLength - 1) * 0.06);
+      atlasCtx.beginPath();
+      atlasCtx.ellipse(cx - nw * 0.55, ny, 7, 5, 0.2, 0, Math.PI * 2);
+      atlasCtx.ellipse(cx + nw * 0.55, ny, 7, 5, -0.2, 0, Math.PI * 2);
+      atlasCtx.fill();
+
+      // Eyes (centered around u=0.5 -> cx +/- eyeSep)
+      const eyeOffset = 58 * f.eyeSpacing;
+      const eyeY = H * 0.41;
+      const eyesClosed = currentMood === 'unconscious' || blinkTimer > 0;
+      for (const side of [-1, 1]) {
+        const ex = cx + side * eyeOffset;
+        if (eyesClosed) {
+          atlasCtx.strokeStyle = shadeHex(f.skinHex, 0.48);
+          atlasCtx.lineWidth = 4;
+          atlasCtx.beginPath();
+          atlasCtx.moveTo(ex - 16, eyeY);
+          atlasCtx.quadraticCurveTo(ex, eyeY + 5, ex + 16, eyeY);
+          atlasCtx.stroke();
+        } else {
+          atlasCtx.fillStyle = '#f4f7fb';
+          atlasCtx.beginPath();
+          atlasCtx.ellipse(ex, eyeY, 17, currentMood === 'gasp' ? 11 : 8.5, 0, 0, Math.PI * 2);
+          atlasCtx.fill();
+          atlasCtx.fillStyle = f.eyeHex;
+          atlasCtx.beginPath();
+          atlasCtx.arc(ex, eyeY, 7.5, 0, Math.PI * 2);
+          atlasCtx.fill();
+          atlasCtx.fillStyle = '#070b12';
+          atlasCtx.beginPath();
+          atlasCtx.arc(ex, eyeY, 3.6, 0, Math.PI * 2);
+          atlasCtx.fill();
+          atlasCtx.fillStyle = '#ffffff';
+          atlasCtx.beginPath();
+          atlasCtx.arc(ex - 2.5, eyeY - 2.5, 1.8, 0, Math.PI * 2);
+          atlasCtx.fill();
+          // Upper lash crease
+          atlasCtx.strokeStyle = shadeHex(f.skinHex, 0.45);
+          atlasCtx.lineWidth = 3;
+          atlasCtx.beginPath();
+          atlasCtx.moveTo(ex - 18, eyeY - 3);
+          atlasCtx.quadraticCurveTo(ex, eyeY - 12, ex + 18, eyeY - 2);
+          atlasCtx.stroke();
+        }
+      }
+
+      // Expressive Mouth
+      const mouthY = H * 0.65;
+      const mw = 36 * f.mouthWidth;
+      atlasCtx.strokeStyle = shadeHex(f.skinHex, 0.46);
+      atlasCtx.lineWidth = 4.5;
+      atlasCtx.lineCap = 'round';
+      if (currentMood === 'gasp' || currentMood === 'popped') {
+        atlasCtx.fillStyle = '#2d0c12';
+        atlasCtx.beginPath();
+        atlasCtx.ellipse(cx, mouthY + 3, mw * 0.55, currentMood === 'gasp' ? 12 : 8, 0, 0, Math.PI * 2);
+        atlasCtx.fill();
+      } else if (currentMood === 'smirk') {
+        atlasCtx.beginPath();
+        atlasCtx.moveTo(cx - mw * 0.8, mouthY + 2);
+        atlasCtx.quadraticCurveTo(cx + mw * 0.1, mouthY + 4, cx + mw * 0.9, mouthY - 8);
+        atlasCtx.stroke();
+      } else {
+        atlasCtx.beginPath();
+        atlasCtx.moveTo(cx - mw * 0.85, mouthY + 1);
+        atlasCtx.quadraticCurveTo(cx, mouthY + (currentMood === 'unconscious' ? 4 : -1), cx + mw * 0.85, mouthY + 1);
+        atlasCtx.stroke();
+      }
+
+      // 2. Render Hair, Eyebrows, Beard & Gray Streaks onto OFFSCREEN HAIR MASK CANVAS
+      hairCtx.clearRect(0, 0, W, H);
+      hairCtx.fillStyle = f.hairHex;
+
+      // Eyebrows
+      const browY = H * 0.345;
+      for (const side of [-1, 1]) {
+        const bx = cx + side * eyeOffset;
+        hairCtx.save();
+        hairCtx.translate(bx, browY);
+        hairCtx.rotate(side * (currentMood === 'popped' ? 0.14 : -0.07));
+        hairCtx.fillRect(-20, -4.5, 40, 9);
+        hairCtx.restore();
+      }
+
+      // Scalp Hair Coverage (UV crown & back)
+      if (f.hairStyle !== 'bald') {
+        const crownH = f.hairStyle === 'buzz' ? H * 0.21 : H * 0.25;
+        hairCtx.fillRect(0, 0, W, crownH);
+        // Sideburns / temples
+        if (f.hairStyle !== 'mohawk') {
+          hairCtx.fillRect(cx - 210, crownH - 6, 48, 86);
+          hairCtx.fillRect(cx + 162, crownH - 6, 48, 86);
+        } else {
+          hairCtx.clearRect(0, 0, W, crownH);
+          hairCtx.fillRect(cx - 60, 0, 120, H * 0.27);
+          hairCtx.fillRect(0, 0, 120, H * 0.22);
+          hairCtx.fillRect(W - 120, 0, 120, H * 0.22);
+        }
+      }
+
+      // Beard / Stubble / Goatee
+      if (f.beardStyle !== 'clean') {
+        hairCtx.save();
+        if (f.beardStyle === 'stubble') hairCtx.globalAlpha = 0.38;
+        if (f.beardStyle === 'goatee') {
+          hairCtx.beginPath();
+          hairCtx.ellipse(cx, H * 0.60, 44, 10, 0, 0, Math.PI * 2);
+          hairCtx.ellipse(cx, H * 0.77, 46, 36, 0, 0, Math.PI * 2);
+          hairCtx.fill();
+        } else {
+          const beardTop = f.beardStyle === 'full_beard' ? H * 0.62 : H * 0.66;
+          hairCtx.beginPath();
+          hairCtx.moveTo(cx - 175, H * 0.53);
+          hairCtx.lineTo(cx - 125, beardTop);
+          hairCtx.lineTo(cx - 50, H * 0.58);
+          hairCtx.lineTo(cx + 50, H * 0.58);
+          hairCtx.lineTo(cx + 125, beardTop);
+          hairCtx.lineTo(cx + 175, H * 0.53);
+          hairCtx.lineTo(cx + 210, H);
+          hairCtx.lineTo(cx - 210, H);
+          hairCtx.closePath();
+          hairCtx.fill();
+          // Clear mouth slit cleanly inside beard
+          hairCtx.globalCompositeOperation = 'destination-out';
+          hairCtx.beginPath();
+          hairCtx.ellipse(cx, mouthY + 2, mw * 0.92, 13, 0, 0, Math.PI * 2);
+          hairCtx.fill();
+          hairCtx.globalCompositeOperation = 'source-over';
+        }
+        hairCtx.restore();
+      }
+
+      // Movable & Rotatable Gray Streaks (composited strictly over existing hair via source-atop!)
+      hairCtx.save();
+      hairCtx.globalCompositeOperation = 'source-atop';
+      for (const st of f.grayStreaks || []) {
+        const sx = cx + st.offsetX * 360;
+        const sy = H * 0.5 + st.offsetY * 360;
+        hairCtx.save();
+        hairCtx.translate(sx, sy);
+        hairCtx.rotate((st.angleDeg * Math.PI) / 180);
+        const grad = hairCtx.createLinearGradient(-35 * st.scale, 0, 35 * st.scale, 0);
+        grad.addColorStop(0, 'rgba(218, 226, 236, 0)');
+        grad.addColorStop(0.5, 'rgba(226, 234, 244, 0.92)');
+        grad.addColorStop(1, 'rgba(218, 226, 236, 0)');
+        hairCtx.fillStyle = grad;
+        hairCtx.fillRect(-35 * st.scale, -70 * st.scale, 70 * st.scale, 140 * st.scale);
+        hairCtx.restore();
+      }
+      hairCtx.restore();
+
+      // 3. SCAR HAIR-CARVING PASS: Punch hairless notches wherever cutsHair scars intersect eyebrows/beard!
+      hairCtx.save();
+      hairCtx.globalCompositeOperation = 'destination-out';
+      for (const mk of f.marks || []) {
+        if (mk.kind === 'scar' && mk.cutsHair) {
+          const mx = cx + mk.x * 360;
+          const my = H * 0.5 + mk.y * 360;
+          hairCtx.save();
+          hairCtx.translate(mx, my);
+          hairCtx.rotate((mk.angleDeg * Math.PI) / 180);
+          hairCtx.fillStyle = '#000';
+          hairCtx.beginPath();
+          hairCtx.ellipse(0, 0, 26 * mk.scale, 7 * mk.scale, 0, 0, Math.PI * 2);
+          hairCtx.fill();
+          hairCtx.restore();
+        }
+      }
+      hairCtx.restore();
+
+      // Composite Masked Hair/Beard onto Skin Canvas FIRST, then draw scar/blemish tissue on top!
+      atlasCtx.drawImage(hairMaskCanvas, 0, 0);
+
+      for (const mk of f.marks || []) {
+        const mx = cx + mk.x * 360;
+        const my = H * 0.5 + mk.y * 360;
+        atlasCtx.save();
+        atlasCtx.translate(mx, my);
+        atlasCtx.rotate((mk.angleDeg * Math.PI) / 180);
+        if (mk.kind === 'scar') {
+          // Pale raised scar core + faint pink border
+          atlasCtx.strokeStyle = 'rgba(155, 62, 62, 0.72)';
+          atlasCtx.lineWidth = 7 * mk.scale;
+          atlasCtx.lineCap = 'round';
+          atlasCtx.beginPath();
+          atlasCtx.moveTo(-24 * mk.scale, 0);
+          atlasCtx.quadraticCurveTo(0, -4 * mk.scale, 24 * mk.scale, 1 * mk.scale);
+          atlasCtx.stroke();
+          atlasCtx.strokeStyle = 'rgba(235, 200, 190, 0.92)';
+          atlasCtx.lineWidth = 3 * mk.scale;
+          atlasCtx.stroke();
+        } else if (mk.kind === 'blemish') {
+          atlasCtx.fillStyle = shadeHex(f.skinHex, 0.45);
+          atlasCtx.beginPath();
+          atlasCtx.ellipse(0, 0, 5.5 * mk.scale, 4.5 * mk.scale, 0, 0, Math.PI * 2);
+          atlasCtx.fill();
+        } else {
+          atlasCtx.fillStyle = shadeHex(f.skinHex, 0.62);
+          for (const [fx, fy] of [[-10, -4], [-3, 3], [5, -2], [12, 4], [-7, 6], [2, -6]]) {
+            atlasCtx.beginPath();
+            atlasCtx.arc(fx * mk.scale, fy * mk.scale, 2 * mk.scale, 0, Math.PI * 2);
+            atlasCtx.fill();
+          }
+        }
+        atlasCtx.restore();
+      }
+
+      uploadFaceTexture();
+      drawMarkPlacementPad();
+    }
+
+    /* =========================================================================
+       CORNER DOOM / IRON-MAN HELMET VISOR PORTRAIT HUD
+       ========================================================================= */
+    function drawCornerVisorHud() {
+      const c = document.getElementById('visorHudCanvas');
+      const ctx = c.getContext('2d');
+      const W = c.width, H = c.height;
+      ctx.clearRect(0, 0, W, H);
+      // Helmet interior padding & steel rim
+      ctx.fillStyle = '#07101f';
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(4, 4, W - 8, H - 8);
+      // Draw cropped center facial slice directly from atlasCanvas so EVERY scar, streak, beard & expression syncs 1:1!
+      const sx = 512 - 140, sy = 105, sw = 280, sh = 270;
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(8, 8, W - 16, H - 16, 10) : ctx.rect(8, 8, W - 16, H - 16);
+      ctx.clip();
+      ctx.drawImage(atlasCanvas, sx, sy, sw, sh, 8, 8, W - 16, H - 16);
+      // Subtle cyan/amber visor scanline reflection
+      ctx.fillStyle = currentMood === 'gasp' || currentMood === 'popped' ? 'rgba(239, 68, 68, 0.14)' : 'rgba(56, 189, 248, 0.10)';
+      ctx.fillRect(8, 8, W - 16, H - 16);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      ctx.beginPath();
+      ctx.moveTo(10, 10); ctx.lineTo(38, 10); ctx.lineTo(14, 52); ctx.lineTo(10, 44); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    /* =========================================================================
+       PURE ZERO-DEPENDENCY 3D WEBGL ENGINE (BODY + PARAMETRIC 3D HEAD + HELMET)
+       ========================================================================= */
+    const glCanvas = document.getElementById('glCanvas');
+    const gl = glCanvas.getContext('webgl', { antialias: true, alpha: true });
+    let glProg = null, faceTex = null;
+    let meshes = {};
+
+    function mat4Ident() { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); }
+    function mat4Mul(a, b) {
+      const o = new Float32Array(16);
+      for (let c = 0; c < 4; c++) {
+        for (let r = 0; r < 4; r++) {
+          o[c*4+r] = a[r]*b[c*4] + a[4+r]*b[c*4+1] + a[8+r]*b[c*4+2] + a[12+r]*b[c*4+3];
+        }
+      }
+      return o;
+    }
+    function mat4Persp(fovRad, aspect, near, far) {
+      const f = 1 / Math.tan(fovRad / 2), nf = 1 / (near - far);
+      const o = new Float32Array(16);
+      o[0] = f / aspect; o[5] = f; o[10] = (far + near) * nf; o[11] = -1; o[14] = 2 * far * near * nf;
+      return o;
+    }
+    function mat4Translate(x, y, z) { const m = mat4Ident(); m[12]=x; m[13]=y; m[14]=z; return m; }
+    function mat4RotY(rad) {
+      const c = Math.cos(rad), s = Math.sin(rad), m = mat4Ident();
+      m[0]=c; m[2]=-s; m[8]=s; m[10]=c; return m;
+    }
+    function mat4RotX(rad) {
+      const c = Math.cos(rad), s = Math.sin(rad), m = mat4Ident();
+      m[5]=c; m[6]=s; m[9]=-s; m[10]=c; return m;
+    }
+
+    function initWebGL() {
+      if (!gl) {
+        document.getElementById('renderEngineTag').textContent = 'WebGL Fallback';
+        return;
+      }
+      const vsSrc = `
+        attribute vec3 aPos;
+        attribute vec3 aNorm;
+        attribute vec2 aUv;
+        uniform mat4 uMvp;
+        uniform mat4 uModel;
+        varying vec3 vNorm;
+        varying vec2 vUv;
+        void main() {
+          vNorm = normalize(mat3(uModel) * aNorm);
+          vUv = aUv;
+          gl_Position = uMvp * vec4(aPos, 1.0);
+        }
+      `;
+      const fsSrc = `
+        precision mediump float;
+        varying vec3 vNorm;
+        varying vec2 vUv;
+        uniform sampler2D uTex;
+        uniform float uUseTex;
+        uniform vec4 uColor;
+        void main() {
+          vec3 n = normalize(vNorm);
+          float key = max(dot(n, normalize(vec3(0.45, 0.72, 0.85))), 0.0);
+          float rim = pow(max(1.0 - abs(n.z), 0.0), 2.0) * 0.35;
+          float lit = 0.34 + key * 0.66 + rim;
+          vec4 base = mix(uColor, texture2D(uTex, vUv), uUseTex);
+          gl_FragColor = vec4(base.rgb * lit, base.a);
+        }
+      `;
+      const compile = (type, src) => {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return s;
+      };
+      glProg = gl.createProgram();
+      gl.attachShader(glProg, compile(gl.VERTEX_SHADER, vsSrc));
+      gl.attachShader(glProg, compile(gl.FRAGMENT_SHADER, fsSrc));
+      gl.linkProgram(glProg);
+      gl.useProgram(glProg);
+
+      faceTex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, faceTex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      uploadFaceTexture();
+      rebuildMeshes();
+    }
+
+    function uploadFaceTexture() {
+      if (!gl || !faceTex) return;
+      gl.bindTexture(gl.TEXTURE_2D, faceTex);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
+    }
+
+    function pushBox(arrPos, arrNorm, arrUv, arrIdx, cx, cy, cz, sx, sy, sz) {
+      const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
+      const faces = [
+        [[0,0,1], [[-hx,-hy,hz],[hx,-hy,hz],[hx,hy,hz],[-hx,hy,hz]]],
+        [[0,0,-1], [[hx,-hy,-hz],[-hx,-hy,-hz],[-hx,hy,-hz],[hx,hy,-hz]]],
+        [[1,0,0], [[hx,-hy,hz],[hx,-hy,-hz],[hx,hy,-hz],[hx,hy,hz]]],
+        [[-1,0,0], [[-hx,-hy,-hz],[-hx,-hy,hz],[-hx,hy,hz],[-hx,hy,-hz]]],
+        [[0,1,0], [[-hx,hy,hz],[hx,hy,hz],[hx,hy,-hz],[-hx,hy,-hz]]],
+        [[0,-1,0], [[-hx,-hy,-hz],[hx,-hy,-hz],[hx,-hy,hz],[-hx,-hy,hz]]]
+      ];
+      for (const [n, pts] of faces) {
+        const base = arrPos.length / 3;
+        for (const p of pts) {
+          arrPos.push(cx + p[0], cy + p[1], cz + p[2]);
+          arrNorm.push(n[0], n[1], n[2]);
+          arrUv.push(0.5, 0.5);
+        }
+        arrIdx.push(base, base+1, base+2, base, base+2, base+3);
+      }
+    }
+
+    function makeMeshBuffers(pos, norm, uv, idx) {
+      const bPos = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bPos); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+      const bNorm = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bNorm); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
+      const bUv = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, bUv); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uv), gl.STATIC_DRAW);
+      const bIdx = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bIdx); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+      return { bPos, bNorm, bUv, bIdx, count: idx.length };
+    }
+
+    function buildSculptedHeadMesh() {
+      const f = PROFILE.face;
+      const b = PROFILE.body;
+      const RINGS = 34, SEGS = 48;
+      const pos = [], norm = [], uv = [], idx = [];
+      const headCy = 1.41 * b.height;
+
+      for (let r = 0; r <= RINGS; r++) {
+        const v = r / RINGS; // 0 top -> 1 bottom
+        const lat = Math.PI * 0.5 - v * Math.PI;
+        const cosL = Math.cos(lat), sinL = Math.sin(lat);
+        for (let s = 0; s <= SEGS; s++) {
+          const u = s / SEGS; // 0.5 is dead-front +Z
+          const lon = (u - 0.5) * Math.PI * 2;
+          const sinLon = Math.sin(lon), cosLon = Math.cos(lon);
+
+          let x = 0.175 * cosL * sinLon;
+          let y = 0.235 * sinL;
+          let z = 0.195 * cosL * cosLon;
+
+          // Sculpt anatomical 3D facial contours strictly along front hemisphere
+          const front = Math.max(0, cosLon);
+          // Cheekbones
+          const cheekMask = Math.exp(-Math.pow((lat + 0.06) * 3.5, 2)) * Math.exp(-Math.pow((Math.abs(lon) - 0.56) * 3.2, 2));
+          x *= 1 + (f.cheekWidth - 1) * 0.42 * cheekMask + (f.cheekWidth - 1) * 0.08;
+          z += 0.024 * cheekMask * f.cheekWidth;
+          // Jaw width flare lower half
+          const jawMask = Math.exp(-Math.pow((lat + 0.45) * 3.2, 2)) * front;
+          x *= 1 + (f.jawWidth - 1) * 0.36 * jawMask;
+          // Chin projection
+          const chinMask = Math.exp(-Math.pow((lat + 0.58) * 3.6, 2)) * Math.exp(-Math.pow(lon * 2.5, 2));
+          y -= 0.028 * (f.chinLength - 1) * chinMask;
+          z += 0.036 * f.chinLength * chinMask;
+          // Eye socket indentation + Brow Ridge overhang
+          const eyeMask = Math.exp(-Math.pow((lat - 0.14) * 5.2, 2)) * Math.exp(-Math.pow((Math.abs(lon) - 0.35 * f.eyeSpacing) * 5.0, 2));
+          z -= 0.022 * eyeMask;
+          const browMask = Math.exp(-Math.pow((lat - 0.28) * 5.2, 2)) * Math.exp(-Math.pow(lon * 1.9, 2));
+          z += 0.028 * f.browRidge * browMask;
+          // 3D Nose Bridge & Tip
+          const noseMask = Math.exp(-Math.pow((lat - 0.01) * 4.2, 2)) * Math.exp(-Math.pow((lon / f.noseWidth) * 6.5, 2));
+          z += 0.058 * f.noseLength * noseMask;
+          y -= 0.015 * (f.noseLength - 1) * noseMask;
+          // Neck taper below chin
+          if (lat < -0.78) { x *= 0.62; z *= 0.62; }
+
+          pos.push(x, headCy + y, z);
+          const len = Math.hypot(x, y, z) || 1;
+          norm.push(x / len, y / len, z / len);
+          uv.push(u, v);
+        }
+      }
+      for (let r = 0; r < RINGS; r++) {
+        for (let s = 0; s < SEGS; s++) {
+          const i0 = r * (SEGS + 1) + s, i1 = i0 + SEGS + 1;
+          idx.push(i0, i1, i0 + 1, i0 + 1, i1, i1 + 1);
+        }
+      }
+      return makeMeshBuffers(pos, norm, uv, idx);
+    }
+
+    function buildBodyAndHelmetMeshes() {
+      const b = PROFILE.body;
+      const h = b.height, sh = b.shoulders, bk = b.bulk, wa = b.waist;
+      const pos=[], norm=[], uv=[], idx=[];
+      // Neck & Collar
+      pushBox(pos, norm, uv, idx, 0, 1.15*h, 0, 0.14*bk, 0.16*h, 0.14*bk);
+      pushBox(pos, norm, uv, idx, 0, 1.07*h, 0, 0.36*sh, 0.08*h, 0.26*bk);
+      // Chest Suit + Armor Plate
+      pushBox(pos, norm, uv, idx, 0, 0.88*h, 0, 0.44*sh, 0.34*h, 0.27*bk);
+      pushBox(pos, norm, uv, idx, 0, 0.90*h, 0.03*bk, 0.36*sh, 0.24*h, 0.27*bk);
+      // Waist & Pelvis
+      pushBox(pos, norm, uv, idx, 0, 0.62*h, 0, 0.35*wa, 0.22*h, 0.23*bk);
+      // Arms + Pauldrons
+      for (const s of [-1, 1]) {
+        const ax = s * (0.28 * sh + 0.03 * bk);
+        pushBox(pos, norm, uv, idx, ax, 0.98*h, 0, 0.16*bk, 0.14*h, 0.19*bk);
+        pushBox(pos, norm, uv, idx, ax + s*0.02, 0.72*h, 0.02, 0.12*bk, 0.44*h, 0.13*bk);
+      }
+      // Legs & Magnetic EVA Boots
+      for (const s of [-1, 1]) {
+        const lx = s * (0.11 * wa + 0.02);
+        pushBox(pos, norm, uv, idx, lx, 0.30*h, 0, 0.15*bk, 0.44*h, 0.16*bk);
+        pushBox(pos, norm, uv, idx, lx, 0.05*h, 0.03, 0.16*bk, 0.12*h, 0.24*bk);
+      }
+      const bodyMesh = makeMeshBuffers(pos, norm, uv, idx);
+
+      // EVA Helmet Rim & Back Shell
+      const hp=[], hn=[], hu=[], hi=[];
+      const cy = 1.42 * h;
+      pushBox(hp, hn, hu, hi, 0, cy + 0.22, -0.02, 0.42, 0.12, 0.46);
+      pushBox(hp, hn, hu, hi, 0, cy + 0.02, -0.18, 0.44, 0.44, 0.18);
+      for (const s of [-1, 1]) pushBox(hp, hn, hu, hi, s * 0.22, cy, -0.02, 0.09, 0.42, 0.38);
+      pushBox(hp, hn, hu, hi, 0, cy - 0.22, 0.02, 0.40, 0.08, 0.42);
+      const helmetMesh = makeMeshBuffers(hp, hn, hu, hi);
+
+      // Translucent Curved Front Visor Pane
+      const vp=[], vn=[], vu=[], vi=[];
+      pushBox(vp, vn, vu, vi, 0, cy + 0.01, 0.23, 0.37, 0.36, 0.04);
+      const visorMesh = makeMeshBuffers(vp, vn, vu, vi);
+
+      return { bodyMesh, helmetMesh, visorMesh };
+    }
+
+    function rebuildMeshes() {
+      if (!gl) return;
+      meshes.head = buildSculptedHeadMesh();
+      const bh = buildBodyAndHelmetMeshes();
+      meshes.body = bh.bodyMesh;
+      meshes.helmet = bh.helmetMesh;
+      meshes.visor = bh.visorMesh;
+    }
+
+    function drawMesh(mesh, mvp, model, color, useTex) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.bPos);
+      const aPos = gl.getAttribLocation(glProg, 'aPos'); gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.bNorm);
+      const aNorm = gl.getAttribLocation(glProg, 'aNorm'); gl.enableVertexAttribArray(aNorm); gl.vertexAttribPointer(aNorm, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.bUv);
+      const aUv = gl.getAttribLocation(glProg, 'aUv'); gl.enableVertexAttribArray(aUv); gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.bIdx);
+
+      gl.uniformMatrix4fv(gl.getUniformLocation(glProg, 'uMvp'), false, mvp);
+      gl.uniformMatrix4fv(gl.getUniformLocation(glProg, 'uModel'), false, model);
+      gl.uniform4fv(gl.getUniformLocation(glProg, 'uColor'), color);
+      gl.uniform1f(gl.getUniformLocation(glProg, 'uUseTex'), useTex);
+      gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+    }
+
+    function renderLoop() {
+      if (gl && glProg && meshes.head) {
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        const w = Math.max(100, Math.floor(glCanvas.clientWidth * dpr));
+        const h = Math.max(100, Math.floor(glCanvas.clientHeight * dpr));
+        if (glCanvas.width !== w || glCanvas.height !== h) { glCanvas.width = w; glCanvas.height = h; }
+        gl.viewport(0, 0, w, h);
+        gl.enable(gl.DEPTH_TEST);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        const proj = mat4Persp(0.68, w / h, 0.1, 20);
+        const view = mat4Mul(mat4Translate(0, -camTargetY, -camZoom), mat4Mul(mat4RotX(camPitch), mat4RotY(camYaw)));
+        const model = mat4Ident();
+        const mvp = mat4Mul(proj, mat4Mul(view, model));
+
+        drawMesh(meshes.body, mvp, model, [0.16, 0.25, 0.36, 1.0], 0.0);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, faceTex);
+        gl.uniform1i(gl.getUniformLocation(glProg, 'uTex'), 0);
+        drawMesh(meshes.head, mvp, model, [1, 1, 1, 1], 1.0);
+
+        if (helmetMode >= 1) {
+          drawMesh(meshes.helmet, mvp, model, [0.22, 0.30, 0.42, 1.0], 0.0);
+        }
+        if (helmetMode === 2) {
+          gl.enable(gl.BLEND);
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+          gl.depthMask(false);
+          drawMesh(meshes.visor, mvp, model, [0.24, 0.72, 0.96, 0.32], 0.0);
+          gl.depthMask(true);
+          gl.disable(gl.BLEND);
+        }
+      }
+      requestAnimationFrame(renderLoop);
+    }
+
+    /* =========================================================================
+       1-FINGER ORBIT + DIRECT-DRAG FACIAL SCULPT INTERACTION
+       ========================================================================= */
+    (function setupStagePointers() {
+      const box = document.getElementById('stageContainer');
+      const ptrs = new Map();
+      let prev = null, pinchDist = 0;
+
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+      box.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('button')) return;
+        ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        prev = { x: e.clientX, y: e.clientY };
+        if (ptrs.size === 2) {
+          const pts = [...ptrs.values()];
+          pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+        }
+      });
+      box.addEventListener('pointermove', (e) => {
+        if (!ptrs.has(e.pointerId)) return;
+        ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (ptrs.size === 2) {
+          const pts = [...ptrs.values()];
+          const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+          camZoom = clamp(camZoom * (pinchDist / d), 0.85, 3.6);
+          pinchDist = d;
+          return;
+        }
+        if (!prev) return;
+        const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+        prev = { x: e.clientX, y: e.clientY };
+
+        if (dragMode === 'orbit') {
+          camYaw += dx * 0.011;
+          camPitch = clamp(camPitch + dy * 0.008, -0.55, 0.65);
+        } else {
+          const rect = box.getBoundingClientRect();
+          const ry = (e.clientY - rect.top) / rect.height;
+          const rx = (e.clientX - rect.left) / rect.width;
+          const f = PROFILE.face;
+          if (ry < 0.36) {
+            f.browRidge = clamp(f.browRidge - dy * 0.004, 0.80, 1.28);
+            document.getElementById('sculptStatusTag').textContent = 'SCULPTING: BROW RIDGE ' + f.browRidge.toFixed(2);
+          } else if (ry < 0.49 && Math.abs(rx - 0.5) < 0.22) {
+            f.eyeSpacing = clamp(f.eyeSpacing + dx * 0.0025, 0.84, 1.18);
+            document.getElementById('sculptStatusTag').textContent = 'SCULPTING: EYE SPACING ' + f.eyeSpacing.toFixed(2);
+          } else if (ry < 0.63 && Math.abs(rx - 0.5) < 0.16) {
+            f.noseWidth = clamp(f.noseWidth + dx * 0.003, 0.78, 1.25);
+            f.noseLength = clamp(f.noseLength + dy * 0.003, 0.80, 1.25);
+            document.getElementById('sculptStatusTag').textContent = `SCULPTING: NOSE W:${f.noseWidth.toFixed(2)} L:${f.noseLength.toFixed(2)}`;
+          } else if (ry < 0.68) {
+            f.cheekWidth = clamp(f.cheekWidth + dx * 0.003, 0.82, 1.22);
+            document.getElementById('sculptStatusTag').textContent = 'SCULPTING: CHEEKBONES ' + f.cheekWidth.toFixed(2);
+          } else {
+            f.jawWidth = clamp(f.jawWidth + dx * 0.0035, 0.78, 1.24);
+            f.chinLength = clamp(f.chinLength + dy * 0.0035, 0.82, 1.24);
+            document.getElementById('sculptStatusTag').textContent = `SCULPTING: JAW ${f.jawWidth.toFixed(2)} CHIN ${f.chinLength.toFixed(2)}`;
+          }
+          syncInputsFromProfile();
+          paintFaceTexture();
+          drawCornerVisorHud();
+          rebuildMeshes();
+        }
+      });
+      const up = (e) => { ptrs.delete(e.pointerId); if (ptrs.size === 0) prev = null; };
+      box.addEventListener('pointerup', up);
+      box.addEventListener('pointercancel', up);
+      box.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        camZoom = clamp(camZoom * (e.deltaY > 0 ? 1.07 : 0.93), 0.85, 3.6);
+      }, { passive: false });
+    })();
+
+    /* =========================================================================
+       SLIDERS, STREAK & SCAR PLACEMENT PAD (CARVES HAIR UNDERNEATH)
+       ========================================================================= */
+    function syncInputsFromProfile() {
+      const b = PROFILE.body, f = PROFILE.face;
+      const map = [
+        ['inHeight', 'valHeight', b.height], ['inShoulders', 'valShoulders', b.shoulders],
+        ['inBulk', 'valBulk', b.bulk], ['inWaist', 'valWaist', b.waist],
+        ['inJawWidth', 'valJawWidth', f.jawWidth], ['inCheekWidth', 'valCheekWidth', f.cheekWidth],
+        ['inChinLength', 'valChinLength', f.chinLength], ['inBrowRidge', 'valBrowRidge', f.browRidge],
+        ['inNoseLength', 'valNoseLength', f.noseLength], ['inNoseWidth', 'valNoseWidth', f.noseWidth],
+        ['inEyeSpacing', 'valEyeSpacing', f.eyeSpacing], ['inMouthWidth', 'valMouthWidth', f.mouthWidth]
+      ];
+      for (const [id, lbl, val] of map) {
+        document.getElementById(id).value = val;
+        document.getElementById(lbl).textContent = Number(val).toFixed(2);
+      }
+      document.getElementById('inSkinHex').value = f.skinHex;
+      document.getElementById('inEyeHex').value = f.eyeHex;
+      document.getElementById('inHairHex').value = f.hairHex;
+      document.getElementById('inHairStyle').value = f.hairStyle;
+      document.getElementById('inBeardStyle').value = f.beardStyle;
+    }
+
+    function updateFromInputs() {
+      const b = PROFILE.body, f = PROFILE.face;
+      b.height = Number(document.getElementById('inHeight').value);
+      b.shoulders = Number(document.getElementById('inShoulders').value);
+      b.bulk = Number(document.getElementById('inBulk').value);
+      b.waist = Number(document.getElementById('inWaist').value);
+      f.jawWidth = Number(document.getElementById('inJawWidth').value);
+      f.cheekWidth = Number(document.getElementById('inCheekWidth').value);
+      f.chinLength = Number(document.getElementById('inChinLength').value);
+      f.browRidge = Number(document.getElementById('inBrowRidge').value);
+      f.noseLength = Number(document.getElementById('inNoseLength').value);
+      f.noseWidth = Number(document.getElementById('inNoseWidth').value);
+      f.eyeSpacing = Number(document.getElementById('inEyeSpacing').value);
+      f.mouthWidth = Number(document.getElementById('inMouthWidth').value);
+      f.skinHex = document.getElementById('inSkinHex').value;
+      f.eyeHex = document.getElementById('inEyeHex').value;
+      f.hairHex = document.getElementById('inHairHex').value;
+      f.hairStyle = document.getElementById('inHairStyle').value;
+      f.beardStyle = document.getElementById('inBeardStyle').value;
+      syncInputsFromProfile();
+      paintFaceTexture();
+      drawCornerVisorHud();
+      rebuildMeshes();
+    }
+
+    function renderStreakControls() {
+      const wrap = document.getElementById('streakControlsWrap');
+      const list = PROFILE.face.grayStreaks || [];
+      wrap.innerHTML = list.map((st, idx) => `
+        <div class="slider-row">
+          <div class="slider-head">
+            <span>Streak #${idx + 1}</span>
+            <button class="btn crit" style="padding:2px 6px;font-size:10px" onclick="removeStreak('${esc(st.id)}')">Remove</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,110px),1fr));gap:6px">
+            <label style="font-family:var(--mono);font-size:10px">X <input type="range" min="-0.38" max="0.38" step="0.01" value="${st.offsetX}" oninput="editStreak('${esc(st.id)}','offsetX',this.value)" /></label>
+            <label style="font-family:var(--mono);font-size:10px">Y <input type="range" min="-0.38" max="0.38" step="0.01" value="${st.offsetY}" oninput="editStreak('${esc(st.id)}','offsetY',this.value)" /></label>
+            <label style="font-family:var(--mono);font-size:10px">Angle <input type="range" min="-180" max="180" step="1" value="${st.angleDeg}" oninput="editStreak('${esc(st.id)}','angleDeg',this.value)" /></label>
+            <label style="font-family:var(--mono);font-size:10px">Size <input type="range" min="0.4" max="2.0" step="0.05" value="${st.scale}" oninput="editStreak('${esc(st.id)}','scale',this.value)" /></label>
+          </div>
+        </div>
+      `).join('') || '<div class="status-line">No gray streaks added. Tap "+ Add Gray Streak" above.</div>';
+    }
+
+    function addGrayStreak() {
+      const id = 'streak_' + Date.now().toString(36);
+      PROFILE.face.grayStreaks.push({ id, zone: 'temple_left', offsetX: 0.22, offsetY: -0.24, angleDeg: 22, scale: 1.0 });
+      renderStreakControls(); paintFaceTexture(); drawCornerVisorHud();
+    }
+    function removeStreak(id) {
+      PROFILE.face.grayStreaks = PROFILE.face.grayStreaks.filter((s) => s.id !== id);
+      renderStreakControls(); paintFaceTexture(); drawCornerVisorHud();
+    }
+    function editStreak(id, key, val) {
+      const st = PROFILE.face.grayStreaks.find((s) => s.id === id);
+      if (st) { st[key] = Number(val); paintFaceTexture(); drawCornerVisorHud(); }
+    }
+
+    function addMark(kind) {
+      const id = kind + '_' + Date.now().toString(36);
+      PROFILE.face.marks.push({ id, kind, x: 0.14, y: 0.08, angleDeg: -24, scale: 1.0, cutsHair: kind === 'scar' });
+      selectedMarkId = id;
+      renderMarksUi(); paintFaceTexture(); drawCornerVisorHud();
+    }
+    function removeMark(id) {
+      PROFILE.face.marks = PROFILE.face.marks.filter((m) => m.id !== id);
+      selectedMarkId = PROFILE.face.marks[0] ? PROFILE.face.marks[0].id : null;
+      renderMarksUi(); paintFaceTexture(); drawCornerVisorHud();
+    }
+    function updateSelectedMark(key, val) {
+      const mk = PROFILE.face.marks.find((m) => m.id === selectedMarkId);
+      if (!mk) return;
+      mk[key] = key === 'cutsHair' ? Boolean(val) : Number(val);
+      paintFaceTexture(); drawCornerVisorHud();
+    }
+
+    function renderMarksUi() {
+      const chips = document.getElementById('markListChips');
+      chips.innerHTML = (PROFILE.face.marks || []).map((m, i) => `
+        <button class="btn ${m.id === selectedMarkId ? 'active' : ''}" onclick="selectedMarkId='${esc(m.id)}';renderMarksUi()">
+          ${esc(m.kind.toUpperCase())} #${i + 1}
+        </button>
+      `).join('');
+
+      const mk = PROFILE.face.marks.find((m) => m.id === selectedMarkId);
+      const box = document.getElementById('markInspectorBox');
+      if (!mk) {
+        box.innerHTML = '<div style="font-size:11px;color:var(--text-1)">No scar or blemish selected. Tap any button above to add one.</div>';
+        drawMarkPlacementPad();
+        return;
+      }
+      box.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong style="font-family:var(--mono);font-size:11px">${esc(mk.kind.toUpperCase())}</strong>
+          <button class="btn crit" style="padding:2px 7px;font-size:10px" onclick="removeMark('${esc(mk.id)}')">Delete</button>
+        </div>
+        <label style="font-family:var(--mono);font-size:10px">Rotate (${Math.round(mk.angleDeg)} deg)
+          <input type="range" min="-180" max="180" step="1" value="${mk.angleDeg}" oninput="updateSelectedMark('angleDeg', this.value)" />
+        </label>
+        <label style="font-family:var(--mono);font-size:10px">Scale (${mk.scale.toFixed(2)}x)
+          <input type="range" min="0.35" max="2.3" step="0.05" value="${mk.scale}" oninput="updateSelectedMark('scale', this.value)" />
+        </label>
+        ${mk.kind === 'scar' ? `<label style="font-family:var(--mono);font-size:10.5px;display:flex;align-items:center;gap:6px"><input type="checkbox" ${mk.cutsHair ? 'checked' : ''} onchange="updateSelectedMark('cutsHair', this.checked)" /> Carve through beard / eyebrow hair</label>` : ''}
+      `;
+      drawMarkPlacementPad();
+    }
+
+    function drawMarkPlacementPad() {
+      const c = document.getElementById('markPadCanvas');
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.drawImage(atlasCanvas, 512 - 165, 65, 330, 360, 0, 0, c.width, c.height);
+      for (const mk of PROFILE.face.marks || []) {
+        const px = c.width * 0.5 + (mk.x * 360 / 330) * c.width;
+        const py = ((256 + mk.y * 360 - 65) / 360) * c.height;
+        ctx.strokeStyle = mk.id === selectedMarkId ? '#38bdf8' : 'rgba(245, 158, 11, 0.7)';
+        ctx.lineWidth = mk.id === selectedMarkId ? 2 : 1;
+        ctx.beginPath(); ctx.arc(px, py, 9, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+
+    (function setupMarkPadDrag() {
+      const c = document.getElementById('markPadCanvas');
+      let down = false;
+      function moveTo(e) {
+        const mk = PROFILE.face.marks.find((m) => m.id === selectedMarkId);
+        if (!mk) return;
+        const r = c.getBoundingClientRect();
+        const nx = (e.clientX - r.left) / r.width;
+        const ny = (e.clientY - r.top) / r.height;
+        mk.x = Math.max(-0.42, Math.min(0.42, ((nx - 0.5) * 330) / 360));
+        mk.y = Math.max(-0.42, Math.min(0.42, (ny * 360 + 65 - 256) / 360));
+        paintFaceTexture(); drawCornerVisorHud();
+      }
+      c.addEventListener('pointerdown', (e) => { down = true; moveTo(e); });
+      c.addEventListener('pointermove', (e) => { if (down) moveTo(e); });
+      window.addEventListener('pointerup', () => { down = false; });
+    })();
+
+    /* =========================================================================
+       ZERO-STORAGE PHOTO TO 3D RATIO IMPORTER (WIPES IMAGE FROM RAM IMMEDIATELY)
+       ========================================================================= */
+    let photoImg = null;
+    let photoPins = [
+      { label: 'L.Eye', x: 105, y: 118, color: '#38bdf8' },
+      { label: 'R.Eye', x: 185, y: 118, color: '#38bdf8' },
+      { label: 'Nose',  x: 145, y: 158, color: '#22c55e' },
+      { label: 'Chin',  x: 145, y: 235, color: '#f59e0b' },
+      { label: 'Jaw',   x: 205, y: 200, color: '#ef4444' }
+    ];
+    let activePinIdx = -1;
+
+    function openPhotoModal() { document.getElementById('photoModal').classList.add('open'); drawPhotoOverlay(); }
+    function closePhotoModal() { wipePhotoMemory(); document.getElementById('photoModal').classList.remove('open'); }
+
+    function wipePhotoMemory() {
+      photoImg = null;
+      const c = document.getElementById('photoAlignCanvas');
+      if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+      const inp = document.getElementById('photoFileInput');
+      if (inp) inp.value = '';
+    }
+
+    function handlePhotoSelected(ev) {
+      const file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      const objUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        photoImg = img;
+        URL.revokeObjectURL(objUrl);
+        drawPhotoOverlay();
+      };
+      img.src = objUrl;
+    }
+
+    function drawPhotoOverlay() {
+      const c = document.getElementById('photoAlignCanvas');
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+      if (photoImg) {
+        const scale = Math.min(c.width / photoImg.width, c.height / photoImg.height);
+        const dw = photoImg.width * scale, dh = photoImg.height * scale;
+        ctx.drawImage(photoImg, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
+      } else {
+        ctx.fillStyle = '#091322';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.fillStyle = '#768ab0';
+        ctx.font = '11px monospace';
+        ctx.fillText('Select local photo above to align 5 points', 18, 145);
+      }
+      for (const p of photoPins) {
+        ctx.strokeStyle = p.color; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = p.color; ctx.font = 'bold 10px monospace';
+        ctx.fillText(p.label, p.x + 10, p.y + 3);
+      }
+    }
+
+    (function setupPhotoPinsDrag() {
+      const c = document.getElementById('photoAlignCanvas');
+      c.addEventListener('pointerdown', (e) => {
+        const r = c.getBoundingClientRect();
+        const x = (e.clientX - r.left) * (c.width / r.width);
+        const y = (e.clientY - r.top) * (c.height / r.height);
+        activePinIdx = photoPins.findIndex((p) => Math.hypot(p.x - x, p.y - y) < 22);
+      });
+      c.addEventListener('pointermove', (e) => {
+        if (activePinIdx < 0) return;
+        const r = c.getBoundingClientRect();
+        photoPins[activePinIdx].x = Math.max(8, Math.min(c.width - 8, (e.clientX - r.left) * (c.width / r.width)));
+        photoPins[activePinIdx].y = Math.max(8, Math.min(c.height - 8, (e.clientY - r.top) * (c.height / r.height)));
+        drawPhotoOverlay();
+      });
+      window.addEventListener('pointerup', () => { activePinIdx = -1; });
+    })();
+
+    function extractAndWipePhoto() {
+      const [le, re, nose, chin, jaw] = photoPins;
+      const eyeDist = Math.max(25, Math.hypot(re.x - le.x, re.y - le.y));
+      const eyeMidY = (le.y + re.y) * 0.5;
+      const midX = (le.x + re.x) * 0.5;
+      const noseLen = Math.max(15, nose.y - eyeMidY);
+      const faceLen = Math.max(45, chin.y - eyeMidY);
+      const jawHalf = Math.max(20, Math.abs(jaw.x - midX));
+
+      const clamp = (v, min, max) => Number(Math.max(min, Math.min(max, v)).toFixed(2));
+      PROFILE.face.eyeSpacing = clamp(0.88 + (eyeDist / 125) * 0.24, 0.84, 1.18);
+      PROFILE.face.noseLength = clamp(0.82 + (noseLen / eyeDist) * 0.42, 0.80, 1.25);
+      PROFILE.face.chinLength = clamp(0.84 + (faceLen / eyeDist - 1.1) * 0.42, 0.82, 1.24);
+      PROFILE.face.jawWidth = clamp(0.80 + (jawHalf / eyeDist) * 0.34, 0.78, 1.24);
+
+      if (photoImg) {
+        const c = document.getElementById('photoAlignCanvas');
+        const ctx = c.getContext('2d');
+        const px = ctx.getImageData(Math.round(midX), Math.round((eyeMidY + nose.y) * 0.5), 1, 1).data;
+        if (px[3] > 0) {
+          const hex = '#' + [px[0], px[1], px[2]].map((n) => n.toString(16).padStart(2, '0')).join('');
+          PROFILE.face.skinHex = hex;
+        }
+      }
+      wipePhotoMemory();
+      document.getElementById('photoModal').classList.remove('open');
+      syncInputsFromProfile();
+      paintFaceTexture();
+      drawCornerVisorHud();
+      rebuildMeshes();
+      setCamPreset('face');
+      setForgeStatus('3D facial proportions applied and local photo wiped from browser RAM (0 bytes stored). Edit sliders & scars freely!', 'ok');
+    }
+
+    function randomizeOperator() {
+      const skins = ['#e3b99b', '#c89572', '#9d6b4b', '#6d442d', '#ebd0bc'];
+      const eyes = ['#4f7a94', '#5a784c', '#5b4032', '#7a8a99'];
+      const hairs = ['#231b16', '#4a3222', '#7b5332', '#17171a', '#5f5b58'];
+      const hStyles = ['swept', 'buzz', 'parted', 'mohawk', 'bald'];
+      const bStyles = ['short_beard', 'full_beard', 'goatee', 'stubble', 'clean'];
+      const r = (min, max) => Number((min + Math.random() * (max - min)).toFixed(2));
+      PROFILE.body = { height: r(0.92, 1.12), shoulders: r(0.90, 1.20), bulk: r(0.88, 1.20), waist: r(0.88, 1.10) };
+      PROFILE.face.jawWidth = r(0.86, 1.18);
+      PROFILE.face.cheekWidth = r(0.88, 1.16);
+      PROFILE.face.chinLength = r(0.88, 1.16);
+      PROFILE.face.browRidge = r(0.90, 1.22);
+      PROFILE.face.noseLength = r(0.88, 1.16);
+      PROFILE.face.noseWidth = r(0.86, 1.16);
+      PROFILE.face.skinHex = skins[Math.floor(Math.random() * skins.length)];
+      PROFILE.face.eyeHex = eyes[Math.floor(Math.random() * eyes.length)];
+      PROFILE.face.hairHex = hairs[Math.floor(Math.random() * hairs.length)];
+      PROFILE.face.hairStyle = hStyles[Math.floor(Math.random() * hStyles.length)];
+      PROFILE.face.beardStyle = bStyles[Math.floor(Math.random() * bStyles.length)];
+      syncInputsFromProfile();
+      paintFaceTexture();
+      drawCornerVisorHud();
+      rebuildMeshes();
+    }
+
+    function makeNonce() {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+      return 'ev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+    }
+
+    async function initD1Hydration() {
+      try {
+        const raw = sessionStorage.getItem('ev_active_seal');
+        if (!raw) return;
+        SEAL_CTX = JSON.parse(raw);
+        if (!SEAL_CTX || !SEAL_CTX.token) return;
+        const res = await fetch((SEAL_CTX.authorityUrl || PROD_AUTHORITY_URL) + '/api/world/bootstrap', {
+          headers: { 'Authorization': 'Bearer ' + SEAL_CTX.token }
+        });
+        const data = await res.json();
+        if (res.ok && data.ok && data.worldState) {
+          LIVE_D1_REV = data.worldState.operator.rev || 1;
+          if (data.worldState.operatorProfile && data.worldState.operatorProfile.face) {
+            PROFILE = data.worldState.operatorProfile;
+            selectedMarkId = PROFILE.face.marks && PROFILE.face.marks[0] ? PROFILE.face.marks[0].id : null;
+          }
+          const pill = document.getElementById('d1SyncPill');
+          pill.textContent = '● D1 PERSISTENCE ACTIVE';
+          pill.className = 'pill ok';
+          syncInputsFromProfile();
+          renderStreakControls();
+          renderMarksUi();
+          paintFaceTexture();
+          drawCornerVisorHud();
+          rebuildMeshes();
+        }
+      } catch (_) {}
+    }
+
+    async function saveProfileToD1() {
+      if (!SEAL_CTX || !SEAL_CTX.token) {
+        setForgeStatus('Sandbox Preview active: Launch via Vigil Hub Gate (index.html) to persist sculpted 3D profile into Cloudflare D1 SQLite.', 'warn');
+        return;
+      }
+      try {
+        const res = await fetch((SEAL_CTX.authorityUrl || PROD_AUTHORITY_URL) + '/api/v06/avatar/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + SEAL_CTX.token,
+            'X-Request-Nonce': makeNonce()
+          },
+          body: JSON.stringify({ expectedRev: LIVE_D1_REV, operatorProfile: PROFILE })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          setForgeStatus((data && data.message) || 'Save rejected by D1 authority.', 'crit');
+          return;
+        }
+        LIVE_D1_REV = data.worldState.operator.rev;
+        setForgeStatus('3D Operator Body/Face/Scars saved cleanly to Cloudflare D1 SQLite (rev ' + LIVE_D1_REV + ')!', 'ok');
+      } catch (_) {
+        setForgeStatus('Network unavailable; profile retained locally in session.', 'warn');
+      }
+    }
+
+    setInterval(() => {
+      if (currentMood === 'unconscious') return;
+      blinkTimer = 1;
+      paintFaceTexture();
+      drawCornerVisorHud();
+      setTimeout(() => { blinkTimer = 0; paintFaceTexture(); drawCornerVisorHud(); }, 150);
+    }, 3900);
+
+    syncInputsFromProfile();
+    renderStreakControls();
+    renderMarksUi();
+    paintFaceTexture();
+    drawCornerVisorHud();
+    initWebGL();
+    renderLoop();
+    initD1Hydration();
+  </script>
+</body>
+</html>

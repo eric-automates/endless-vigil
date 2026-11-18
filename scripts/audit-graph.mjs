@@ -196,7 +196,7 @@ function dirBytes(dir) {
 const totalBytes = dirBytes(rootDir);
 const totalKb = (totalBytes / 1024).toFixed(1);
 
-console.log('=== ENDLESS VIGIL // v0.5.0 AUDIT ===');
+console.log('=== ENDLESS VIGIL // v0.6.0-alpha AUDIT ===');
 console.log(`Schema Title         : ${schema.title}`);
 console.log(`Shards Defined       : ${ledger.meta.shards.length}`);
 console.log(`Total Nodes          : ${ledger.nodes.length}`);
