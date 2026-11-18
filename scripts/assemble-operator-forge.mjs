@@ -65,6 +65,9 @@ const uiControllerJs = `
     missionAccepted: true,
     shipSeed: 1,
     turntableYaw: 0.18,
+    camPitch: 0.0,
+    camZoom: 1.0,
+    stageOrbitYaw: 0.0,
     rampTimer: 4.0,
     peek: 'center',
     strideYaw: 0.22,
@@ -116,9 +119,10 @@ const uiControllerJs = `
       canvas.width = pw;
       canvas.height = ph;
     }
-    var boxPx = Math.min(132, Math.floor(pw * 0.22));
-    var cssBox = Math.round(boxPx / dpr);
-    var cssOff = Math.round(14 / dpr);
+    var cssBox = Math.max(88, Math.min(126, Math.round(rect.width * 0.24)));
+    var cssOff = 12;
+    state.portraitBoxPx = Math.round(cssBox * dpr);
+    state.portraitOffPx = Math.round(cssOff * dpr);
     portraitHud.style.width = cssBox + 'px';
     portraitHud.style.height = cssBox + 'px';
     portraitHud.style.left = cssOff + 'px';
@@ -382,22 +386,64 @@ const uiControllerJs = `
     });
   }
 
-  // Interactive Orbit / Aim Drag on 3D Canvas
-  var dragCanvas = false, lastDragX = 0;
-  canvas.addEventListener('pointerdown', function(e){ dragCanvas = true; lastDragX = e.clientX; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove', function(e){
-    if (!dragCanvas) return;
-    var dx = (e.clientX - lastDragX) * 0.01;
-    lastDragX = e.clientX;
+  // Interactive Orbit (Yaw + Pitch), Pinch/Wheel Zoom & Double-Tap Reset across all browsers!
+  var activePts = new Map();
+  var lastPinchDist = 0, lastTapMs = 0;
+  function applyOrbitDelta(dx, dy){
     if (state.tab === 'action'){
-      state.aimYaw = Math.max(-1.4, Math.min(1.4, (state.aimYaw || 0) + dx));
+      state.aimYaw = Math.max(-1.4, Math.min(1.4, (state.aimYaw || 0) + dx * 0.008));
       var ay = document.getElementById('rng-aimYaw'); if (ay) ay.value = state.aimYaw;
+    } else if (state.tab === 'ramp'){
+      state.stageOrbitYaw = (state.stageOrbitYaw || 0) + dx * 0.009;
     } else {
-      state.turntableYaw = (state.turntableYaw || 0) + dx;
+      state.turntableYaw = (state.turntableYaw || 0) + dx * 0.01;
+    }
+    state.camPitch = Math.max(-0.42, Math.min(0.55, (state.camPitch || 0) + dy * 0.005));
+  }
+  function resetView(){
+    state.turntableYaw = 0.18; state.camPitch = 0.0; state.camZoom = 1.0; state.stageOrbitYaw = 0.0;
+    persistLocal();
+  }
+  var btnResetView = document.getElementById('btn-reset-view');
+  if (btnResetView) btnResetView.addEventListener('click', resetView);
+
+  canvas.addEventListener('pointerdown', function(e){
+    if (e.preventDefault) e.preventDefault();
+    try { canvas.setPointerCapture(e.pointerId); } catch (_err){}
+    activePts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (activePts.size === 1){
+      var nowMs = Date.now();
+      if (nowMs - lastTapMs < 280) resetView();
+      lastTapMs = nowMs;
+    } else if (activePts.size === 2){
+      var pts = Array.from(activePts.values());
+      lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
     }
   });
-  canvas.addEventListener('pointerup', function(){ dragCanvas = false; });
-  canvas.addEventListener('pointercancel', function(){ dragCanvas = false; });
+  canvas.addEventListener('pointermove', function(e){
+    if (!activePts.has(e.pointerId)) return;
+    if (e.preventDefault) e.preventDefault();
+    var prev = activePts.get(e.pointerId);
+    var dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+    activePts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (activePts.size === 1){
+      applyOrbitDelta(dx, dy);
+    } else if (activePts.size >= 2){
+      var pts = Array.from(activePts.values());
+      var nd = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (lastPinchDist > 4 && nd > 4){
+        state.camZoom = Math.max(0.62, Math.min(1.65, (state.camZoom || 1.0) * (lastPinchDist / nd)));
+      }
+      lastPinchDist = nd;
+    }
+  });
+  function endPtr(e){ activePts.delete(e.pointerId); if (activePts.size < 2) lastPinchDist = 0; }
+  canvas.addEventListener('pointerup', endPtr);
+  canvas.addEventListener('pointercancel', endPtr);
+  canvas.addEventListener('wheel', function(e){
+    if (e.preventDefault) e.preventDefault();
+    state.camZoom = Math.max(0.62, Math.min(1.65, (state.camZoom || 1.0) + (e.deltaY > 0 ? 0.08 : -0.08)));
+  }, { passive: false });
 
   // Boot Dual WebGPU / WebGL2 Engine
   setTab(state.tab || 'face');
@@ -500,19 +546,20 @@ const htmlTop = `<!DOCTYPE html>
   .telemetry-line { font-size: 10px; color: #9db7ca; }
 
   #corner-portrait-hud {
-    position: absolute; left: 14px; bottom: 14px; width: 132px; height: 132px;
+    position: absolute; left: 12px; bottom: 12px; width: 108px; height: 108px;
     border: 1.5px solid #00e5ff; box-shadow: 0 0 18px rgba(0, 229, 255, 0.22);
-    border-radius: 4px; pointer-events: none; z-index: 4;
+    border-radius: 4px; pointer-events: none; z-index: 4; overflow: hidden;
     display: flex; flex-direction: column; justify-content: space-between;
   }
   .portrait-hdr {
-    background: rgba(5, 11, 16, 0.82); color: #00e5ff; font-size: 9px; font-weight: 700;
-    padding: 2px 5px; letter-spacing: 0.06em; border-bottom: 1px solid rgba(0,229,255,0.28);
-    display: flex; justify-content: space-between;
+    background: rgba(5, 11, 16, 0.86); color: #00e5ff; font-size: 8.5px; font-weight: 700;
+    padding: 2px 4px; letter-spacing: 0.04em; border-bottom: 1px solid rgba(0,229,255,0.28);
+    display: flex; justify-content: space-between; gap: 4px; white-space: nowrap; overflow: hidden;
   }
   .portrait-ftr {
-    background: rgba(5, 11, 16, 0.82); color: #cbe6f5; font-size: 9px;
-    padding: 3px 5px; border-top: 1px solid rgba(0,229,255,0.22);
+    background: rgba(5, 11, 16, 0.86); color: #cbe6f5; font-size: 8px;
+    padding: 2px 4px; border-top: 1px solid rgba(0,229,255,0.22);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   #cinema-fade {
     position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none;
@@ -594,6 +641,7 @@ const htmlTop = `<!DOCTYPE html>
       <div class="hud-pill">
         <span id="backend-badge" class="backend-tag">INITIALIZING GPU...</span>
         <span id="hud-telemetry" class="telemetry-line">Loading CC0 asset kit...</span>
+        <button type="button" id="btn-reset-view" class="ev-btn" style="padding:2px 6px;font-size:10px;flex:0 0 auto;">Reset Cam</button>
       </div>
     </div>
 

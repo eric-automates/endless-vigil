@@ -53,6 +53,8 @@ const publicTargets = [
   'scripts/audit-3d-quality.mjs',
   'scripts/assemble-operator-forge.mjs',
   'scripts/build-cc0-humanoid-kit.py',
+  'scripts/dev-verify-forge.mjs',
+  'scripts/dev-render-inspect.py',
   'scripts/build-release.mjs',
   'scripts/termux-push.sh'
 ].filter((item) => fs.existsSync(path.join(rootDir, item)));

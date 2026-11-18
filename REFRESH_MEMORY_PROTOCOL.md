@@ -52,10 +52,10 @@ Welcome, Ironscribe of the Endless Vigil. You are stepping into an ongoing creat
 
 Attached is our condensed Refresh Memory Protocol bundle (<25 MB) or a GitHub release tag archive (e.g. `git archive --format=zip v0.5.0`). Before making edits or proposing new designs:
 1. Read `HANDOFF_SNAPSHOT.md` (if present), `PROJECT_CHARTER.md`, `ARCHITECTURE_STANDARDS.md`, `COPYRIGHT_COMPLIANCE.md`, `DESIGN_PARKING_LOT.md`, `LEGAL_DISCLAIMER.md`, and `data/graph-ledger.json`.
-2. Run `node scripts/audit-graph.mjs` to verify the baseline state of the workspace (including the HTML `<\/script>` leak guard).
+2. Run `node scripts/audit-graph.mjs` (which also triggers `scripts/audit-3d-quality.mjs`) and `node scripts/dev-verify-forge.mjs` to verify the baseline state of the workspace, 3D CC0 kit integrity, Design Vault SHA-256 records, and HTML `<\/script>` leak guard.
 3. Uphold all established project standards:
    - Optimal Version Rule: Deliver the highest-grade UI, coding, commenting (`@shard`, `@branch-id`, `@state-contract`, `@invariant`), and systemic foresight—proactively adding obvious companion safeguards and checking downstream links across Shards.
-   - Multi-Resolution Verification Gate (PERMANENT REMEMBRANCE): Always check EVERY new UI, modal, overlay, and layout across narrow mobile (`320px`, `360px`, `412px` Android Chrome/DuckDuckGo/`content://`), tablet (`768px`), and desktop (`1280px`–`1920px`) before presenting. NEVER use `display: grid` + fixed-px widths on modals/overlays (always use `display: flex` + `width: min(<N>px, calc(100vw - 24px))` + `min-width: 0`), NEVER use raw `minmax(<N>px, 1fr)` without `min(100%, ...)`, and ALWAYS verify `node scripts/audit-graph.mjs` passes its resolution safety check with 0 errors.
+   - Multi-Resolution & 3D Verification Gate (PERMANENT REMEMBRANCE): Always check EVERY new UI, modal, overlay, and 3D render across narrow mobile (`320px`, `360px`, `412px` Android Chrome/DuckDuckGo/`content://`), tablet (`768px`), and desktop (`1280px`–`1920px`) before presenting. NEVER use `display: grid` + fixed-px widths on modals/overlays (always use `display: flex` + `width: min(<N>px, calc(100vw - 24px))` + `min-width: 0`), NEVER use raw `minmax(<N>px, 1fr)` without `min(100%, ...)`, preserve the single-`<script>` inline HTML rule (`scripts/assemble-operator-forge.mjs`), and ALWAYS verify `node scripts/audit-graph.mjs` + `node scripts/dev-verify-forge.mjs` pass with 0 errors.
    - Public Wording Rule: Keep "Endless Vigil" as the project name, use **Telemetry Shards** and **Continuum Manifest**, and never use `"game"` or `"simulation"` in public-facing/GitHub/UI labels.
    - Exhaustive Flowchart Discipline: Every new choice, failure state, or Shard jump must register in `data/graph-ledger.json` with gap auditing.
    - IP Guardrails: Log and differentiate any potential copyright/trademark overlaps strictly inside `COPYRIGHT_COMPLIANCE.md`.
@@ -69,15 +69,15 @@ Please confirm baseline state verification, summarize the active gaps/priorities
 
 ## 4. Quick Packaging & Version-Rollback Commands
 
-Run the release packager anytime (always verifies `< 25 MB` + writes `RELEASE_SHA256.txt`):
+Run the release packager anytime (always verifies `< 25 MB` + runs graph/3D audits + writes `RELEASE_SHA256.txt`):
 
 ```bash
-node scripts/build-release.mjs v0.5.0
+node scripts/build-release.mjs v0.6.0-alpha
 ```
 
 Or export any historical version cleanly from GitHub tags in Termux for a fresh Arena.ai upload (if a future edit ever regresses):
 
 ```bash
-git archive --format=zip --output=~/storage/downloads/ev-restore-v0.5.0.zip v0.5.0
+git archive --format=zip --output=~/storage/downloads/ev-restore-v0.6.0-alpha.zip v0.6.0-alpha
 ```
 *(See `GITHUB_WORKFLOW.md` for full Termux push and rollback instructions.)*

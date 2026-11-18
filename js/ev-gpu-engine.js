@@ -68,6 +68,15 @@
     var rzM = new Float32Array([cz,sz,0,0, -sz,cz,0,0, 0,0,1,0, 0,0,0,1]);
     return mat4Mul(ryM, mat4Mul(rxM, rzM));
   }
+  function quatMul(a, b){
+    var ax=a[0],ay=a[1],az=a[2],aw=a[3], bx=b[0],by=b[1],bz=b[2],bw=b[3];
+    return [
+      aw*bx + ax*bw + ay*bz - az*by,
+      aw*by - ax*bz + ay*bw + az*bx,
+      aw*bz + ax*by - ay*bx + az*bw,
+      aw*bw - ax*bx - ay*by - az*bz
+    ];
+  }
   function quatSlerp(a, b, t){
     var ax=a[0],ay=a[1],az=a[2],aw=a[3], bx=b[0],by=b[1],bz=b[2],bw=b[3];
     var dot = ax*bx + ay*by + az*bz + aw*bw;
@@ -393,8 +402,38 @@
       chair: mergeStaticParts(chairParts),
       crate: mergeStaticParts(crateParts),
       corridor: mergeStaticParts(corrParts),
-      turntableDisk: buildBeveledBox(0, -0.025, 0, 1.15, 0.025, 1.15, 0.02),
+      turntableDisk: (function(){
+        // Sleek dark hexagonal/octagonal tactical stage pedestal (0.64m radius)
+        var nSeg = 24, p = [], n = [], u = [], idx = [];
+        var r = 0.66, h = 0.036;
+        p.push(0, 0, 0); n.push(0, 1, 0); u.push(0.5, 0.5);
+        for (var i = 0; i <= nSeg; i++){
+          var a = (i / nSeg) * Math.PI * 2;
+          p.push(Math.cos(a)*r, 0, Math.sin(a)*r); n.push(0, 1, 0); u.push(0.5+Math.cos(a)*0.5, 0.5+Math.sin(a)*0.5);
+        }
+        for (var i = 1; i <= nSeg; i++) idx.push(0, i+1, i);
+        var bOff = p.length / 3;
+        for (var i = 0; i <= nSeg; i++){
+          var a = (i / nSeg) * Math.PI * 2;
+          var cx = Math.cos(a), sz = Math.sin(a);
+          p.push(cx*r, 0, sz*r, cx*r, -h, sz*r);
+          n.push(cx, 0, sz, cx, 0, sz);
+          u.push(i/nSeg, 0, i/nSeg, 1);
+        }
+        for (var i = 0; i < nSeg; i++){
+          var s = bOff + i*2;
+          idx.push(s, s+2, s+3, s, s+3, s+1);
+        }
+        return { pos:new Float32Array(p), norm:new Float32Array(n), uv:new Float32Array(u), indices:new Uint16Array(idx), vcount:p.length/3, icount:idx.length };
+      })(),
       floorPlane: buildBeveledBox(0, -0.05, 2.0, 12.0, 0.04, 16.0, 0.02),
+      portraitBg: (function(){
+        var p = new Float32Array([-1,-1,0.998, 1,-1,0.998, 1,1,0.998, -1,1,0.998]);
+        var n = new Float32Array([0,0,1, 0,0,1, 0,0,1, 0,0,1]);
+        var u = new Float32Array([0,0, 1,0, 1,1, 0,1]);
+        var idx = new Uint16Array([0,1,2, 0,2,3]);
+        return { pos: p, norm: n, uv: u, indices: idx, vcount: 4, icount: 6 };
+      })(),
       holoCard: (function(){
         // Backwards-mirrored quad for holographic projection facing operator!
         var p = new Float32Array([-0.14,0.0,0, 0.14,0.0,0, 0.14,0.20,0, -0.14,0.20,0]);
@@ -559,7 +598,7 @@
   function evaluateSkeletonPose(kit, animName, animTime, worldOverrides, rootOffset, heightScale){
     var sk = kit.skeleton;
     var n = sk.names.length;
-    var anim = kit.anims[animName] || kit.anims.idle;
+    var anim = (animName && animName !== 'rest') ? (kit.anims[animName] || null) : null;
     var frameF = 0, f0 = 0, f1 = 0, alpha = 0;
     if (anim && anim.frames > 1){
       var tNorm = ((animTime % anim.duration) + anim.duration) % anim.duration / anim.duration;
@@ -577,13 +616,16 @@
 
     for (var ji = 0; ji < n; ji++){
       var pi = sk.parents[ji];
+      var jname = sk.names[ji];
       var t = sk.restT[ji];
       var r = sk.restR[ji];
-      if (anim && anim.tracks[ji]){
+      // Apply clip delta only when not overridden (so worldOvr never double-stacks onto idle/walk arms!)
+      if (anim && anim.tracks[ji] && !ovr[jname]){
         var tr = anim.tracks[ji];
         var q0 = [tr[f0*4], tr[f0*4+1], tr[f0*4+2], tr[f0*4+3]];
         var q1 = [tr[f1*4], tr[f1*4+1], tr[f1*4+2], tr[f1*4+3]];
-        r = quatSlerp(q0, q1, alpha);
+        var dq = quatSlerp(q0, q1, alpha);
+        r = quatMul(r, dq);
       }
       var tx = t[0], ty = t[1], tz = t[2];
       if (ji === 0){
@@ -623,8 +665,7 @@
     if (mus >= 0.5) w.muscle_max = (mus - 0.5) * 2.0; else w.muscle_min = (0.5 - mus) * 2.0;
     var wt = Number(state.weight || 0.45);
     if (wt >= 0.5) w.weight_max = (wt - 0.5) * 2.0; else w.weight_min = (0.5 - wt) * 2.0;
-    var ht = Number(state.height || 0.5);
-    if (ht >= 0.5) w.height_tall = (ht - 0.5) * 0.45; else w.height_short = (0.5 - ht) * 0.45;
+    // Note: height scaling is applied uniformly via Root bone hScale so armor, helmet & wrist gear never drift!
     w.age_old = Number(state.age || 0.15);
 
     var mapPair = function(val, decKey, incKey){
@@ -671,6 +712,16 @@
     if (tuckAmount > 0 && mesh.hairTuck){
       var ht = mesh.hairTuck;
       for (var hi = 0; hi < p.length; hi++) p[hi] += ht[hi] * tuckAmount;
+    } else if (mesh.hairCrown){
+      // Gently clear skull surface by +3.5mm so crown hair strands never z-fight into scalp
+      for (var vi = 0; vi < p.length; vi += 3){
+        var dx = p[vi], dy = p[vi+1] - 1.545, dz = p[vi+2] - 0.020;
+        var rl = Math.hypot(dx, dy, dz);
+        if (rl > 0.04 && rl < 0.135 && p[vi+1] > 1.52){
+          var lift = 0.0035 / rl;
+          p[vi] += dx * lift; p[vi+1] += dy * lift; p[vi+2] += dz * lift;
+        }
+      }
     }
     return p;
   }
@@ -1078,8 +1129,8 @@
       var jointMatBuf = gpuDevice.createBuffer({ size: 53 * 64, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
       var dummyInstBuf = gpuDevice.createBuffer({ size: 16, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
       gpuDevice.queue.writeBuffer(dummyInstBuf, 0, new Float32Array([0,0,0,0]));
-      var dummyJntBuf = gpuDevice.createBuffer({ size: 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
-      gpuDevice.queue.writeBuffer(dummyJntBuf, 0, new Uint32Array([0]));
+      var dummyJntBuf = gpuDevice.createBuffer({ size: 4096 * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+      gpuDevice.queue.writeBuffer(dummyJntBuf, 0, new Uint32Array(4096));
       var instOffBuf = gpuDevice.createBuffer({ size: 64 * 16, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
       var instColBuf = gpuDevice.createBuffer({ size: 64 * 16, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
 
@@ -1122,7 +1173,10 @@
         }
         return rec;
       }
-      Object.keys(kit.meshes).forEach(function(mk){ meshesGPU[mk] = mkGpuMesh(kit.meshes[mk], true); });
+      Object.keys(kit.meshes).forEach(function(mk){
+        var isSkinnedMesh = (mk !== 'carbine_rifle' && mk !== 'lod2');
+        meshesGPU[mk] = mkGpuMesh(kit.meshes[mk], isSkinnedMesh);
+      });
       Object.keys(props).forEach(function(pk){ meshesGPU['prop_' + pk] = mkGpuMesh(props[pk], false); });
 
       function mkGpuTex(src){
@@ -1191,13 +1245,14 @@
       var outfit = state.outfit || 'jacket';
       if (state.gender >= 0.35) hide |= (bz.underwear_f | bz.bra);
       else hide |= bz.underwear_m;
-      if (outfit === 'tee' || outfit === 'armor'){ hide |= (bz.torso | bz.legs | bz.boots); }
-      else if (outfit === 'hoodie'){ hide |= (bz.hoodie | bz.legs | bz.boots); }
-      else if (outfit === 'jacket'){ hide |= (bz.torso | bz.jacket | bz.legs | bz.boots); }
+      if (outfit === 'tee' || outfit === 'armor'){ hide |= (bz.torso | bz.shirt | bz.hips | bz.legs | bz.feet | bz.boots); }
+      else if (outfit === 'hoodie'){ hide |= (bz.hoodie | bz.torso | bz.shirt | bz.hips | bz.legs | bz.feet | bz.boots); }
+      else if (outfit === 'jacket'){ hide |= (bz.torso | bz.shirt | bz.jacket | bz.hips | bz.legs | bz.feet | bz.boots); }
       var raw = m.indices, ccz = m.cczone, out = [];
       for (var i = 0; i < raw.length; i += 3){
         var a = raw[i], b = raw[i+1], c = raw[i+2];
-        if (((ccz[a] & hide) !== 0) && ((ccz[b] & hide) !== 0) && ((ccz[c] & hide) !== 0)) continue;
+        var hits = ((ccz[a] & hide) !== 0 ? 1 : 0) + ((ccz[b] & hide) !== 0 ? 1 : 0) + ((ccz[c] & hide) !== 0 ? 1 : 0);
+        if (hits >= 2) continue;
         out.push(a, b, c);
       }
       activeCulledBodyIdx = new Uint16Array(out);
@@ -1209,6 +1264,34 @@
         var pad = new Uint16Array((activeCulledBodyIdx.length + 1) & ~1); pad.set(activeCulledBodyIdx);
         gpuDevice.queue.writeBuffer(wgpuState.meshesGPU.base_body.idxBuf, 0, pad);
         wgpuState.meshesGPU.base_body.icount = activeCulledBodyIdx.length;
+      }
+
+      // Cull tshirt sleeves/back/shoulders when jacket is worn so only front V-chest panel shows cleanly
+      var tm = kit.meshes.tshirt;
+      if (tm){
+        var tIdxArr;
+        if (outfit === 'jacket'){
+          var tr = tm.indices, tp = tm.restPos, tout = [];
+          for (var ti = 0; ti < tr.length; ti += 3){
+            var ta = tr[ti], tb = tr[ti+1], tc = tr[ti+2];
+            var cx = (tp[ta*3] + tp[tb*3] + tp[tc*3]) / 3;
+            var cy = (tp[ta*3+1] + tp[tb*3+1] + tp[tc*3+1]) / 3;
+            var cz = (tp[ta*3+2] + tp[tb*3+2] + tp[tc*3+2]) / 3;
+            if (Math.abs(cx) < 0.135 && cz > 0.032 && cy > 0.96 && cy < 1.38) tout.push(ta, tb, tc);
+          }
+          tIdxArr = new Uint16Array(tout);
+        } else {
+          tIdxArr = tm.indices;
+        }
+        if (glState){
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glState.meshBufs.tshirt.bIdx);
+          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tIdxArr, gl.DYNAMIC_DRAW);
+          glState.meshBufs.tshirt.icount = tIdxArr.length;
+        } else if (wgpuState){
+          var tpad = new Uint16Array((tIdxArr.length + 1) & ~1); tpad.set(tIdxArr);
+          gpuDevice.queue.writeBuffer(wgpuState.meshesGPU.tshirt.idxBuf, 0, tpad);
+          wgpuState.meshesGPU.tshirt.icount = tIdxArr.length;
+        }
       }
     }
 
@@ -1352,18 +1435,20 @@
         draws.push({ mesh:'eyebrows',   tex:'body_eyebrow', isSkin:0, tint:[browTint[0],browTint[1],browTint[2],1], met:0.0, rough:0.85, cut:0.32, em:0 });
         draws.push({ mesh:'eyelashes',  tex:'body_eyelash', isSkin:0, tint:[0.08,0.06,0.06,1], met:0.0, rough:0.8, cut:0.35, em:0 });
       }
-      // Base underwear ALWAYS stays active under clothing or standalone (never nude!)
-      if (state.gender >= 0.35){
-        draws.push({ mesh:'panties', tex:'panties_cloth_panties_albedo', isSkin:0, tint:[0.85,0.85,0.88,1], met:0.0, rough:0.88, cut:0, em:0 });
-        draws.push({ mesh:'bra',     tex:'bra_cloth_bra_albedo',         isSkin:0, tint:[0.85,0.85,0.88,1], met:0.0, rough:0.88, cut:0, em:0 });
-      } else {
-        draws.push({ mesh:'briefs',  tex:'briefs_cloth_briefs_albedo',   isSkin:0, tint:[0.85,0.88,0.92,1], met:0.0, rough:0.88, cut:0, em:0 });
+      // Underwear renders only when outfit is 'underwear' so wider hip meshes never bleed through jeans
+      if (outfit === 'underwear'){
+        if (state.gender >= 0.35){
+          draws.push({ mesh:'panties', tex:'panties_cloth_panties_albedo', isSkin:0, tint:[0.85,0.85,0.88,1], met:0.0, rough:0.88, cut:0, em:0 });
+          draws.push({ mesh:'bra',     tex:'bra_cloth_bra_albedo',         isSkin:0, tint:[0.85,0.85,0.88,1], met:0.0, rough:0.88, cut:0, em:0 });
+        } else {
+          draws.push({ mesh:'briefs',  tex:'briefs_cloth_briefs_albedo',   isSkin:0, tint:[0.85,0.88,0.92,1], met:0.0, rough:0.88, cut:0, em:0 });
+        }
       }
 
       if (outfit !== 'underwear'){
         draws.push({ mesh:'jeans', tex:'jeans_cloth_jeans_albedo', isSkin:0, tint:[armorTint[0]*0.78+0.15, armorTint[1]*0.78+0.15, armorTint[2]*0.78+0.15, 1], met:0.04, rough:0.82, cut:0, em:0 });
         draws.push({ mesh:'boots', tex:'boots_cloth_boots_albedo', isSkin:0, tint:[0.52,0.48,0.44,1], met:0.15, rough:0.62, cut:0, em:0 });
-        draws.push({ mesh:'tshirt', tex:'tshirt_cloth_tshirt_albedo', isSkin:0, tint:[0.32,0.38,0.42,1], met:0.04, rough:0.85, cut:0, em:0 });
+        if (outfit !== 'hoodie') draws.push({ mesh:'tshirt', tex:'tshirt_cloth_tshirt_albedo', isSkin:0, tint:[0.32,0.38,0.42,1], met:0.04, rough:0.85, cut:0, em:0 });
         if (outfit === 'hoodie') draws.push({ mesh:'hoodie', tex:'hoodie_cloth_hoodie_albedo', isSkin:0, tint:[armorTint[0]*0.9+0.1, armorTint[1]*0.9+0.1, armorTint[2]*0.9+0.1, 1], met:0.04, rough:0.84, cut:0, em:0 });
         if (outfit === 'jacket') draws.push({ mesh:'jacket', tex:'jacket_cloth_jacket_albedo', isSkin:0, tint:[armorTint[0]*0.9+0.18, armorTint[1]*0.9+0.18, armorTint[2]*0.9+0.18, 1], met:0.08, rough:0.75, cut:0, em:0 });
         if (outfit === 'armor'){
@@ -1373,7 +1458,7 @@
         }
       }
       // Left wrist device (Watch vs Gauntlet — always present!)
-      draws.push({ mesh: state.wristDevice === 'gauntlet' ? 'wrist_gauntlet' : 'wrist_watch', tex:'white', isSkin:0, tint:[0.58,0.24,0.20,1], met:0.72, rough:0.32, cut:0, em:0 });
+      draws.push({ mesh: state.wristDevice === 'gauntlet' ? 'wrist_gauntlet' : 'wrist_watch', tex:'white', isSkin:0, tint:[0.18,0.22,0.28,1], met:0.78, rough:0.28, cut:0, em:0.04 });
 
       // Hair style (except buzz/bald)
       if (state.hairStyle !== 'bald' && state.hairStyle !== 'buzz'){
@@ -1385,10 +1470,22 @@
       var hm = state.helmetMode || 'none';
       if (includeHelmetShell && hm !== 'none'){
         draws.push({ mesh:'helmet_shell', tex:'white', isSkin:0, tint:[armorTint[0]*0.85+0.08, armorTint[1]*0.85+0.12, armorTint[2]*0.85+0.10, 1], met:0.68, rough:0.30, cut:0, em:0 });
-        if (hm === 'half')   draws.push({ mesh:'helmet_half_visor',   tex:'white', isSkin:0, tint:[0.14,0.36,0.46,1], met:0.88, rough:0.12, cut:0, em:0.08 });
+        if (hm === 'half')   draws.push({ mesh:'helmet_half_visor',   tex:'white', isSkin:0, tint:[0.14,0.50,0.68,0.62], met:0.88, rough:0.10, cut:0, em:0.10 });
         if (hm === 'sealed') draws.push({ mesh:'helmet_sealed_visor', tex:'white', isSkin:0, tint:[0.10,0.44,0.56,1], met:0.92, rough:0.10, cut:0, em:0.15 });
       }
       return draws;
+    }
+
+    function applyWeaponGripFingers(ovr){
+      var fNamesR = ['index_01_r','index_02_r','index_03_r','middle_01_r','middle_02_r','middle_03_r','ring_01_r','ring_02_r','ring_03_r','pinky_01_r','pinky_02_r','pinky_03_r'];
+      var fNamesL = ['index_01_l','index_02_l','index_03_l','middle_01_l','middle_02_l','middle_03_l','ring_01_l','ring_02_l','ring_03_l','pinky_01_l','pinky_02_l','pinky_03_l'];
+      for (var fi = 0; fi < fNamesR.length; fi++){
+        var seg = (fi % 3) + 1;
+        ovr[fNamesR[fi]] = [-0.24 * seg,  0.10 * seg, -0.08 * seg];
+        ovr[fNamesL[fi]] = [-0.24 * seg, -0.10 * seg,  0.08 * seg];
+      }
+      ovr.thumb_01_r = [-0.15, 0.25, -0.12]; ovr.thumb_02_r = [-0.20, 0.30, -0.15]; ovr.thumb_03_r = [-0.24, 0.35, -0.18];
+      ovr.thumb_01_l = [-0.15,-0.25,  0.12]; ovr.thumb_02_l = [-0.20,-0.30,  0.15]; ovr.thumb_03_l = [-0.24,-0.35,  0.18];
     }
 
     // --- Pose Selection & Transition Sequencer ---
@@ -1398,23 +1495,33 @@
       var showWeapon = false, showHolo = false, fadeAlpha = 0.0;
       var hScale = 0.94 + Number(state.height || 0.5) * 0.14;
 
+      var yaw = Number(state.turntableYaw || 0);
       if (tab === 'face' || tab === 'body' || tab === 'gear' || tab === 'hair'){
-        // Natural relaxed ready stance on turntable (arms down cleanly from A-pose!)
+        // Natural relaxed ready stance from clean bind rest (or two-handed carbine hold when rifle preview is on!)
+        anim = 'rest';
         var br = Math.sin(timeSec * 1.8) * 0.015;
-        worldOvr = {
-          upperarm_l: [0.06, 0.0, -0.58 - br], upperarm_r: [0.06, 0.0, 0.58 + br],
-          lowerarm_l: [-0.22, 0.15, 0.0],     lowerarm_r: [-0.22, -0.15, 0.0],
-          head:       [Math.sin(timeSec*0.7)*0.03, Math.sin(timeSec*0.4)*0.06, 0.0]
-        };
-        var yaw = Number(state.turntableYaw || 0);
+        if (tab === 'gear' && state.equipRiflePreview){
+          showWeapon = true;
+          worldOvr = {
+            upperarm_r: [-0.46,  0.04, 0.46], lowerarm_r: [-0.84,  0.26, 0.0], hand_r: [0.0, 0.18, -0.24],
+            upperarm_l: [-0.58, -0.14,-0.44], lowerarm_l: [-0.72, -0.38, 0.0], hand_l: [0.0,-0.18,  0.22],
+            head:       [Math.sin(timeSec*0.7)*0.03, Math.sin(timeSec*0.4)*0.05, 0.0]
+          };
+          applyWeaponGripFingers(worldOvr);
+        } else {
+          worldOvr = {
+            upperarm_l: [0.05, 0.0, -0.52 - br], upperarm_r: [0.05, 0.0, 0.52 + br],
+            lowerarm_l: [-0.18, 0.10, 0.0],      lowerarm_r: [-0.18, -0.10, 0.0],
+            head:       [Math.sin(timeSec*0.7)*0.03, Math.sin(timeSec*0.4)*0.06, 0.0]
+          };
+        }
         modelMat = mat4FromEulerXYZ(0, yaw, 0);
-        if (tab === 'gear' && state.equipRiflePreview) showWeapon = true;
       } else if (tab === 'ramp'){
-        // Diegetic transition: 0..1.5s gun check, 1.5..2.6s walk to locker/ramp, 2.6..3.2s cinema black fade, >=3.2s seated!
+        // Diegetic transition: 0..1.5s gun check, 1.5..2.9s walk to locker/ramp, 2.9..3.45s cinema fade, >=3.45s seated!
         var tp = Number(state.rampTimer || 4.0);
         if (tp < 1.5){
           // Gun check inspection pose
-          anim = 'idle'; showWeapon = true;
+          anim = 'rest'; showWeapon = true;
           worldOvr = {
             upperarm_r: [-0.55,  0.25, 0.42], lowerarm_r: [-0.95,  0.35, 0.0],
             upperarm_l: [-0.45, -0.35,-0.45], lowerarm_l: [-0.85, -0.65, 0.0],
@@ -1432,7 +1539,7 @@
         } else {
           // Seated kicked-back on folding hangar chair on EV-74 Kestrel boarding ramp!
           if (tp < 3.45) fadeAlpha = 1.0 - (tp - 2.9) / 0.55;
-          anim = 'idle'; showHolo = true;
+          anim = 'rest'; showHolo = true;
           worldOvr = {
             pelvis:     [-0.26, 0.0, 0.0],
             spine_01:   [-0.12, 0.0, 0.0],
@@ -1446,7 +1553,7 @@
         }
       } else if (tab === 'action'){
         // Sector 4 Ore Depot Corridor CQB: independent strideYaw vs aimYaw + Corner Peek!
-        anim = state.cqbMoving ? 'walk' : 'idle';
+        anim = state.cqbMoving ? 'walk' : 'rest';
         showWeapon = true;
         var peek = state.peek === 'left' ? -0.268 : (state.peek === 'right' ? 0.268 : 0.0);
         var strideYaw = Number(state.strideYaw || 0.25);
@@ -1457,10 +1564,11 @@
         worldOvr = {
           spine_02:   [0.10, twist * 0.45, peek * 0.45],
           spine_03:   [0.08, twist * 0.35, peek * 0.35],
-          upperarm_r: [-0.72 + recoil, 0.22 + twist * 0.25, 0.42], lowerarm_r: [-0.85, 0.35, 0.0],
-          upperarm_l: [-0.68 + recoil,-0.32 + twist * 0.30,-0.40], lowerarm_l: [-0.95,-0.65, 0.0],
+          upperarm_r: [-0.84 + recoil, 0.12 + twist * 0.25, 0.30], lowerarm_r: [-1.02, 0.28, 0.0], hand_r: [0.0, 0.25, -0.18],
+          upperarm_l: [-0.92 + recoil,-0.22 + twist * 0.30,-0.28], lowerarm_l: [-0.52,-0.32, 0.0], hand_l: [0.0,-0.22,  0.18],
           head:       [-0.08 + trem, twist * 0.25, peek * 0.15]
         };
+        applyWeaponGripFingers(worldOvr);
         modelMat = mat4FromEulerXYZ(0, strideYaw, 0);
         modelMat[12] = peek; modelMat[14] = 0.85;
       }
@@ -1468,7 +1576,7 @@
       var pose = evaluateSkeletonPose(kit, anim, animT, worldOvr, rootOff, hScale);
       return {
         pose: pose, modelMat: modelMat, showWeapon: showWeapon, showHolo: showHolo,
-        fadeAlpha: Math.max(0, Math.min(1, fadeAlpha))
+        hScale: hScale, fadeAlpha: Math.max(0, Math.min(1, fadeAlpha))
       };
     }
 
@@ -1482,30 +1590,56 @@
       syncCharacterAssets(state);
 
       var W = canvas.width || 960, H = canvas.height || 640;
+      var aspect = W / Math.max(1, H);
       var stage = computeStageTransformAndPose(state, totalSec);
+      var hs = stage.hScale || 1.0;
       var tab = state.tab || 'face';
-      var camEye = [0.22, 1.54, 0.78], camTgt = [0.0, 1.50, 0.06], fov = 26;
+      var pitch = Math.max(-0.45, Math.min(0.58, Number(state.camPitch || 0)));
+      var zoom  = Math.max(0.62, Math.min(1.65, Number(state.camZoom || 1.0)));
+
+      // Responsive camera framing per creator screen + mobile portrait FOV scaling
+      var baseEye = [0.16, 1.56 * hs, 0.82], camTgt = [0.0, 1.53 * hs, 0.04], fov = 28;
       if (tab === 'body' || tab === 'gear' || tab === 'hair'){
-        camEye = [0.45, 1.15, 2.55]; camTgt = [0.0, 0.92, 0.0]; fov = 42;
+        baseEye = [0.36, 1.10 * hs, 2.50]; camTgt = [0.0, 0.88 * hs, 0.0]; fov = 42;
       } else if (tab === 'ramp'){
         var tp = Number(state.rampTimer || 4.0);
-        if (tp < 2.9){ camEye = [1.45, 1.35, 2.35]; camTgt = [0.0, 1.05, -0.4]; fov = 44; }
-        else { camEye = [-1.45, 1.18, 1.85]; camTgt = [0.08, 0.78, 0.15]; fov = 40; }
+        if (tp < 2.9){ baseEye = [1.45, 1.32 * hs, 2.35]; camTgt = [0.0, 1.02 * hs, -0.4]; fov = 44; }
+        else { baseEye = [-1.45, 1.18, 1.85]; camTgt = [0.08, 0.78, 0.15]; fov = 40; }
       } else if (tab === 'action'){
-        // Isometric 3/4 Tactical Corridor View matching reference bottom-right!
-        camEye = [3.95, 4.65, -2.45]; camTgt = [0.0, 0.85, 3.65]; fov = 42;
+        // Isometric 3/4 Tactical Corridor View keeping hero prominent + 25-unit crowd visible!
+        baseEye = [3.45, 3.85, -1.65]; camTgt = [0.0, 0.95, 2.25]; fov = 44;
       }
 
+      // Orbit pitch + zoom + stageOrbitYaw (for ramp/action camera orbit drag!)
+      var stageYaw = (tab === 'ramp' || tab === 'action') ? Number(state.stageOrbitYaw || 0) : 0;
+      var dx = baseEye[0] - camTgt[0], dy = baseEye[1] - camTgt[1], dz = baseEye[2] - camTgt[2];
+      var dist = Math.hypot(dx, dy, dz) * zoom;
+      var horiz = Math.hypot(dx, dz) || 0.001;
+      var baseYaw = Math.atan2(dx, dz) + stageYaw;
+      var basePitch = Math.max(-0.55, Math.min(0.85, Math.atan2(dy, horiz) + pitch));
+      var ch = Math.cos(basePitch) * dist;
+      var camEye = [
+        camTgt[0] + Math.sin(baseYaw) * ch,
+        camTgt[1] + Math.sin(basePitch) * dist,
+        camTgt[2] + Math.cos(baseYaw) * ch
+      ];
+      // Preserve horizontal framing cleanly on narrow portrait screens (e.g. Pixel 10 Pro XL)
+      var effFovDeg = aspect < 1.0
+        ? Math.min(70, (2 * Math.atan(Math.tan((fov * Math.PI / 180) * 0.5) / Math.max(0.65, aspect))) * 180 / Math.PI)
+        : fov;
+
       var proj = (backend === 'webgpu')
-        ? mat4PerspectiveZO(fov * Math.PI / 180, W / Math.max(1, H), 0.08, 60.0)
-        : mat4Perspective(fov * Math.PI / 180, W / Math.max(1, H), 0.08, 60.0);
+        ? mat4PerspectiveZO(effFovDeg * Math.PI / 180, aspect, 0.08, 60.0)
+        : mat4Perspective(effFovDeg * Math.PI / 180, aspect, 0.08, 60.0);
       var view = mat4LookAt(camEye, camTgt, [0,1,0]);
       var drawCalls = 0, trisDrawn = 0;
       var charDraws = buildDrawListForCharacter(state, true, state.helmetMode === 'sealed');
 
-      // Compute hand_r rifle matrix & lowerarm_l wrist hologram matrix!
+      // Compute hand_r / hand_l palm sockets & two-handed rifle grip alignment!
       var handRWorld = mat4Mul(stage.modelMat, stage.pose.worlds[27]);
-      var armLWorld  = mat4Mul(stage.modelMat, stage.pose.worlds[7]);
+      var midRWorld  = mat4Mul(stage.modelMat, stage.pose.worlds[31]);
+      var handLWorld = mat4Mul(stage.modelMat, stage.pose.worlds[8]);
+      var midLWorld  = mat4Mul(stage.modelMat, stage.pose.worlds[12]);
       // Exact consistent left-wrist emitter position for BOTH Watch and Gauntlet!
       var emitterLocal = [0.443, 1.060, 0.168];
       var emitterSkin = mat4Mul(stage.modelMat, stage.pose.skinMats.subarray(7*16, 8*16));
@@ -1513,24 +1647,51 @@
       var holoMat = mat4FromEulerXYZ(0.18, 0.35, 0.0);
       holoMat[12] = holoOrigin[0]; holoMat[13] = holoOrigin[1] + 0.055; holoMat[14] = holoOrigin[2] + 0.045;
 
-      // Rifle grip transform anchored directly to hand_r world socket (orientation + position!)
-      var rifleMat = mat4Mul(handRWorld, mat4FromEulerXYZ(-1.35, 0.05, 0.0));
-      rifleMat[12] += (handRWorld[4]*0.03);
-      rifleMat[13] += (handRWorld[5]*0.03) - 0.015;
-      rifleMat[14] += (handRWorld[6]*0.03) + 0.025;
+      // Align carbine +Z barrel cleanly from right palm (pistol grip) straight through left palm (angled foregrip)!
+      var pRx = handRWorld[12]*0.55 + midRWorld[12]*0.45, pRy = handRWorld[13]*0.55 + midRWorld[13]*0.45, pRz = handRWorld[14]*0.55 + midRWorld[14]*0.45;
+      var pLx = handLWorld[12]*0.55 + midLWorld[12]*0.45, pLy = handLWorld[13]*0.55 + midLWorld[13]*0.45, pLz = handLWorld[14]*0.55 + midLWorld[14]*0.45;
+      var fdx = pLx - pRx, fdy = pLy - pRy, fdz = pLz - pRz;
+      var flen = Math.hypot(fdx, fdy, fdz) || 1;
+      var fvx = fdx / flen, fvy = fdy / flen, fvz = fdz / flen;
+      // right = normalize(cross([0,1,0], fwd)) = [fvz, 0, -fvx]
+      var rvx = fvz, rvy = 0, rvz = -fvx;
+      var rlen = Math.hypot(rvx, rvy, rvz) || 1;
+      rvx /= rlen; rvz /= rlen;
+      // up = cross(fwd, right)
+      var uvx = fvy * rvz - fvz * rvy;
+      var uvy = fvz * rvx - fvx * rvz;
+      var uvz = fvx * rvy - fvy * rvx;
+      var rifleMat = new Float32Array([
+        rvx, rvy, rvz, 0,
+        uvx, uvy, uvz, 0,
+        fvx, fvy, fvz, 0,
+        pRx - fvx * 0.015 + uvx * 0.008 - rvx * 0.014,
+        pRy - fvy * 0.015 + uvy * 0.008 - rvy * 0.014,
+        pRz - fvz * 0.015 + uvz * 0.008 - rvz * 0.014,
+        1
+      ]);
 
-      // Build Crowd LOD2 instances when in Action View!
+      // Build Crowd LOD2 instances when in Action View (avoiding corridor cover crates!)
       var crowdCount = tab === 'action' ? (state.crowd25 ? 25 : 4) : 0;
       lodStats = { lod0: 1, lod1: tab === 'action' ? 2 : 0, lod2: crowdCount };
       var instOffArr = null, instColArr = null;
       if (crowdCount > 0){
+        var crates = [[-1.15, 3.2, 0.92, 0.72], [1.25, 5.8, 0.88, 0.74], [0.15, 7.6, 0.85, 0.68]];
         instOffArr = new Float32Array(crowdCount * 4);
         instColArr = new Float32Array(crowdCount * 4);
         for (var ci = 0; ci < crowdCount; ci++){
           var row = Math.floor(ci / 3), col = ci % 3;
-          instOffArr[ci*4]   = (col - 1) * 1.45 + Math.sin(ci*1.7)*0.25;
+          var cx = (col - 1) * 1.45 + Math.sin(ci*1.7)*0.25;
+          var cz = 3.25 + row * 1.35;
+          for (var kb = 0; kb < crates.length; kb++){
+            var cr = crates[kb];
+            if (Math.abs(cx - cr[0]) < cr[2] && Math.abs(cz - cr[1]) < cr[3]){
+              cz = cr[1] + cr[3] + 0.15;
+            }
+          }
+          instOffArr[ci*4]   = cx;
           instOffArr[ci*4+1] = 0.0;
-          instOffArr[ci*4+2] = 3.2 + row * 1.35;
+          instOffArr[ci*4+2] = cz;
           instOffArr[ci*4+3] = Math.PI + Math.sin(totalSec + ci)*0.25;
           var hostile = (ci % 4 !== 0);
           instColArr[ci*4]   = hostile ? 0.68 : 0.32;
@@ -1598,7 +1759,7 @@
         // Environment Props
         var idMat = mat4Identity();
         if (tab === 'face' || tab === 'body' || tab === 'gear' || tab === 'hair'){
-          drawGlMesh('prop_turntableDisk', idMat, false, 'white', null, [0.10,0.16,0.20,1], 0, 0.7, 0.35, 0, 0.05);
+          drawGlMesh('prop_turntableDisk', idMat, false, 'white', null, [0.04,0.06,0.09,1], 0, 0.45, 0.55, 0, 0.02);
         } else if (tab === 'ramp'){
           drawGlMesh('prop_floorPlane', idMat, false, 'white', null, [0.07,0.09,0.11,1], 0, 0.45, 0.25, 0, 0);
           drawGlMesh('prop_ramp',  idMat, false, 'white', null, [0.22,0.25,0.28,1], 0, 0.55, 0.45, 0, 0);
@@ -1667,9 +1828,10 @@
         }
 
         // --- LIVE 3D CORNER STATUS PORTRAIT PASS (Synced directly to Helmet Visor Geometry!) ---
+        var pw = Math.max(96, Math.min(260, Math.round(state.portraitBoxPx || Math.min(180, Math.floor(W * 0.24))))), ph = pw;
+        var pOff = Math.max(8, Math.round(state.portraitOffPx || 14));
         if (state.showCornerPortrait !== false){
-          var pw = Math.min(132, Math.floor(W * 0.22)), ph = pw;
-          var px = 14, py = 14;
+          var px = pOff, py = pOff;
           gl.enable(gl.SCISSOR_TEST);
           gl.scissor(px, py, pw, ph);
           gl.viewport(px, py, pw, ph);
@@ -1677,12 +1839,12 @@
           gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
           var hm = state.helmetMode || 'none';
-          // Half-visor zooms cleanly on LOWER exposed mouth/jaw/smirk; Sealed zooms full visor; Open zooms face!
-          var pEye = hm === 'half' ? [0.06, 1.445, 0.34] : [0.09, 1.52, 0.48];
-          var pTgt = hm === 'half' ? [0.00, 1.445, 0.06] : [0.00, 1.50, 0.06];
-          var pProj = mat4Perspective((hm === 'half' ? 22 : 28) * Math.PI / 180, 1.0, 0.05, 10.0);
+          // Half-visor frames tactical eye shield + helmet brow + lower face; Sealed/Open frames full face/visor!
+          var pEye = hm === 'half' ? [0.06, 1.585, 0.54] : [0.09, 1.565, 0.54];
+          var pTgt = hm === 'half' ? [0.00, 1.575, 0.04] : [0.00, 1.550, 0.05];
+          var pProj = mat4Perspective((hm === 'half' ? 30 : 28) * Math.PI / 180, 1.0, 0.05, 10.0);
           var pView = mat4LookAt(pEye, pTgt, [0,1,0]);
-          var pPose = evaluateSkeletonPose(kit, 'idle', totalSec, { head: [0, Math.sin(totalSec*0.9)*0.06, 0] }, [0,0,0], 1.0);
+          var pPose = evaluateSkeletonPose(kit, 'rest', totalSec, { head: [0, Math.sin(totalSec*0.9)*0.06, 0] }, [0,0,0], 1.0);
 
           gl.useProgram(glState.progSkin);
           gl.uniformMatrix4fv(ls.uProj, false, pProj);
@@ -1725,6 +1887,8 @@
           colorAttachments: [{ view: viewTex, clearValue:{r:0.035,g:0.055,b:0.075,a:1}, loadOp:'clear', storeOp:'store' }],
           depthStencilAttachment: { view: wgpuState.depthTex.createView(), depthClearValue:1.0, depthLoadOp:'clear', depthStoreOp:'store' }
         });
+        rp.setViewport(0, 0, W, H, 0, 1);
+        rp.setScissorRect(0, 0, W, H);
         rp.setPipeline(wgpuState.renderPipe);
         var pv = mat4Mul(proj, view);
         var poolIdx = 0;
@@ -1759,8 +1923,8 @@
             wgpuState.bgCache.set(bgKey, bg);
           }
           pass.setBindGroup(0, bg);
-          pass.setVertexBuffer(0, mg.posOut || mg.posIn);
-          pass.setVertexBuffer(1, mg.nrmOut || mg.nrmIn);
+          pass.setVertexBuffer(0, instCount > 0 ? mg.posIn : (mg.posOut || mg.posIn));
+          pass.setVertexBuffer(1, instCount > 0 ? mg.nrmIn : (mg.nrmOut || mg.nrmIn));
           pass.setVertexBuffer(2, mg.uvBuf);
           pass.setVertexBuffer(3, instCount > 0 ? wgpuState.instOffBuf : wgpuState.dummyInstBuf);
           pass.setVertexBuffer(4, instCount > 0 ? wgpuState.instColBuf : wgpuState.dummyInstBuf);
@@ -1772,7 +1936,7 @@
 
         var idM = mat4Identity();
         if (tab === 'face' || tab === 'body' || tab === 'gear' || tab === 'hair'){
-          drawGpuMesh(rp, pv, 'prop_turntableDisk', idM, 'white', [0.10,0.16,0.20,1], 0, 0.7, 0.35, 0, 0.05, 0);
+          drawGpuMesh(rp, pv, 'prop_turntableDisk', idM, 'white', [0.04,0.06,0.09,1], 0, 0.45, 0.55, 0, 0.02, 0);
         } else if (tab === 'ramp'){
           drawGpuMesh(rp, pv, 'prop_floorPlane', idM, 'white', [0.07,0.09,0.11,1], 0, 0.45, 0.25, 0, 0, 0);
           drawGpuMesh(rp, pv, 'prop_ramp',  idM, 'white', [0.22,0.25,0.28,1], 0, 0.55, 0.45, 0, 0, 0);
@@ -1797,15 +1961,16 @@
 
         // 3) Live 3D Corner Status Portrait Pass on WebGPU (bottom-left scissor HUD!)
         if (state.showCornerPortrait !== false){
-          var pw = Math.min(132, Math.floor(W * 0.22)), ph = pw;
-          var px = 14, pyTop = Math.max(0, H - 14 - ph);
+          var pw = Math.max(96, Math.min(260, Math.round(state.portraitBoxPx || Math.min(180, Math.floor(W * 0.24))))), ph = pw;
+          var px = Math.max(8, Math.round(state.portraitOffPx || 14));
+          var pyTop = Math.max(0, H - px - ph);
           var hmW = state.helmetMode || 'none';
-          var pEyeW = hmW === 'half' ? [0.06, 1.445, 0.34] : [0.09, 1.52, 0.48];
-          var pTgtW = hmW === 'half' ? [0.00, 1.445, 0.06] : [0.00, 1.50, 0.06];
-          var pProjW = mat4PerspectiveZO((hmW === 'half' ? 22 : 28) * Math.PI / 180, 1.0, 0.05, 10.0);
+          var pEyeW = hmW === 'half' ? [0.06, 1.585, 0.54] : [0.09, 1.565, 0.54];
+          var pTgtW = hmW === 'half' ? [0.00, 1.575, 0.04] : [0.00, 1.550, 0.05];
+          var pProjW = mat4PerspectiveZO((hmW === 'half' ? 30 : 28) * Math.PI / 180, 1.0, 0.05, 10.0);
           var pViewW = mat4LookAt(pEyeW, pTgtW, [0,1,0]);
           var pPV = mat4Mul(pProjW, pViewW);
-          var pPoseW = evaluateSkeletonPose(kit, 'idle', totalSec, { head:[0, Math.sin(totalSec*0.9)*0.06, 0] }, [0,0,0], 1.0);
+          var pPoseW = evaluateSkeletonPose(kit, 'rest', totalSec, { head:[0, Math.sin(totalSec*0.9)*0.06, 0] }, [0,0,0], 1.0);
           gpuDevice.queue.writeBuffer(wgpuState.portraitJointMatBuf, 0, pPoseW.skinMats);
           var pDrawsW = buildDrawListForCharacter(state, true, hmW === 'sealed');
 
@@ -1825,6 +1990,8 @@
           rp2.setViewport(px, pyTop, pw, ph, 0, 1);
           rp2.setScissorRect(px, pyTop, pw, ph);
           rp2.setPipeline(wgpuState.renderPipe);
+          // Clear corner portrait scissor box cleanly with dark navy backdrop quad at z=0.998
+          drawGpuMesh(rp2, idM, 'prop_portraitBg', idM, 'white', [0.004,0.011,0.019,1], 0, 0, 1, 0, 1.0, 0);
           pDrawsW.forEach(function(pd){
             if (pd.mesh === 'jeans' || pd.mesh === 'boots' || pd.mesh === 'armor_belt_knees' || pd.mesh === 'briefs' || pd.mesh === 'panties' || pd.mesh === 'bra') return;
             drawGpuMesh(rp2, pPV, pd.mesh, idM, pd.tex, pd.tint, pd.isSkin, pd.met, pd.rough, pd.cut, pd.em, 0);

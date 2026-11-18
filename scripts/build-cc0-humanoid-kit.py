@@ -125,7 +125,8 @@ def quantize_pos(pos, scale=10000.0):
     return np.clip(np.round(pos * scale), -32767, 32767).astype(np.int16)
 
 def quantize_uv(uv):
-    return np.clip(np.round(np.mod(uv, 1.00001) * 65535.0), 0, 65535).astype(np.uint16)
+    u = np.where((uv >= -0.025) & (uv <= 1.025), np.clip(uv, 0.0, 1.0), np.mod(uv, 1.00001))
+    return np.clip(np.round(u * 65535.0), 0, 65535).astype(np.uint16)
 
 def pack_prim_mesh(gltf, b, mesh_idx, prim_idx=0, target_names_keep=None, name="mesh", hair_helmet_tuck=False, pos_scale=10000.0):
     m = gltf["meshes"][mesh_idx]
@@ -505,35 +506,48 @@ def build_custom_hard_surface_meshes(body_pos, body_norm, body_joints, body_weig
         paul_parts.append((vp, np_, up, ip, jp, wp))
     meshes["armor_pauldrons"] = combine_parts(paul_parts)
 
-    # Utility belt + mag pouches + kneepads sitting cleanly outside jeans
+    # Utility belt + mag pouches + kneepads sitting snugly against jeans waist & knee!
     belt_parts = []
     belt_rings = []
-    for dy, scale in [(-0.026, 0.99), (-0.012, 1.02), (0.012, 1.02), (0.026, 0.99)]:
+    for dy, scale in [(-0.024, 0.99), (-0.011, 1.02), (0.011, 1.02), (0.024, 0.99)]:
         ring = []
         for si in range(20):
             a = 2.0 * math.pi * si / 20.0
-            ring.append(np.array([math.sin(a)*0.200*scale, 0.905+dy, math.cos(a)*0.156*scale + 0.014], dtype=np.float32))
+            ring.append(np.array([math.sin(a)*0.178*scale, 0.935+dy, math.cos(a)*0.128*scale + 0.022], dtype=np.float32))
         belt_rings.append(ring)
     vb, nb, ub, ib = make_loft_shell(belt_rings, closed_caps=False)
     jb, wb = nearest_skin(vb)
     belt_parts.append((vb, nb, ub, ib, jb, wb))
-    belt_parts.append(make_beveled_box(0.0, 0.905, 0.172, 0.034, 0.025, 0.014, 0.004, bone_idx=1))
-    belt_parts.append(make_beveled_box(-0.172, 0.892, 0.108, 0.026, 0.044, 0.026, 0.004, bone_idx=1))
-    belt_parts.append(make_beveled_box( 0.172, 0.892, 0.108, 0.026, 0.044, 0.026, 0.004, bone_idx=1))
-    belt_parts.append(make_beveled_box(-0.202, 0.855, 0.005, 0.028, 0.064, 0.042, 0.006, bone_idx=1))
-    # Kneepads rigged to calf_l (46) and calf_r (50), proud of jeans knee
-    belt_parts.append(make_beveled_box( 0.148, 0.468, 0.138, 0.044, 0.050, 0.020, 0.006, bone_idx=46))
-    belt_parts.append(make_beveled_box(-0.148, 0.468, 0.138, 0.044, 0.050, 0.020, 0.006, bone_idx=50))
+    belt_parts.append(make_beveled_box(0.0, 0.935, 0.152, 0.030, 0.022, 0.012, 0.004, bone_idx=1))
+    belt_parts.append(make_beveled_box(-0.184, 0.930, 0.022, 0.020, 0.032, 0.028, 0.004, bone_idx=1))
+    belt_parts.append(make_beveled_box( 0.184, 0.930, 0.022, 0.020, 0.032, 0.028, 0.004, bone_idx=1))
+    belt_parts.append(make_beveled_box(-0.184, 0.916,-0.045, 0.022, 0.034, 0.030, 0.004, bone_idx=1))
+    # Kneepads snug at patella crest (y=0.472) & smoothly skinned via nearest_skin so they track bent knees cleanly!
+    belt_parts.append(make_beveled_box( 0.146, 0.472, 0.095, 0.034, 0.038, 0.011, 0.004, bone_idx=None))
+    belt_parts.append(make_beveled_box(-0.142, 0.472, 0.100, 0.034, 0.038, 0.011, 0.004, bone_idx=None))
     meshes["armor_belt_knees"] = combine_parts(belt_parts)
 
     # 2. CONSISTENT LEFT WRIST EMITTER DEVICES (Watch vs Full Gauntlet, exact same emitter point!)
     # lowerarm_l = bone 7, bindPos=(0.331, 1.140, 0.020); hand_l = bone 8, bindPos=(0.453, 1.016, 0.183)
     # Wrist point ~ 82% along lowerarm_l -> hand_l = (0.431, 1.038, 0.154)
     wrist_c = np.array([0.431, 1.038, 0.154], dtype=np.float32)
-    # Watch: sleek tactical strap + Titanium dial + emitter node at wrist_c + [0.015, 0.018, 0.012]
+    # Watch: sleek forearm-hugging tactical strap + low-profile Titanium dial
+    w_band = []
+    w_p0 = np.array([0.415, 1.054, 0.133], dtype=np.float32)
+    w_p1 = np.array([0.443, 1.026, 0.170], dtype=np.float32)
+    for t in (0.0, 0.5, 1.0):
+        c = w_p0 * (1.0 - t) + w_p1 * t
+        ring = []
+        for si in range(14):
+            a = 2.0 * math.pi * si / 14.0
+            ring.append(np.array([c[0]+math.cos(a)*0.032, c[1]+math.sin(a)*0.026, c[2]+math.sin(a)*0.018], dtype=np.float32))
+        w_band.append(ring)
+    vwb, nwb, uwb, iwb = make_loft_shell(w_band, closed_caps=False)
+    jwb = np.zeros((len(vwb), 4), dtype=np.uint8); jwb[:, 0] = 7
+    wwb = np.zeros((len(vwb), 4), dtype=np.uint8); wwb[:, 0] = 255
     watch_parts = [
-        make_beveled_box(wrist_c[0], wrist_c[1], wrist_c[2], 0.038, 0.032, 0.036, 0.005, bone_idx=7),
-        make_beveled_box(wrist_c[0]+0.012, wrist_c[1]+0.022, wrist_c[2]+0.014, 0.020, 0.008, 0.022, 0.003, bone_idx=7)
+        (vwb, nwb, uwb, iwb, jwb, wwb),
+        make_beveled_box(wrist_c[0]+0.012, wrist_c[1]+0.020, wrist_c[2]+0.012, 0.015, 0.005, 0.018, 0.002, bone_idx=7)
     ]
     meshes["wrist_watch"] = combine_parts(watch_parts)
 
@@ -558,59 +572,90 @@ def build_custom_hard_surface_meshes(body_pos, body_norm, body_joints, body_weig
     meshes["wrist_gauntlet"] = combine_parts(gaunt_parts)
 
     # 3. 3-MODE COMBAT HELMET (Open Visor / Half-Visor / Sealed Visor) rigged to head bone (44)
-    # Sleek Endless Vigil EV-TAC MK.IV ballistic dome: frames temples/sideburns cleanly!
+    # Sleek modern high-cut EV-TAC MK.IV ballistic helmet: smooth continuous 360° profile with horizontal brow rim & high-cut ear arch!
     h_parts = []
-    hrings = []
-    y_levels = [
-        (1.460, 0.104, 0.124, -0.008, 1.24),  # lower ear/nape rim (open across cheeks/jaw/sideburns!)
-        (1.498, 0.110, 0.130,  0.004, 1.16),  # ear comms rim framing sideburn temples
-        (1.542, 0.114, 0.136,  0.012, 0.96),  # temple arch
-        (1.570, 0.114, 0.138,  0.016, 0.56),  # smooth arched brow curve
-        (1.588, 0.112, 0.136,  0.016, 0.22),  # gentle brow apex
-        (1.602, 0.108, 0.132,  0.015, 0.00),  # closed sculpted forehead crown
-        (1.638, 0.094, 0.116,  0.014, 0.00),
-        (1.668, 0.066, 0.084,  0.010, 0.00),
-        (1.682, 0.022, 0.028,  0.008, 0.00),
-    ]
-    for y, rx, rz, zoff, front_gap in y_levels:
-        ring = []
-        n_s = 24
+    n_s = 32
+    n_r = 9
+    outer_rings = []
+    inner_rings = []
+    hc = np.array([0.0, 1.580, 0.038], dtype=np.float32)
+
+    def _helm_rim_y(ang):
+        # ang = 0 is dead-center front forehead; pi is dead-center back nape
+        ca = math.cos(ang)
+        if ca >= 0.45:
+            # Smooth gentle brow curve across forehead (~1.602 center -> 1.606 temples)
+            return 1.602 + 0.006 * (1.0 - (ca - 0.45) / 0.55)
+        elif ca >= -0.35:
+            # High-cut ear-arch swoop above ears & side comms rails (1.608 -> 1.530)
+            t = (0.45 - ca) / 0.80
+            return 1.608 - 0.078 * (t * t * (3.0 - 2.0 * t))
+        else:
+            # Occipital nape shell protection down back of skull (1.530 -> 1.478)
+            t = (-0.35 - ca) / 0.65
+            return 1.530 - 0.052 * (t * t * (3.0 - 2.0 * t))
+
+    for ri in range(n_r):
+        v_t = ri / (n_r - 1)  # 0.0 = bottom sculpted rim -> 1.0 = crown ring
+        # Radius profile across dome height
+        if v_t < 0.35:
+            st = v_t / 0.35
+            rx = 0.122 + 0.002 * math.sin(st * math.pi)
+            rz = 0.148 + 0.002 * math.sin(st * math.pi)
+            zoff = 0.026 + 0.012 * st
+        else:
+            dt = (v_t - 0.35) / 0.65
+            arch = math.cos(dt * math.pi * 0.44)
+            rx = 0.032 + 0.090 * arch
+            rz = 0.042 + 0.106 * arch
+            zoff = 0.038 + 0.004 * math.sin(dt * math.pi) - 0.004 * dt
+        o_ring, i_ring = [], []
         for si in range(n_s):
-            ang = front_gap + (2.0 * math.pi - 2.0 * front_gap) * (si / (n_s - 1))
+            ang = 2.0 * math.pi * (si / n_s)
+            y_bot = _helm_rim_y(ang)
+            y_top = 1.728
+            # Smooth easing upward from sculpted lower rim toward crown dome
+            y = y_bot + (y_top - y_bot) * (v_t ** 0.86)
             px = math.sin(ang) * rx
             pz = math.cos(ang) * rz + zoff
-            ring.append(np.array([px, y, pz], dtype=np.float32))
-        hrings.append(ring)
+            p_out = np.array([px, y, pz], dtype=np.float32)
+            o_ring.append(p_out)
+            din = hc - p_out
+            p_in = p_out + (din / (np.linalg.norm(din) + 1e-6)) * 0.007
+            i_ring.append(p_in)
+        outer_rings.append(o_ring)
+        inner_rings.append(i_ring)
+
     verts_h, tris_h, uvs_h = [], [], []
-    n_s = 24
-    for ri, ring in enumerate(hrings):
-        for si, p in enumerate(ring):
-            verts_h.append(p)
-            uvs_h.append([si / (n_s - 1), ri / (len(hrings)-1)])
-    hc = np.array([0.0, 1.548, 0.020], dtype=np.float32)
+    for ri in range(n_r):
+        for si in range(n_s):
+            verts_h.append(outer_rings[ri][si])
+            uvs_h.append([si / n_s, ri / (n_r - 1)])
     in_off = len(verts_h)
-    for ri, ring in enumerate(hrings):
-        for si, p in enumerate(ring):
-            dir_in = hc - p
-            dl = np.linalg.norm(dir_in) + 1e-6
-            verts_h.append(p + (dir_in / dl) * 0.007)
-            uvs_h.append([si / (n_s - 1), ri / (len(hrings)-1)])
-    for ri in range(len(hrings) - 1):
-        for si in range(n_s - 1):
-            ns = si + 1
+    for ri in range(n_r):
+        for si in range(n_s):
+            verts_h.append(inner_rings[ri][si])
+            uvs_h.append([si / n_s, ri / (n_r - 1)])
+    for ri in range(n_r - 1):
+        for si in range(n_s):
+            ns = (si + 1) % n_s
             a, b, c, d = ri*n_s+si, ri*n_s+ns, (ri+1)*n_s+ns, (ri+1)*n_s+si
             tris_h.extend([a, b, c, a, c, d])
             ia, ib, ic, id_ = in_off+a, in_off+b, in_off+c, in_off+d
             tris_h.extend([ia, ic, ib, ia, id_, ic])
-        if y_levels[ri][4] > 0.01 or y_levels[ri+1][4] > 0.01:
-            a0, d0 = ri*n_s+0, (ri+1)*n_s+0
-            tris_h.extend([a0, in_off+d0, in_off+a0, a0, d0, in_off+d0])
-            a1, d1 = ri*n_s+(n_s-1), (ri+1)*n_s+(n_s-1)
-            tris_h.extend([a1, in_off+a1, in_off+d1, a1, in_off+d1, d1])
-    tc = len(verts_h); verts_h.append(np.array([0.0, 1.685, 0.008], dtype=np.float32)); uvs_h.append([0.5, 1.0])
-    top_base = (len(hrings) - 1) * n_s
-    for si in range(n_s - 1):
-        tris_h.extend([tc, top_base + si, top_base + si + 1])
+    # Seal bottom sculpted rim cleanly between outer_rings[0] and inner_rings[0]
+    for si in range(n_s):
+        ns = (si + 1) % n_s
+        a, b, ia, ib = si, ns, in_off+si, in_off+ns
+        tris_h.extend([a, ia, ib, a, ib, b])
+    # Seal outer & inner top crown caps
+    tc_out = len(verts_h); verts_h.append(np.array([0.0, 1.734, 0.034], dtype=np.float32)); uvs_h.append([0.5, 1.0])
+    tc_in  = len(verts_h); verts_h.append(np.array([0.0, 1.727, 0.034], dtype=np.float32)); uvs_h.append([0.5, 1.0])
+    top_base = (n_r - 1) * n_s
+    for si in range(n_s):
+        ns = (si + 1) % n_s
+        tris_h.extend([tc_out, top_base + si, top_base + ns])
+        tris_h.extend([tc_in, in_off + top_base + ns, in_off + top_base + si])
 
     vh = np.array(verts_h, dtype=np.float32)
     ih = np.array(tris_h, dtype=np.uint16)
@@ -619,41 +664,41 @@ def build_custom_hard_surface_meshes(body_pos, body_norm, body_joints, body_weig
     jh = np.zeros((len(vh), 4), dtype=np.uint8); jh[:, 0] = 44
     wh = np.zeros((len(vh), 4), dtype=np.uint8); wh[:, 0] = 255
     h_parts.append((vh, nh, uh, ih, jh, wh))
-    # Low-profile side tactical comms rails + compact antenna pod (100% original silhouette)
-    h_parts.append(make_beveled_box(-0.114, 1.540, 0.016, 0.010, 0.024, 0.028, 0.004, bone_idx=44))
-    h_parts.append(make_beveled_box( 0.114, 1.540, 0.016, 0.010, 0.024, 0.028, 0.004, bone_idx=44))
-    h_parts.append(make_beveled_box( 0.120, 1.578, 0.006, 0.004, 0.038, 0.006, 0.002, bone_idx=44))
+    # Low-profile side tactical ARC comms rails + compact antenna pod (mounted cleanly on high-cut ear arch)
+    h_parts.append(make_beveled_box(-0.125, 1.568, 0.022, 0.009, 0.018, 0.032, 0.004, bone_idx=44))
+    h_parts.append(make_beveled_box( 0.125, 1.568, 0.022, 0.009, 0.018, 0.032, 0.004, bone_idx=44))
+    h_parts.append(make_beveled_box( 0.130, 1.606, 0.014, 0.004, 0.034, 0.006, 0.002, bone_idx=44))
     meshes["helmet_shell"] = combine_parts(h_parts)
 
-    # Half-Visor: curved contoured upper-eye ballistic shield curving cleanly over nasal bridge (y=1.515..1.588)
+    # Half-Visor: sleek tactical ballistic eye shield tucked cleanly into horizontal brow rim (y=1.556..1.612)
     hv_rings = []
-    for y, rz, rx in [(1.515, 0.146, 0.098), (1.538, 0.156, 0.104), (1.565, 0.154, 0.104), (1.590, 0.142, 0.096)]:
+    for y, rz, rx in [(1.556, 0.144, 0.092), (1.576, 0.152, 0.098), (1.598, 0.150, 0.098), (1.612, 0.140, 0.092)]:
         ring = []
         for si in range(13):
-            a = -0.78 + 1.56 * (si / 12.0)
-            # Arch higher over nasal bridge at center so nose tip & mouth remain clean!
-            nose_arch = 0.010 * math.exp(-(a / 0.25)**2) if y < 1.525 else 0.0
-            ring.append(np.array([math.sin(a)*rx, y + nose_arch, math.cos(a)*rz + 0.014], dtype=np.float32))
+            a = -0.76 + 1.52 * (si / 12.0)
+            # Clean nose-bridge notch so nostrils & tip of nose stay completely open below eyepro!
+            nose_arch = 0.012 * math.exp(-(a / 0.24)**2) if y < 1.570 else 0.0
+            ring.append(np.array([math.sin(a)*rx, y + nose_arch, math.cos(a)*rz + 0.020], dtype=np.float32))
         for si in range(12, -1, -1):
-            a = -0.78 + 1.56 * (si / 12.0)
-            nose_arch = 0.010 * math.exp(-(a / 0.25)**2) if y < 1.525 else 0.0
-            ring.append(np.array([math.sin(a)*(rx-0.005), y + nose_arch, math.cos(a)*(rz-0.005) + 0.014], dtype=np.float32))
+            a = -0.76 + 1.52 * (si / 12.0)
+            nose_arch = 0.012 * math.exp(-(a / 0.24)**2) if y < 1.570 else 0.0
+            ring.append(np.array([math.sin(a)*(rx-0.004), y + nose_arch, math.cos(a)*(rz-0.004) + 0.020], dtype=np.float32))
         hv_rings.append(ring)
     vhv, nhv, uhv, ihv = make_loft_shell(hv_rings, closed_caps=True)
     jhv = np.zeros((len(vhv), 4), dtype=np.uint8); jhv[:, 0] = 44
     whv = np.zeros((len(vhv), 4), dtype=np.uint8); whv[:, 0] = 255
     meshes["helmet_half_visor"] = combine_parts([(vhv, nhv, uhv, ihv, jhv, whv)])
 
-    # Sealed Lower Faceplate + Full Reflective Visor (contoured angled sci-fi faceplate y=1.415..1.590)
+    # Sealed Lower Faceplate + Full Reflective Visor (contoured angled sci-fi faceplate y=1.456..1.612)
     sv_rings = []
-    for y, rz, rx in [(1.415, 0.118, 0.070), (1.452, 0.142, 0.088), (1.495, 0.158, 0.098), (1.542, 0.160, 0.105), (1.590, 0.144, 0.096)]:
+    for y, rz, rx in [(1.456, 0.120, 0.072), (1.495, 0.144, 0.088), (1.542, 0.156, 0.098), (1.584, 0.154, 0.100), (1.612, 0.142, 0.094)]:
         ring = []
         for si in range(13):
-            a = -0.92 + 1.84 * (si / 12.0)
-            ring.append(np.array([math.sin(a)*rx, y, math.cos(a)*rz + 0.014], dtype=np.float32))
+            a = -0.90 + 1.80 * (si / 12.0)
+            ring.append(np.array([math.sin(a)*rx, y, math.cos(a)*rz + 0.022], dtype=np.float32))
         for si in range(12, -1, -1):
-            a = -0.92 + 1.84 * (si / 12.0)
-            ring.append(np.array([math.sin(a)*(rx-0.005), y, math.cos(a)*(rz-0.005) + 0.014], dtype=np.float32))
+            a = -0.90 + 1.80 * (si / 12.0)
+            ring.append(np.array([math.sin(a)*(rx-0.004), y, math.cos(a)*(rz-0.004) + 0.022], dtype=np.float32))
         sv_rings.append(ring)
     vsv, nsv, usv, isv = make_loft_shell(sv_rings, closed_caps=True)
     jsv = np.zeros((len(vsv), 4), dtype=np.uint8); jsv[:, 0] = 44
@@ -845,8 +890,56 @@ def main():
     c_w   = np.vstack(comb_w)
     c_i   = np.concatenate(comb_i)
 
-    lod1 = decimate_skinned_mesh(c_pos, c_nrm, c_uv, c_j, c_w, c_i, 0.036)
-    lod2 = decimate_skinned_mesh(c_pos, c_nrm, c_uv, c_j, c_w, c_i, 0.095)
+    # Bake alert tactical ready combat stance into LOD1/LOD2 (so 25-unit crowd stands combat-ready instead of A-pose!)
+    def _q_to_m4(q):
+        x, y, z, w = q
+        return np.array([
+            [1-2*(y*y+z*z), 2*(x*y-w*z),   2*(x*z+w*y),   0],
+            [2*(x*y+w*z),   1-2*(x*x+z*z), 2*(y*z-w*x),   0],
+            [2*(x*z-w*y),   2*(y*z+w*x),   1-2*(x*x+y*y), 0],
+            [0, 0, 0, 1]
+        ], dtype=np.float32)
+    def _eul_xyz(rx, ry, rz):
+        cx, sx = math.cos(rx), math.sin(rx); cy, sy = math.cos(ry), math.sin(ry); cz, sz = math.cos(rz), math.sin(rz)
+        Rx = np.array([[1,0,0,0],[0,cx,-sx,0],[0,sx,cx,0],[0,0,0,1]], dtype=np.float32)
+        Ry = np.array([[cy,0,sy,0],[0,1,0,0],[-sy,0,cy,0],[0,0,0,1]], dtype=np.float32)
+        Rz = np.array([[cz,-sz,0,0],[sz,cz,0,0],[0,0,1,0],[0,0,0,1]], dtype=np.float32)
+        return Rz @ Ry @ Rx
+    lod_ovr = {
+        "spine_02":   (0.08, 0.0, 0.0),
+        "upperarm_r": (-0.52, 0.18, 0.44), "lowerarm_r": (-0.90, 0.34, 0.0),
+        "upperarm_l": (-0.48,-0.28,-0.46), "lowerarm_l": (-0.92,-0.58, 0.0),
+        "thigh_l":    (-0.14, 0.02, 0.03), "calf_l":     (0.24, 0.0, 0.0),
+        "thigh_r":    (-0.10,-0.02,-0.03), "calf_r":     (0.18, 0.0, 0.0),
+    }
+    lod_worlds = []
+    lod_skins = np.zeros((len(joint_names), 4, 4), dtype=np.float32)
+    for ji, jn in enumerate(joint_names):
+        M = _q_to_m4(rest_r[ji])
+        M[:3, 3] = rest_t[ji]
+        pi = parents[ji]
+        W = (lod_worlds[pi] @ M) if pi >= 0 else M
+        if jn in lod_ovr:
+            W = W.copy()
+            px, py, pz = W[:3, 3].copy()
+            W[:3, 3] = 0
+            W = _eul_xyz(*lod_ovr[jn]) @ W
+            W[:3, 3] = [px, py, pz]
+        lod_worlds.append(W)
+        lod_skins[ji] = W @ ibm[ji].reshape(4, 4).T
+    c_p4 = np.concatenate([c_pos, np.ones((len(c_pos), 1), dtype=np.float32)], axis=1)
+    c_pos_p = np.zeros_like(c_pos)
+    c_nrm_p = np.zeros_like(c_nrm)
+    wf = c_w.astype(np.float32) / 255.0
+    for k in range(4):
+        S = lod_skins[c_j[:, k]]
+        c_pos_p += wf[:, k:k+1] * np.einsum("vij,vj->vi", S, c_p4)[:, :3]
+        c_nrm_p += wf[:, k:k+1] * np.einsum("vij,vj->vi", S[:, :3, :3], c_nrm)
+    c_pos_p[:, 1] -= float(c_pos_p[:, 1].min())
+    c_nrm_p /= np.maximum(np.linalg.norm(c_nrm_p, axis=1, keepdims=True), 1e-6)
+
+    lod1 = decimate_skinned_mesh(c_pos_p, c_nrm_p, c_uv, c_j, c_w, c_i, 0.036)
+    lod2 = decimate_skinned_mesh(c_pos_p, c_nrm_p, c_uv, c_j, c_w, c_i, 0.095)
 
     # Compact CC0 Animations (idle, walk, run — 15fps quantized int16 quaternions mapped to our 53 bones!)
     anims = {}

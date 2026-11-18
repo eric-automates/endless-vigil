@@ -12,6 +12,7 @@ An operator visits **one single GitHub entry link** (`Vigil Hub` / `continuum-mo
 | Shard ID | Suggested Repo Name | Purpose | Owned State Slices | Reads From |
 | :--- | :--- | :--- | :--- | :--- |
 | **`HUB`** | `ev-hub` | Single public landing URL (`index.html`), per-session Legal Gate, Service Worker prefetcher, Shard router, State Kernel host, Med-Bay Reconstitution Pad & PING Kiosk | `meta`, `session`, `activeShard`, `manifest.pingInsurance.reconstitutionQueueIds` | All (metadata/checksum only) |
+| **`FORGE`** | `ev-shard-forge` | Self-contained 3D CC0 Operator Forge (`operator-forge.html`): WebGPU WGSL compute skinning + WebGL2/WebGL1 PBR character creator, 41 morphs, 3-mode visor, live 3D corner portrait, ship ramp & Sector 4 CQB action stage | `manifest.operatorLook`, `manifest.loadout`, `manifest.pose` | `assets/ev-humanoid-kit.bin`, `js/ev-gpu-engine.js` |
 | **`EVA`** | `ev-shard-eva` | First-person 3D/WebGL asteroid survival, suit leak physics, movement, debris scavenging, world object interaction | `manifest.pose`, `manifest.suit`, `localSector.looseObjects` | `world.seeds`, `containers`, `ships` |
 | **`PDA`** | `ev-shard-pda` | Wrist-mounted Cuff-Slate diagnostics, worn hardware tutorial mode, logs, local radar/telemetry, security interface bridge | `pda.firmware`, `pda.wear`, `pda.logs`, `pda.alerts` | `manifest.suit`, `tech.unlocked`, `world.beacons` |
 | **`TECH`** | `ev-shard-tech` | Blueprint research, reverse-engineering salvage, crafting/fabrication queues, upgrade schematics | `tech.unlocked`, `tech.researchQueue`, `tech.blueprints` | `manifest.inventory`, `pda.scans` |
@@ -198,4 +199,20 @@ Because **nothing is arbitrarily player-locked**, our data model treats all item
    - Dying before docking/settling (`POST /api/operator/terminate`) automatically snap-reverts unsettled objects back to `anchorOrigin`, blocking death-teleport loot inching.
 6. **Why Clients Never Push Directly to GitHub:**
    - Embedding a GitHub write token in browser HTML allows anyone inspecting network/source to hijack the repository. GitHub stores static client builds & audited tagged releases (`ev-release-bundle.zip`), while `AUTH` Relay stores transactional live universe deltas safely.
+
+---
+
+## 9. CC0-1.0 3D Pipeline, Dual WebGPU/WebGL Runtime & Self-Contained Assembly (`v0.6.0-alpha+`)
+
+1. **Zero-CDN Self-Contained HTML Shards (Single-Script Invariant):**
+   - `operator-forge.html` and every public Shard embed all kit binaries/textures (`js/ev-humanoid-kit.js`) and engine code (`js/ev-gpu-engine.js`) via `scripts/assemble-operator-forge.mjs` with **zero runtime network fetches** and **strictly 1 `<script>` / 1 `</script>` tag** so `content://`, offline Android DuckDuckGo/Chrome/Vivaldi, and sandboxed previews boot instantaneously.
+2. **Binary Humanoid Kit (`assets/ev-humanoid-kit.bin` & `scripts/build-cc0-humanoid-kit.py`):**
+   - Compiles CC0-1.0 MakeHuman `hm08` & `CharacterCreator` meshes (`base_body` with 41 sparse morphs, 53-bone rig, 19 WebP textures, garment `_CCZONE` vertex masks, `LOD1`, tactical combat-posed `LOD2`, high-cut tactical `helmet_shell` / `helmet_half_visor` / `helmet_sealed_visor`, `armor_*`, `wrist_watch` / `wrist_gauntlet`, and `carbine_rifle`) into a compact zlib-compressed binary pack (`2,369 KB`).
+3. **Dual WebGPU Compute Skinning + WebGL2/WebGL1 PBR Fallback (`js/ev-gpu-engine.js`):**
+   - Probes `navigator.gpu` *before* touching `canvas.getContext(...)` (preventing browser multi-context errors).
+   - Executes 53-bone GPU compute skinning (`@workgroup_size(64)`) + ACES PBR + subsurface skin warmth on WebGPU, falling back seamlessly to WebGL2/WebGL1 hardware skinning & instanced `LOD2` crowd rendering, plus a live scissored 3D Corner Status Portrait synchronized to `helmetMode`.
+4. **Permanent Automated Verification & Visual Pixel-Inspection Shield (`scripts/audit-3d-quality.mjs`, `scripts/dev-verify-forge.mjs`, `scripts/dev-render-inspect.py`):**
+   - `audit-graph.mjs` + `audit-3d-quality.mjs` enforce topology, LOD ratio (`30.2x`), Design Vault SHA-256 provenance (`data/design-vault.json`), zero banned public wording, and responsive CSS containment across `320px–1920px`.
+   - `dev-verify-forge.mjs` + `dev-render-inspect.py` emulate Pixel 10 Pro XL (`412x915, dpr=3`) Chrome WebGPU, DuckDuckGo WebGL2, Vivaldi WebGPU, and Desktop (`1440x900`), exporting live GPU buffers to rasterize all 6 creator tabs + the Corner Portrait HUD for pixel-accurate inspection before release.
+
 
