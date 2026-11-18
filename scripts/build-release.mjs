@@ -49,11 +49,13 @@ const publicTargets = [
   'data/design-vault.json',
   'js/ev-humanoid-kit.js',
   'js/ev-gpu-engine.js',
+  'js/ev-forge-ui.js',
   'scripts/audit-graph.mjs',
   'scripts/audit-3d-quality.mjs',
   'scripts/assemble-operator-forge.mjs',
   'scripts/build-cc0-humanoid-kit.py',
   'scripts/dev-verify-forge.mjs',
+  'scripts/dev-verify-ui.mjs',
   'scripts/dev-render-inspect.py',
   'scripts/build-release.mjs',
   'scripts/termux-push.sh'

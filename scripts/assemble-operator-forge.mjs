@@ -2,8 +2,10 @@
 /**
  * @shard TOOLING
  * @branch-id FORGE-ASSEMBLER
- * @state-contract reads(js/ev-humanoid-kit.js, js/ev-gpu-engine.js) mutates(operator-forge.html)
- * @invariant Emits single-<script> zero-CDN operator-forge.html synchronized with CC0 kit + dual WebGPU/WebGL2 engine.
+ * @state-contract reads(js/ev-humanoid-kit.js, js/ev-gpu-engine.js, js/ev-forge-ui.js) mutates(operator-forge.html)
+ * @invariant Emits one zero-CDN operator-forge.html with exactly one <script> and one </script> tag,
+ *            flex-only overlays, min(100%, ...) grid guards, and every UI control wired to a real engine state key.
+ * @ip-note "Vigil Atelier" layout, typography, and inline SVG are original clean-room work.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,743 +16,413 @@ const rootDir = path.resolve(__dirname, '..');
 
 const kitJs = fs.readFileSync(path.join(rootDir, 'js', 'ev-humanoid-kit.js'), 'utf8');
 const engineJs = fs.readFileSync(path.join(rootDir, 'js', 'ev-gpu-engine.js'), 'utf8');
+const uiJs = fs.readFileSync(path.join(rootDir, 'js', 'ev-forge-ui.js'), 'utf8');
 
-if (/<\/?script/i.test(kitJs) || /<\/?script/i.test(engineJs)) {
-  throw new Error('Embedded JS contains forbidden script tag literal');
+for (const [label, src] of [['kit', kitJs], ['engine', engineJs], ['ui', uiJs]]){
+  if (/<\/?script/i.test(src)) throw new Error('Embedded ' + label + ' JS contains forbidden script-tag literal');
 }
 
-const uiControllerJs = `
-(function(){
-  'use strict';
+/* ------------------------------------------------------------------ *
+ * Build-time UI markup generators (plain HTML, no runtime DOM creation)
+ * ------------------------------------------------------------------ */
+function esc(s){ return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  var STORAGE_KEY = 'ev_operator_forge_v07';
-  var DEFAULT_STATE = {
-    callsign: 'VIGIL-01',
-    tab: 'face',
-    sexMode: 'male',
-    gender: -0.85,
-    age: 0.16,
-    muscle: 0.62,
-    weight: 0.44,
-    height: 0.52,
-    skinHex: '#cf9170',
-    skinFinish: 'matte',
-    eyeHex: '#3aa7d6',
-    hairHex: '#2a1f1a',
-    suitTint: '#4d5d54',
-    nailColor: 'none',
-    noseWidth: 0.0,
-    noseLength: 0.04,
-    noseHeight: 0.04,
-    jawWidth: 0.16,
-    chinSize: 0.10,
-    cheekbones: 0.10,
-    eyeSize: 0.0,
-    eyeSpacing: 0.0,
-    eyeTilt: 0.04,
-    lipSize: 0.0,
-    mouthWidth: 0.0,
-    earSize: 0.0,
-    forehead: 0.0,
-    expression: 'neutral',
-    blink: 0.0,
-    beardStyle: 'stubble',
-    scarType: 'none',
-    scars: 0.0,
-    scarPos: { x: 0.34, y: 0.42, enabled: false },
-    cyberFace: 0.0,
-    tattooStyle: 'none',
-    tattooZone: 'arm_l',
-    tattooColor: '#131d28',
-    tattooGlow: false,
-    piercings: { brow: false, nostril: false, lip: false, ears: false, metal: 'silver', glow: false, color: '#00e5ff' },
-    chassisMode: 'humanoid',
-    skelStyle: 'titanium',
-    bodyParts: { head: 'organic', torso: 'organic', armL: 'organic', armR: 'organic', legL: 'organic', legR: 'organic' },
-    skelProps: { headSize: 0, shoulderWidth: 0, torsoWidth: 0, armLength: 0, hipWidth: 0, legLength: 0, calfBulk: 0, footSize: 0 },
-    bustQuad: { x: 0.25, y: 0.25 },
-    bustSize: 0.52,
-    bustFirmness: 0.56,
-    bustHeight: 0.05,
-    bustSpacing: 0.0,
-    cyberArm: false,
-    outfit: 'jacket',
-    underwearBra: 'sport',
-    underwearBottom: 'panties_classic',
-    underwearColor: '#1e242c',
-    wristDevice: 'watch',
-    helmetMode: 'none',
-    hairStyle: 'short',
-    grayStreak: { enabled: false, x: 0.34, y: 0.44, angle: 0.42, width: 0.18 },
-    equipRiflePreview: false,
-    missionAccepted: true,
-    shipSeed: 1,
-    appearanceLocked: false,
-    cyberExpertActive: false,
-    turntableYaw: 0.18,
-    camPitch: 0.0,
-    camZoom: 1.0,
-    camPanX: 0.0,
-    camPanY: 0.0,
-    stageOrbitYaw: 0.0,
-    rampTimer: 4.0,
-    peek: 'center',
-    cqbMode: 'center',
-    cqbSpeed: 'slow',
-    aimSkill: 0.85,
-    injuredLeg: false,
-    strideYaw: 0.22,
-    aimYaw: -0.18,
-    cqbMoving: false,
-    firing: false,
-    suppressed: false,
-    veteran: true,
-    crowd25: true,
-    showCornerPortrait: true
-  };
-
-  function deepCopyDefault(){ return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
-  function loadSavedState(){
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return deepCopyDefault();
-      var parsed = JSON.parse(raw);
-      var base = deepCopyDefault();
-      Object.assign(base, parsed);
-      base.piercings = Object.assign({}, DEFAULT_STATE.piercings, parsed.piercings || {});
-      base.bodyParts = Object.assign({}, DEFAULT_STATE.bodyParts, parsed.bodyParts || {});
-      base.skelProps = Object.assign({}, DEFAULT_STATE.skelProps, parsed.skelProps || {});
-      base.bustQuad  = Object.assign({}, DEFAULT_STATE.bustQuad,  parsed.bustQuad  || {});
-      base.scarPos   = Object.assign({}, DEFAULT_STATE.scarPos,   parsed.scarPos   || {});
-      base.grayStreak= Object.assign({}, DEFAULT_STATE.grayStreak,parsed.grayStreak|| {});
-      return base;
-    } catch (_e){ return deepCopyDefault(); }
+function rangeField(id, label, min, max, step, opts = {}){
+  const bio = opts.bio ? ' bio-lockable' : '';
+  const unit = opts.unit || '';
+  const lo = opts.lo || '';
+  const hi = opts.hi || '';
+  const hint = opts.hint ? '<small class="ctrl-hint">' + esc(opts.hint) + '</small>' : '';
+  return `<div class="ctrl-row">
+    <div class="ctrl-lbl"><span>${esc(label)}</span><span class="val-pill" id="val-${id}">0.00</span></div>
+    <input class="ev-range${bio}" id="rng-${id}" type="range" min="${min}" max="${max}" step="${step}" aria-label="${esc(label)}" />
+    <div class="range-scale"><span>${esc(lo)}</span><span>${esc(unit)}</span><span>${esc(hi)}</span></div>${hint}
+  </div>`;
+}
+function chipButtons(options){
+  return options.map(([v, l]) => `<button type="button" class="chip" data-value="${esc(v)}" aria-pressed="false">${esc(l)}</button>`).join('');
+}
+function selectField(id, label, options, opts = {}){
+  const bio = opts.bio ? ' bio-lockable' : '';
+  const chips = opts.chips;
+  const native = `<select class="ev-select${bio}${chips ? ' is-chipped' : ''}" id="${id}" aria-label="${esc(label)}">${options.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select>`;
+  if (!chips){
+    return `<div class="ctrl-row"><div class="ctrl-lbl"><span>${esc(label)}</span></div>${native}</div>`;
   }
+  return `<div class="ctrl-row"><div class="ctrl-lbl"><span>${esc(label)}</span></div>${native}
+    <div class="chip-row" data-chip-for="${id}" data-prop="${esc(opts.prop || '')}"${opts.sub ? ` data-sub="${esc(opts.sub)}"` : ''}>${chipButtons(options)}</div></div>`;
+}
+function swatchField(id, label, desc){
+  return `<div class="ctrl-row swatch-block"><div class="ctrl-lbl"><span>${esc(label)}</span></div>${desc ? `<small class="ctrl-hint">${esc(desc)}</small>` : ''}<div class="swatches" id="sw-${id}"></div></div>`;
+}
+function toggleField(id, label, desc){
+  return `<label class="toggle-row"><input type="checkbox" id="chk-${id}" /><span class="switch"></span><span class="toggle-copy"><strong>${esc(label)}</strong><small>${esc(desc)}</small></span></label>`;
+}
+function padField(padId, dotId, label, corners, desc){
+  const marks = corners.map(([pos, txt]) => `<span class="pad-corner" style="${esc(pos)}">${esc(txt)}</span>`).join('');
+  return `<div class="ctrl-row"><div class="ctrl-lbl"><span>${esc(label)}</span></div>${desc ? `<small class="ctrl-hint">${esc(desc)}</small>` : ''}
+    <div class="pad-2d" id="${padId}">${marks}<div class="pad-dot" id="${dotId}"></div></div></div>`;
+}
+function card(kicker, title, body, opts = {}){
+  return `<section class="refine-card${opts.cls ? ' ' + opts.cls : ''}"${opts.id ? ` id="${opts.id}"` : ''}>
+    <div class="refine-head"><span class="refine-kicker">${esc(kicker)}</span><h3>${esc(title)}</h3>${opts.desc ? `<p>${esc(opts.desc)}</p>` : ''}</div>
+    <div class="refine-body">${body}</div></section>`;
+}
+function disclosure(kicker, title, body, opts = {}){
+  return `<details class="disclosure"${opts.open ? ' open' : ''}><summary><span class="refine-kicker">${esc(kicker)}</span><strong>${esc(title)}</strong><span class="chev">⌄</span></summary><div class="sub-body">${body}</div></details>`;
+}
 
-  var state = loadSavedState();
-  function persistLocal(){
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_e){}
+const FACE_SCULPT = [
+  ['noseWidth','Nose width',-1,1,0.05], ['noseLength','Nose length',-1,1,0.05], ['noseHeight','Nose bridge',-1,1,0.05],
+  ['jawWidth','Jaw width',-1,1,0.05], ['chinSize','Chin projection',-1,1,0.05], ['cheekbones','Cheekbones',-1,1,0.05],
+  ['eyeSize','Eye size',-1,1,0.05], ['eyeSpacing','Eye spacing',-1,1,0.05], ['eyeTilt','Eye tilt',-1,1,0.05],
+  ['lipSize','Lip fullness',-1,1,0.05], ['mouthWidth','Mouth width',-1,1,0.05], ['earSize','Ear size',-1,1,0.05],
+  ['forehead','Forehead height',-1,1,0.05]
+].map(r => rangeField(r[0], r[1], r[2], r[3], r[4], { bio: true, lo: '−', hi: '+', hint: 'Double-click a slider to reset it.' })).join('');
+
+const SKEL_RANGES = [
+  ['headSize','Skull scale'], ['shoulderWidth','Shoulder span'], ['torsoWidth','Ribcage width'], ['armLength','Arm length'],
+  ['hipWidth','Pelvis span'], ['legLength','Leg length'], ['calfBulk','Calf thickness'], ['footSize','Foot frame']
+].map(r => rangeField('skel-' + r[0], r[1], -0.8, 0.8, 0.05, { lo: 'Compact', hi: 'Extended' })).join('');
+
+const PART_SELECTS = [
+  ['head','Head / ocular'], ['torso','Torso core'], ['armL','Left arm'], ['armR','Right arm'], ['legL','Left leg'], ['legR','Right leg']
+].map(([k, l]) => `<div class="part-cell"><span>${esc(l)}</span><select class="ev-select" id="sel-part-${k}" aria-label="${esc(l)}"><option value="organic">Organic</option><option value="cyber">Cybernetic</option><option value="skeleton">Skeleton</option></select></div>`).join('');
+
+function presetButton(key, label, sub, pathD){
+  return `<button type="button" class="preset-card" data-preset="${key}">
+    <svg viewBox="0 0 48 56" aria-hidden="true"><circle cx="24" cy="15" r="8"/><path d="${pathD}"/></svg>
+    <strong>${esc(label)}</strong><small>${esc(sub)}</small></button>`;
+}
+const PRESET_CARDS = [
+  presetButton('vanguard','Vanguard','Grounded · armored','M7 52 C7 36 14 28 24 28 C34 28 41 36 41 52 Z'),
+  presetButton('recon','Recon','Agile · precise','M9 52 C9 38 15 29 24 29 C33 29 39 38 39 52 Z'),
+  presetButton('heavy','Heavy','Broad · reinforced','M4 52 C4 34 12 26 24 26 C36 26 44 34 44 52 Z'),
+  presetButton('android','Android','Synthetic · modular','M10 52 L10 34 L24 26 L38 34 L38 52 Z M17 34 L24 30 L31 34')
+].join('');
+
+const GENDER_SEGMENTS = `<div class="segment gender-segment" role="group" aria-label="Body frame">
+  <button type="button" data-gender-preset="male" aria-pressed="false">Masculine</button>
+  <button type="button" data-gender-preset="finetune" aria-pressed="false">Balanced</button>
+  <button type="button" data-gender-preset="female" aria-pressed="false">Feminine</button>
+</div>`;
+
+const QUICK_OUTFITS = [
+  ['jacket','Jacket'], ['hoodie','Hoodie'], ['tee','Tee'], ['trousers','Trousers'],
+  ['cyborg_suit','Cyborg suit'], ['armor','Armor'], ['underwear','Cabin base']
+].map(([v, l]) => `<button type="button" class="chip" data-outfit-quick="${v}">${esc(l)}</button>`).join('');
+
+const STEP_DOTS = STEP_META_CONST().map(([id, short]) => `<button type="button" class="step-dot" data-step-jump="${id}" aria-label="${esc(short)}"><span></span></button>`).join('');
+function STEP_META_CONST(){
+  return [['face','Face'],['body','Physique'],['quarters','Wardrobe'],['gear','Gear'],['ramp','Ramp'],['action','Action']];
+}
+const RAIL_STEPS = [
+  ['face','01','Face','M12 4 A8 8 0 1 0 12 20 A8 8 0 1 0 12 4 Z M9 11 h1 M15 11 h1 M9 16 q3 2 6 0'],
+  ['body','02','Physique','M12 3 v18 M6 7 h12 M8 21 l4 -6 l4 6'],
+  ['quarters','03','Wardrobe','M7 4 l5 2 l5 -2 l4 4 l-3 3 l-1 -1 v11 h-10 v-11 l-1 1 l-3 -3 Z'],
+  ['gear','04','Gear','M4 9 h16 v10 h-16 Z M9 9 v-3 h6 v3 M4 14 h16'],
+  ['ramp','05','Ramp','M3 19 h18 M6 19 l6 -11 l6 11 M9 19 l3 -5 l3 5'],
+  ['action','06','Action','M4 20 h16 M8 20 l4 -12 l4 12 M12 8 v-4']
+].map(([id, no, label, d]) => `<button type="button" class="tab-btn" data-tab="${id}" aria-label="${esc(label)}">
+    <span class="rail-no">${no}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span class="rail-label">${esc(label)}</span></button>`);
+
+/* ------------------------------------------------------------------ *
+ * Stylesheet — flex-only containment, zero external assets
+ * ------------------------------------------------------------------ */
+const CSS = `
+  :root{
+    --bg:#070a0f; --bg-2:#0b1017; --surface:#0f161f; --surface-2:#131d28; --surface-3:#18242f;
+    --line:rgba(150,190,215,.12); --line-2:rgba(150,190,215,.22);
+    --text:#e8f0f7; --text-2:#a9bdcc; --text-3:#71889b;
+    --cyan:#61e3ff; --cyan-soft:rgba(97,227,255,.14); --amber:#f2ae6a; --amber-soft:rgba(242,174,106,.14);
+    --good:#66e0b0; --warn:#ffb27a; --crit:#ff7f88;
+    --radius:16px; --radius-sm:10px;
+    --shadow:0 18px 50px rgba(0,0,0,.45);
+    --ease:cubic-bezier(.22,.8,.28,1);
+    --font:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;max-width:100vw;overflow-x:hidden;overflow-y:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  button,input,select{font-family:inherit;font-size:inherit}
+  button{cursor:pointer}
+  button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .forge-shell{display:flex;flex-direction:column;height:100dvh;width:100%;max-width:100vw;min-width:0;overflow:hidden;background:radial-gradient(120% 90% at 50% -20%,#13202c 0%,#070a0f 62%)}
 
-  var SKIN_SWATCHES = ['#f5d9cb','#edc2ad','#dfb197','#cf9170','#be7f5d','#a46343','#8d5538','#6f422b','#54311f','#3a2115','#8b99a6','#3b454e'];
-  var EYE_SWATCHES  = ['#3aa7d6','#44b89a','#c89b3c','#7a6652','#92a6b8','#ff6a33'];
-  var HAIR_SWATCHES = ['#1a1614','#2a1f1a','#4e3424','#8c5230','#c49a52','#aeb7be','#b4384e','#2894b8'];
-  var SUIT_SWATCHES = ['#4d5d54','#2c3b47','#3a3f47','#5e4a38','#6e2b2b','#222830'];
-  var NAIL_SWATCHES = ['none','#181a1f','#7a1c28','#d45b72','#c98c44','#1398b8','#d8e0e8'];
-  var TAT_SWATCHES  = ['#131d28','#2f1e3a','#00e5ff','#ff8c3a','#e03a68','#44f29a'];
-  var UW_SWATCHES   = ['#1e242c','#2e3c34','#4a1d28','#0d0f14','#6c584c','#c9d2db'];
+  /* Top bar */
+  .topbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-width:0;padding:9px clamp(10px,2vw,22px);border-bottom:1px solid var(--line);background:rgba(9,14,20,.82);backdrop-filter:blur(14px);flex:0 0 auto;z-index:8}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand-mark{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,var(--cyan-soft),rgba(242,174,106,.10));border:1px solid var(--line-2);box-shadow:inset 0 0 14px rgba(97,227,255,.10);flex:0 0 auto}
+  .brand-mark svg{width:18px;height:18px}
+  .brand-copy{display:flex;flex-direction:column;min-width:0}
+  .brand-copy strong{font-size:12px;letter-spacing:.18em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand-copy small{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--text-3);white-space:nowrap}
+  .topbar-step{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--cyan);background:var(--cyan-soft);border:1px solid rgba(97,227,255,.25);padding:4px 9px;border-radius:999px;white-space:nowrap}
+  .topbar-spacer{flex:1 1 auto;min-width:0}
+  .topbar-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+  .icon-btn{display:flex;align-items:center;justify-content:center;gap:6px;min-width:34px;height:32px;padding:0 9px;border-radius:9px;border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--text-2);font-size:11px;font-weight:700;transition:all .2s var(--ease)}
+  .icon-btn:hover{color:var(--cyan);border-color:rgba(97,227,255,.45);background:var(--cyan-soft)}
+  .icon-btn.is-muted{opacity:.38}
+  .icon-btn svg{width:14px;height:14px}
+  .lock-badge{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--good);border:1px solid rgba(102,224,176,.35);background:rgba(102,224,176,.09);padding:4px 8px;border-radius:999px}
 
-  var canvas = document.getElementById('viewport3d');
-  var portraitHud = document.getElementById('corner-portrait-hud');
-  var portraitTag = document.getElementById('portrait-mode-tag');
-  var fadeOverlay = document.getElementById('cinema-fade');
-  var telemetryEl = document.getElementById('hud-telemetry');
-  var backendBadge = document.getElementById('backend-badge');
-  var d1StatusEl = document.getElementById('d1-save-status');
+  /* Workspace */
+  .workspace{flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+  .step-rail{display:flex;flex-direction:row;flex:0 0 auto;min-width:0;gap:6px;padding:8px 10px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;border-bottom:1px solid var(--line);background:rgba(8,12,17,.7)}
+  .step-rail::-webkit-scrollbar{display:none}
+  .rail-group{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--text-3);padding:0 4px;white-space:nowrap;flex:0 0 auto}
+  .rail-divider{width:1px;align-self:stretch;background:var(--line);margin:2px 4px;flex:0 0 auto}
+  .tab-btn{display:flex;align-items:center;gap:7px;flex:0 0 auto;min-width:0;padding:7px 10px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--text-3);font-size:11px;font-weight:650;white-space:nowrap;transition:all .24s var(--ease)}
+  .tab-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+  .tab-btn .rail-no{font-family:var(--mono);font-size:9px;opacity:.7}
+  .tab-btn:hover{color:var(--text);background:rgba(255,255,255,.04)}
+  .tab-btn.active{color:var(--cyan);border-color:rgba(97,227,255,.32);background:linear-gradient(135deg,var(--cyan-soft),rgba(97,227,255,.03));box-shadow:0 6px 20px rgba(0,0,0,.28)}
+  .tab-btn.active .rail-no{opacity:1}
 
-  function syncCanvasSize(){
-    var parent = canvas.parentElement;
-    if (!parent) return;
-    var rect = parent.getBoundingClientRect();
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    var pw = Math.max(300, Math.round(rect.width * dpr));
-    var ph = Math.max(220, Math.round(rect.height * dpr));
-    if (canvas.width !== pw || canvas.height !== ph){
-      canvas.width = pw;
-      canvas.height = ph;
-    }
-    var cssBox = Math.max(82, Math.min(118, Math.round(rect.width * 0.23)));
-    var cssOff = 10;
-    state.portraitBoxPx = Math.round(cssBox * dpr);
-    state.portraitOffPx = Math.round(cssOff * dpr);
-    portraitHud.style.width = cssBox + 'px';
-    portraitHud.style.height = cssBox + 'px';
-    portraitHud.style.left = cssOff + 'px';
-    portraitHud.style.bottom = cssOff + 'px';
+  /* Stage */
+  .stage-pane{position:relative;flex:1 1 0;min-height:190px;min-width:0;overflow:hidden;background:radial-gradient(90% 70% at 50% 42%,#1a2734 0%,#0a1119 58%,#06090e 100%)}
+  .stage-aura{position:absolute;inset:0;pointer-events:none;background:radial-gradient(42% 52% at 50% 48%,rgba(97,227,255,.10),transparent 70%),radial-gradient(60% 40% at 50% 100%,rgba(242,174,106,.07),transparent 72%)}
+  #viewport3d{display:block;width:100%;height:100%;touch-action:none;cursor:grab;position:relative;z-index:1}
+  #viewport3d:active{cursor:grabbing}
+  .stage-vignette{position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(75% 72% at 50% 45%,transparent 52%,rgba(3,6,10,.62) 100%)}
+  .stage-grain{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:.10;background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+  .stage-reticle{position:absolute;left:50%;top:50%;width:min(46vh,320px);height:min(46vh,320px);transform:translate(-50%,-50%);border-radius:50%;border:1px solid rgba(97,227,255,.10);pointer-events:none;z-index:2}
+  .stage-reticle::before,.stage-reticle::after{content:"";position:absolute;background:rgba(97,227,255,.14)}
+  .stage-reticle::before{left:50%;top:-9px;width:1px;height:18px;transform:translateX(-50%)}
+  .stage-reticle::after{top:50%;left:-9px;height:1px;width:18px;transform:translateY(-50%)}
+  .stage-pane.is-reframing .stage-aura{animation:reframe 620ms var(--ease)}
+  @keyframes reframe{0%{opacity:.3;transform:scale(.97)}55%{opacity:1;transform:scale(1.02)}100%{opacity:1;transform:scale(1)}}
+  .stage-hud-left,.stage-hud-right{position:absolute;top:10px;display:flex;flex-direction:column;gap:6px;z-index:4;max-width:min(260px,calc(100% - 20px));min-width:0}
+  .stage-hud-left{left:10px;align-items:flex-start}
+  .stage-hud-right{right:10px;align-items:flex-end}
+  .hud-chip{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%;padding:5px 9px;border-radius:9px;border:1px solid var(--line-2);background:rgba(9,14,20,.72);backdrop-filter:blur(10px);font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hud-chip strong{color:var(--text);font-weight:700}
+  .hud-chip.cyan{color:var(--cyan);border-color:rgba(97,227,255,.3);background:rgba(8,32,42,.72)}
+  .hud-chip.amber{color:var(--amber)}
+  #backend-badge{font-weight:700;color:var(--amber);letter-spacing:.08em}
+  #backend-badge.is-webgpu{color:var(--cyan)}
+  .hud-link{display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:9px;border:1px solid var(--line-2);background:rgba(9,14,20,.72);backdrop-filter:blur(10px);color:var(--text-2);font-size:10px;font-weight:700;text-decoration:none;white-space:nowrap}
+  .hud-link:hover{color:var(--cyan);border-color:rgba(97,227,255,.4)}
+  .hud-link svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8}
+  .diag-links{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
+  .diag-links a{font-family:var(--mono);font-size:8.5px;letter-spacing:.05em;color:var(--text-3);text-decoration:none;padding:4px 7px;border-radius:6px;border:1px solid var(--line-2)}
+  .diag-links a:hover{color:var(--cyan);border-color:rgba(97,227,255,.4)}
+
+  #corner-portrait-hud{position:absolute;left:10px;bottom:10px;width:104px;height:104px;border:1px solid rgba(97,227,255,.65);border-radius:12px;box-shadow:0 0 0 4px rgba(6,12,18,.55),0 0 24px rgba(97,227,255,.22),inset 0 0 22px rgba(97,227,255,.06);background:rgba(6,12,18,.35);pointer-events:none;z-index:4;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}
+  .portrait-hdr{display:flex;justify-content:space-between;gap:4px;background:linear-gradient(180deg,rgba(6,14,20,.94),rgba(6,14,20,.55));color:var(--cyan);font-family:var(--mono);font-size:7.5px;font-weight:700;letter-spacing:.08em;padding:3px 5px;white-space:nowrap;overflow:hidden}
+  .portrait-ftr{background:linear-gradient(0deg,rgba(6,14,20,.94),rgba(6,14,20,.55));color:#cfe9f5;font-family:var(--mono);font-size:7px;padding:3px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stage-caption{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:4;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:2px;max-width:min(360px,calc(100vw - 220px));min-width:0;text-align:center;padding:6px 13px;border-radius:12px;border:1px solid var(--line-2);background:rgba(7,12,18,.80);backdrop-filter:blur(12px);box-shadow:0 8px 26px rgba(0,0,0,.45)}
+  .stage-caption strong{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#e6f4fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .stage-caption small{font-size:9.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .gesture-hint{position:absolute;right:10px;bottom:10px;z-index:4;pointer-events:none;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:rgba(9,14,20,.7);backdrop-filter:blur(8px);font-family:var(--mono);font-size:8px;letter-spacing:.04em;color:var(--text-3)}
+  #cinema-fade{position:absolute;inset:0;background:#03060a;opacity:0;pointer-events:none;z-index:6;display:flex;align-items:center;justify-content:center;color:var(--cyan);letter-spacing:.2em;font-family:var(--mono);font-size:11px}
+  .diagnostics{position:absolute;top:48px;right:10px;z-index:7;width:min(300px,calc(100vw - 24px));min-width:0;max-width:calc(100vw - 24px);display:none;flex-direction:column;gap:9px;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--line-2);background:rgba(10,16,23,.96);backdrop-filter:blur(16px);box-shadow:var(--shadow)}
+  .diagnostics.is-open{display:flex}
+  .diagnostics h4{margin:0;font-size:10px;letter-spacing:.14em;color:var(--cyan);text-transform:uppercase}
+  .diagnostics .diag-note{font-size:10px;color:var(--text-3);line-height:1.45}
+  .diag-actions{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+
+  /* Inspector */
+  .inspector{display:flex;flex-direction:column;flex:0 0 auto;height:min(50dvh,470px);min-height:0;min-width:0;width:100%;max-width:100vw;overflow:hidden;background:linear-gradient(180deg,rgba(18,26,36,.98),rgba(9,14,20,.99));border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;box-shadow:0 -14px 40px rgba(0,0,0,.38);z-index:5}
+  .inspector-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-width:0;padding:11px 14px 9px;border-bottom:1px solid var(--line);flex:0 0 auto}
+  .step-copy{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .step-line{display:flex;align-items:center;gap:7px;min-width:0;flex-wrap:wrap}
+  .step-group{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--cyan);background:var(--cyan-soft);border:1px solid rgba(97,227,255,.22);padding:2px 7px;border-radius:999px}
+  .step-no{font-family:var(--mono);font-size:9px;color:var(--text-3);letter-spacing:.1em}
+  .step-copy h2{margin:0;font-size:clamp(15px,2.4vw,19px);font-weight:720;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step-copy p{margin:0;font-size:10.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .progress-cluster{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+  .progress-ring{position:relative;width:46px;height:46px;flex:0 0 auto}
+  .progress-ring svg{width:46px;height:46px;transform:rotate(-90deg)}
+  .progress-ring .track{fill:none;stroke:rgba(255,255,255,.08);stroke-width:4}
+  .progress-ring .fill{fill:none;stroke:var(--cyan);stroke-width:4;stroke-linecap:round;stroke-dasharray:113;stroke-dashoffset:113;transition:stroke-dashoffset .5s var(--ease);filter:drop-shadow(0 0 5px rgba(97,227,255,.55))}
+  .progress-ring span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9.5px;font-weight:700;color:var(--cyan)}
+  .progress-meta{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .progress-meta strong{font-size:10px;letter-spacing:.1em;color:var(--text-2)}
+  .progress-track{width:84px;height:4px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+  .progress-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--amber));border-radius:999px;transition:width .5s var(--ease)}
+  .view-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;padding:8px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.015);flex:0 0 auto}
+  .view-label{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--text-3);white-space:nowrap}
+  .segment{display:flex;flex-wrap:wrap;gap:3px;padding:3px;border-radius:10px;border:1px solid var(--line-2);background:rgba(4,8,12,.55);min-width:0}
+  .segment button{border:0;background:transparent;color:var(--text-3);font-size:10px;font-weight:700;padding:5px 9px;border-radius:7px;white-space:nowrap;transition:all .22s var(--ease)}
+  .segment button:hover{color:var(--text)}
+  .segment button.active{color:#04121a;background:linear-gradient(135deg,var(--cyan),#9af0ff);box-shadow:0 4px 14px rgba(97,227,255,.28)}
+  .gender-segment button{font-size:11px;padding:8px 10px}
+  .view-zoom{display:flex;align-items:center;gap:7px;flex:1 1 120px;min-width:0}
+  .view-zoom .ev-range{flex:1 1 0;min-width:0}
+  .view-zoom .val-pill{min-width:38px;text-align:center}
+  .inspector-scroll{flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:13px 14px 22px;scrollbar-width:thin;scrollbar-color:rgba(97,227,255,.3) transparent}
+  .tab-panel{display:none;flex-direction:column;gap:11px;min-width:0}
+  .tab-panel.active{display:flex;animation:panelIn .32s var(--ease)}
+  @keyframes panelIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+  .inspector-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;padding:9px 14px calc(9px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:rgba(6,10,15,.75);flex:0 0 auto}
+  .step-dots{display:flex;flex-wrap:wrap;align-items:center;gap:5px;flex:1 1 0;min-width:0;justify-content:center}
+  .step-dot{width:20px;height:20px;border-radius:50%;border:1px solid var(--line-2);background:transparent;display:flex;align-items:center;justify-content:center;padding:0}
+  .step-dot span{width:6px;height:6px;border-radius:50%;background:var(--text-3);transition:all .25s var(--ease)}
+  .step-dot.active{border-color:var(--cyan)}
+  .step-dot.active span{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+  .nav-btn{border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--text-2);padding:7px 12px;border-radius:9px;font-size:11px;font-weight:700;white-space:nowrap}
+  .nav-btn:hover{color:var(--cyan);border-color:rgba(97,227,255,.4)}
+  .nav-btn.primary{background:linear-gradient(135deg,var(--cyan),#8fe9ff);color:#04121a;border-color:transparent;box-shadow:0 8px 22px rgba(97,227,255,.22)}
+  .nav-btn:disabled{opacity:.35;cursor:default}
+  .save-local{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--text-3);border:1px dashed var(--line-2);background:transparent;padding:6px 9px;border-radius:8px;white-space:nowrap}
+  .save-local:hover{color:var(--good);border-color:rgba(102,224,176,.4)}
+
+  /* Cards & controls */
+  .refine-card,.disclosure{border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(160deg,rgba(24,35,47,.72),rgba(13,20,28,.86));box-shadow:0 10px 30px rgba(0,0,0,.20);min-width:0;overflow:hidden}
+  .refine-card{padding:13px}
+  .refine-head{display:flex;flex-direction:column;gap:2px;margin-bottom:11px;min-width:0}
+  .refine-kicker{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
+  .refine-head h3{margin:0;font-size:14px;font-weight:700;letter-spacing:-.005em}
+  .refine-head p{margin:0;font-size:10.5px;color:var(--text-3);line-height:1.45}
+  .refine-body{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .disclosure summary{display:flex;align-items:center;gap:8px;list-style:none;cursor:pointer;padding:12px 13px;min-width:0}
+  .disclosure summary::-webkit-details-marker{display:none}
+  .disclosure summary strong{font-size:12px;font-weight:700;flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .disclosure summary .refine-kicker{flex:0 0 auto}
+  .disclosure summary .chev{color:var(--amber);font-size:15px;transition:transform .25s var(--ease)}
+  .disclosure[open] summary .chev{transform:rotate(180deg)}
+  .disclosure[open] summary{border-bottom:1px solid var(--line)}
+  .sub-body{display:flex;flex-direction:column;gap:12px;padding:13px;min-width:0;animation:panelIn .28s var(--ease)}
+  .ctrl-row{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .ctrl-lbl{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;font-size:11.5px;font-weight:600;color:#cfe0ec}
+  .ctrl-lbl>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .val-pill{font-family:var(--mono);font-size:9.5px;color:var(--cyan);background:var(--cyan-soft);border:1px solid rgba(97,227,255,.18);padding:2px 7px;border-radius:999px;white-space:nowrap;flex:0 0 auto}
+  .ctrl-hint{font-size:9.5px;color:var(--text-3);line-height:1.4}
+  .range-scale{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:8.5px;color:var(--text-3);letter-spacing:.04em;min-width:0}
+  .ev-range{-webkit-appearance:none;appearance:none;width:100%;height:22px;margin:0;background:transparent;--fill:50%;cursor:pointer;min-width:0}
+  .ev-range::-webkit-slider-runnable-track{height:5px;border-radius:999px;background:linear-gradient(90deg,var(--cyan) 0%,var(--cyan) var(--fill),rgba(255,255,255,.10) var(--fill),rgba(255,255,255,.10) 100%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+  .ev-range::-moz-range-track{height:5px;border-radius:999px;background:rgba(255,255,255,.10)}
+  .ev-range::-moz-range-progress{height:5px;border-radius:999px;background:var(--cyan)}
+  .ev-range::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-5.5px;border-radius:50%;background:#eafcff;border:2px solid var(--cyan);box-shadow:0 0 0 4px rgba(97,227,255,.14),0 3px 10px rgba(0,0,0,.5);transition:transform .18s var(--ease)}
+  .ev-range::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#eafcff;border:2px solid var(--cyan);box-shadow:0 0 0 4px rgba(97,227,255,.14)}
+  .ev-range:hover::-webkit-slider-thumb{transform:scale(1.12)}
+  .ev-range:disabled{opacity:.4;cursor:not-allowed}
+  .ev-select{width:100%;min-width:0;background:rgba(4,9,14,.75);color:var(--text);border:1px solid var(--line-2);border-radius:9px;padding:9px 30px 9px 10px;font-size:11.5px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2361e3ff' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .2s var(--ease)}
+  .ev-select:hover{border-color:rgba(97,227,255,.45)}
+  .ev-select.is-chipped{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;padding:0;border:0}
+  .chip-row{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
+  .chip{border:1px solid var(--line-2);background:rgba(255,255,255,.025);color:var(--text-2);padding:6px 10px;border-radius:8px;font-size:10.5px;font-weight:650;white-space:nowrap;transition:all .2s var(--ease);min-width:0}
+  .chip:hover{color:var(--text);border-color:rgba(97,227,255,.4);background:rgba(97,227,255,.06)}
+  .chip.active{color:#04121a;border-color:transparent;background:linear-gradient(135deg,var(--cyan),#a4f1ff);box-shadow:0 5px 16px rgba(97,227,255,.22)}
+  .swatch-block{gap:7px}
+  .swatches{display:flex;flex-wrap:wrap;gap:7px;min-width:0}
+  .swatch{width:27px;height:27px;border-radius:9px;border:2px solid rgba(255,255,255,.12);cursor:pointer;color:#dce8f0;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0;position:relative;transition:transform .18s var(--ease),box-shadow .18s var(--ease);flex:0 0 auto}
+  .swatch:hover{transform:translateY(-2px)}
+  .swatch.active{border-color:#eafcff;box-shadow:0 0 0 3px rgba(97,227,255,.28),0 5px 14px rgba(0,0,0,.4)}
+  .swatch.active::after{content:"";position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:var(--cyan);border:2px solid #08121a}
+  .swatch-none{background:repeating-linear-gradient(45deg,#1a222c 0 5px,#10171f 5px 10px)}
+  .toggle-row{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.02);min-width:0;cursor:pointer}
+  .toggle-row input{position:absolute;opacity:0;width:1px;height:1px}
+  .switch{width:34px;height:19px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid var(--line-2);position:relative;flex:0 0 auto;transition:all .22s var(--ease)}
+  .switch::after{content:"";position:absolute;left:2px;top:2px;width:13px;height:13px;border-radius:50%;background:#c8d8e4;transition:all .22s var(--ease)}
+  .toggle-row input:checked + .switch{background:linear-gradient(135deg,var(--cyan),#8be8ff);border-color:transparent}
+  .toggle-row input:checked + .switch::after{transform:translateX(15px);background:#04121a}
+  .toggle-copy{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .toggle-copy strong{font-size:11px;font-weight:650;color:#d7e6f0}
+  .toggle-copy small{font-size:9.5px;color:var(--text-3);line-height:1.35}
+  .pad-2d{position:relative;width:100%;height:104px;border-radius:12px;background:linear-gradient(135deg,rgba(15,26,37,.92),rgba(10,18,26,.92));border:1px solid var(--line-2);cursor:crosshair;touch-action:none;overflow:hidden;min-width:0}
+  .pad-2d::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(97,227,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(97,227,255,.07) 1px,transparent 1px);background-size:25% 25%;pointer-events:none}
+  .pad-corner{position:absolute;font-family:var(--mono);font-size:8px;color:var(--text-3);pointer-events:none;padding:4px 6px;letter-spacing:.04em}
+  .pad-dot{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--amber);border:2px solid #fff;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 12px rgba(242,174,106,.75)}
+  .part-grid{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+  .part-cell{flex:1 1 44%;display:flex;flex-direction:column;gap:5px;min-width:0}
+  .part-cell>span{font-size:10px;color:var(--text-3);font-weight:600}
+  .preset-grid{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+  .preset-card{flex:1 1 44%;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;padding:9px;border-radius:12px;border:1px solid var(--line-2);background:rgba(255,255,255,.02);color:var(--text);text-align:left;transition:all .22s var(--ease)}
+  .preset-card:hover{transform:translateY(-2px);border-color:rgba(97,227,255,.45);background:var(--cyan-soft);box-shadow:0 10px 24px rgba(0,0,0,.3)}
+  .preset-card svg{width:34px;height:38px;fill:none;stroke:var(--cyan);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;margin-bottom:2px}
+  .preset-card strong{font-size:11px;font-weight:700}
+  .preset-card small{font-size:9px;color:var(--text-3)}
+  .btn-row{display:flex;flex-wrap:wrap;gap:7px;min-width:0}
+  .ev-btn{flex:1 1 auto;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;background:rgba(255,255,255,.025);color:var(--text-2);font-size:11px;font-weight:700;text-align:center;white-space:nowrap;transition:all .2s var(--ease);min-width:0}
+  .ev-btn:hover{color:var(--cyan);border-color:rgba(97,227,255,.45)}
+  .ev-btn.active{color:#04121a;background:linear-gradient(135deg,var(--cyan),#9ceeff);border-color:transparent}
+  .ev-btn.warn{color:var(--amber);border-color:rgba(242,174,106,.35)}
+  .ev-btn.primary{color:#04121a;background:linear-gradient(135deg,var(--amber),#ffd3a3);border-color:transparent}
+  .lore-box{border-radius:10px;padding:10px;font-size:10.5px;line-height:1.5;background:rgba(97,227,255,.06);border:1px solid rgba(97,227,255,.22);color:#bfe3f2}
+  .lore-box.locked{background:rgba(255,127,136,.07);border-color:rgba(255,127,136,.32);color:#ffc6cb}
+  .lore-box.expert{background:rgba(102,224,176,.07);border-color:rgba(102,224,176,.32);color:#b8f2dc}
+  .is-locked{opacity:.5}
+  .collapsible{transition:max-height .4s var(--ease),opacity .3s var(--ease),margin .3s var(--ease),padding .3s var(--ease);max-height:900px;opacity:1}
+  .collapsible.is-collapsed{max-height:0;opacity:0;overflow:hidden;padding-top:0;padding-bottom:0;margin-top:0;margin-bottom:0;border-color:transparent;pointer-events:none}
+  .status-msg{font-family:var(--mono);font-size:9.5px;color:#7dc4d9;min-height:14px}
+  .fine-note{font-size:10px;color:var(--text-3);line-height:1.5;padding:9px;border-radius:9px;border:1px dashed var(--line-2);background:rgba(255,255,255,.015)}
+  #ev-toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translate(-50%,14px);z-index:20;padding:9px 15px;border-radius:999px;border:1px solid rgba(97,227,255,.4);background:rgba(9,22,30,.94);backdrop-filter:blur(12px);color:#d8f6ff;font-family:var(--mono);font-size:10px;letter-spacing:.06em;box-shadow:0 12px 30px rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:all .32s var(--ease);max-width:min(320px,calc(100vw - 24px));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #ev-toast.show{opacity:1;transform:translate(-50%,0)}
+
+  /* Compact step rail: all six steps visible, zero horizontal scroll on phones/tablets */
+  @media (max-width:1023px){
+    .step-rail{overflow-x:hidden;flex-wrap:nowrap;gap:4px;padding:7px 8px}
+    .rail-group,.rail-divider{display:none}
+    .tab-btn{flex:1 1 0;min-width:0;justify-content:center;padding:6px 2px;gap:2px}
+    .tab-btn .rail-label{display:none}
+    .tab-btn .rail-no{font-size:8px}
+    .tab-btn svg{width:16px;height:16px}
   }
-  window.addEventListener('resize', syncCanvasSize);
-
-  // Tab switching
-  var tabBtns = Array.prototype.slice.call(document.querySelectorAll('.tab-btn'));
-  var tabPanels = Array.prototype.slice.call(document.querySelectorAll('.tab-panel'));
-  function setTab(t){
-    state.tab = t;
-    tabBtns.forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-tab') === t); });
-    tabPanels.forEach(function(p){ p.classList.toggle('active', p.getAttribute('data-panel') === t); });
-    if (t === 'quarters' && state.outfit !== 'underwear') state.outfit = 'underwear';
-    if (t === 'ramp' && state.rampTimer >= 4.0) state.rampTimer = 4.0;
-    refreshLockUI();
-    persistLocal();
+  /* Tablet & desktop */
+  @media (min-width:768px){
+    .inspector{height:min(46dvh,440px)}
+    .stage-caption{max-width:min(420px,calc(100vw - 260px))}
+    .preset-card{flex:1 1 21%}
   }
-  tabBtns.forEach(function(b){
-    b.addEventListener('click', function(){ setTab(b.getAttribute('data-tab')); });
-  });
-
-  function isBioLocked(){
-    return !!state.appearanceLocked && !state.cyberExpertActive;
+  @media (min-width:1024px){
+    .workspace{flex-direction:row}
+    .step-rail{flex:0 0 92px;flex-direction:column;justify-content:flex-start;gap:5px;padding:12px 8px;overflow-x:hidden;overflow-y:auto;border-bottom:0;border-right:1px solid var(--line);background:rgba(8,12,17,.55)}
+    .rail-group{justify-content:center;padding:2px 0}
+    .rail-divider{width:auto;height:1px;align-self:stretch;margin:5px 8px}
+    .tab-btn{flex:0 0 auto;width:100%;flex-direction:column;gap:3px;padding:9px 4px;border-radius:12px;text-align:center}
+    .tab-btn svg{width:18px;height:18px}
+    .tab-btn .rail-no{font-size:8px}
+    .tab-btn .rail-label{font-size:9px}
+    .stage-pane{flex:1 1 0;min-width:0;height:100%}
+    .inspector{height:100%;width:min(390px,32vw);flex:0 0 auto;border-top:0;border-left:1px solid var(--line-2);border-radius:0;box-shadow:-14px 0 40px rgba(0,0,0,.28)}
+    .inspector-head{padding:14px 16px 11px}
+    .view-bar{padding:10px 16px}
+    .inspector-scroll{padding:15px 16px 26px}
+    .inspector-foot{padding:10px 16px}
+    .stage-caption{max-width:min(480px,calc(100vw - 620px))}
+    .diagnostics{width:min(320px,calc(100vw - 24px))}
   }
-
-  function refreshGenderAndBustVisibility(){
-    var fineWrap = document.getElementById('wrap-gender-finetune');
-    if (fineWrap) fineWrap.style.display = state.sexMode === 'finetune' ? 'flex' : 'none';
-    var bustCard = document.getElementById('card-bust-controls');
-    if (bustCard) bustCard.style.display = (state.gender >= 0.05) ? 'flex' : 'none';
-    var femUw = document.getElementById('wrap-uw-female');
-    if (femUw) femUw.style.display = (state.gender >= 0.35) ? 'flex' : 'none';
-    var maleUw = document.getElementById('wrap-uw-male');
-    if (maleUw) maleUw.style.display = (state.gender < 0.35) ? 'flex' : 'none';
-    Array.prototype.slice.call(document.querySelectorAll('[name="sexMode"]')).forEach(function(r){
-      r.checked = (r.value === state.sexMode);
-    });
+  @media (min-width:1600px){
+    .inspector{width:410px}
+    .refine-card{padding:15px}
   }
-
-  function refreshLockUI(){
-    var bioLocked = isBioLocked();
-    var lockBanner = document.getElementById('lock-lore-banner');
-    var btnLock = document.getElementById('btn-lock-appearance');
-    var btnExpert = document.getElementById('btn-cyber-expert');
-    if (lockBanner){
-      if (state.appearanceLocked && !state.cyberExpertActive){
-        lockBanner.textContent = 'APPEARANCE LOCKED IN MANIFEST — Biological genetics frozen. Visit a Cybernetics Expert in-world to graft synthetic cyber-dermal skin or swap mechanical limbs.';
-        lockBanner.className = 'lore-box locked';
-      } else if (state.cyberExpertActive){
-        lockBanner.textContent = 'CYBERNETICS EXPERT BAY ACTIVE — Bio-skin unlocked for synthetic cyber-dermal replacement & modular prosthetics.';
-        lockBanner.className = 'lore-box expert';
-      } else {
-        lockBanner.textContent = 'OPEN BIO-FORGE — Biological traits remain editable until finalized. Once locked, future changes require a Cybernetics Expert.';
-        lockBanner.className = 'lore-box';
-      }
-    }
-    if (btnLock){
-      btnLock.textContent = state.appearanceLocked ? 'Appearance Locked in Manifest' : 'Finalize & Lock Biological Appearance';
-      btnLock.classList.toggle('active', !!state.appearanceLocked);
-    }
-    if (btnExpert){
-      btnExpert.style.display = state.appearanceLocked ? 'block' : 'none';
-      btnExpert.textContent = state.cyberExpertActive ? 'Leave Cybernetics Expert Bay' : 'Consult Cybernetics Expert (Swap Cyber-Skin / Limbs)';
-      btnExpert.classList.toggle('active', !!state.cyberExpertActive);
-    }
-    Array.prototype.slice.call(document.querySelectorAll('.bio-lockable')).forEach(function(el){
-      el.disabled = bioLocked;
-      if (el.closest) {
-        var wrap = el.closest('.ctrl-row, .sec-card, .sub-drawer');
-        if (wrap && bioLocked) wrap.classList.add('is-locked');
-        else if (wrap) wrap.classList.remove('is-locked');
-      }
-    });
+  @media (max-width:600px){
+    .stage-caption{bottom:74px;max-width:min(300px,calc(100vw - 24px))}
+    .stage-caption small{font-size:9px}
+    .gesture-hint{display:none}
+    .progress-meta{display:none}
+    .topbar-tools .lock-badge{display:none}
+    .view-label{display:none}
+    .stage-hud-left .hud-chip{max-width:118px}
+    .stage-hud-right .hud-chip{max-width:150px}
   }
-
-  function bindRange(id, prop, valId, subObj){
-    var el = document.getElementById(id);
-    var vEl = valId ? document.getElementById(valId) : null;
-    if (!el) return;
-    var cur = subObj ? state[subObj][prop] : state[prop];
-    el.value = cur;
-    if (vEl) vEl.textContent = Number(cur).toFixed(2);
-    el.addEventListener('input', function(){
-      var v = parseFloat(el.value);
-      if (subObj) state[subObj][prop] = v; else state[prop] = v;
-      if (vEl) vEl.textContent = Number(v).toFixed(2);
-      if (prop === 'gender') refreshGenderAndBustVisibility();
-      persistLocal();
-    });
+  @media (max-width:380px){
+    .stage-hud-right #hud-telemetry{display:none}
+    .stage-hud-left .hud-chip{display:none}
   }
-  function bindSelect(id, prop, subObj){
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.value = subObj ? state[subObj][prop] : state[prop];
-    el.addEventListener('change', function(){
-      if (subObj) state[subObj][prop] = el.value; else state[prop] = el.value;
-      persistLocal();
-    });
+  @media (max-width:380px){
+    .brand-copy small{display:none}
+    .topbar{padding:8px 10px}
+    .hud-chip{font-size:8px;padding:4px 7px}
+    .stage-reticle{width:min(40vh,240px);height:min(40vh,240px)}
+    .inspector-head{padding:9px 11px 8px}
+    .view-bar{padding:7px 11px}
+    .inspector-scroll{padding:11px 11px 20px}
+    .refine-card{padding:11px}
   }
-  function bindCheck(id, prop, subObj){
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.checked = !!(subObj ? state[subObj][prop] : state[prop]);
-    el.addEventListener('change', function(){
-      if (subObj) state[subObj][prop] = el.checked; else state[prop] = el.checked;
-      persistLocal();
-    });
-  }
-  function buildSwatches(containerId, list, prop, subObj){
-    var wrap = document.getElementById(containerId);
-    if (!wrap) return;
-    wrap.innerHTML = '';
-    list.forEach(function(hex){
-      var cur = subObj ? state[subObj][prop] : state[prop];
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'swatch' + (cur === hex ? ' active' : '') + (hex === 'none' ? ' swatch-none' : '');
-      if (hex !== 'none') b.style.background = hex;
-      else b.textContent = 'Ø';
-      b.setAttribute('aria-label', hex);
-      b.addEventListener('click', function(){
-        if (b.disabled) return;
-        if (isBioLocked() && (prop === 'skinHex' || prop === 'eyeHex' || prop === 'hairHex' || prop === 'nailColor' || prop === 'tattooColor')) return;
-        if (subObj) state[subObj][prop] = hex; else state[prop] = hex;
-        Array.prototype.forEach.call(wrap.children, function(c){ c.classList.remove('active'); });
-        b.classList.add('active');
-        persistLocal();
-      });
-      wrap.appendChild(b);
-    });
-  }
-
-  function setup2DPad(padId, dotId, getObj, onUpdate){
-    var pad = document.getElementById(padId);
-    var dot = document.getElementById(dotId);
-    if (!pad || !dot) return;
-    function syncDot(){
-      var o = getObj();
-      dot.style.left = Math.round(o.x * 100) + '%';
-      dot.style.top  = Math.round(o.y * 100) + '%';
-    }
-    syncDot();
-    var dragging = false;
-    function applyEvt(e){
-      var r = pad.getBoundingClientRect();
-      var cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-      var cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-      var nx = Math.max(0.04, Math.min(0.96, cx / Math.max(1, r.width)));
-      var ny = Math.max(0.04, Math.min(0.96, cy / Math.max(1, r.height)));
-      onUpdate(nx, ny);
-      syncDot();
-      persistLocal();
-    }
-    pad.addEventListener('pointerdown', function(e){ dragging = true; try { pad.setPointerCapture(e.pointerId); } catch(_e){} applyEvt(e); });
-    pad.addEventListener('pointermove', function(e){ if (dragging) applyEvt(e); });
-    pad.addEventListener('pointerup', function(){ dragging = false; });
-    pad.addEventListener('pointercancel', function(){ dragging = false; });
-    pad._syncDot = syncDot;
-  }
-
-  function refreshAllControlValues(){
-    ['gender','age','muscle','weight','height','noseWidth','noseLength','noseHeight','jawWidth','chinSize','cheekbones','eyeSize','eyeSpacing','eyeTilt','lipSize','mouthWidth','earSize','forehead','cyberFace','bustSize','bustFirmness','bustHeight','bustSpacing','strideYaw','aimYaw','aimSkill'].forEach(function(k){
-      var el = document.getElementById('rng-' + k);
-      var vEl = document.getElementById('val-' + k);
-      if (el){ el.value = state[k]; if (vEl) vEl.textContent = Number(state[k]).toFixed(2); }
-    });
-    ['headSize','shoulderWidth','torsoWidth','armLength','hipWidth','legLength','calfBulk','footSize'].forEach(function(k){
-      var el = document.getElementById('rng-skel-' + k);
-      var vEl = document.getElementById('val-skel-' + k);
-      if (el){ el.value = state.skelProps[k]; if (vEl) vEl.textContent = Number(state.skelProps[k]).toFixed(2); }
-    });
-    ['skinFinish','expression','beardStyle','scarType','tattooStyle','tattooZone','chassisMode','skelStyle','outfit','underwearBra','underwearBottom','wristDevice','helmetMode','hairStyle','cqbSpeed'].forEach(function(k){
-      var el = document.getElementById('sel-' + k);
-      if (el) el.value = state[k];
-    });
-    ['head','torso','armL','armR','legL','legR'].forEach(function(pk){
-      var el = document.getElementById('sel-part-' + pk);
-      if (el) el.value = state.bodyParts[pk];
-    });
-    var pm = document.getElementById('sel-piercingMetal'); if (pm) pm.value = state.piercings.metal;
-    ['brow','nostril','lip','ears','glow'].forEach(function(pk){
-      var el = document.getElementById('chk-piercing-' + pk); if (el) el.checked = !!state.piercings[pk];
-    });
-    ['tattooGlow','equipRiflePreview','cqbMoving','firing','suppressed','injuredLeg','crowd25'].forEach(function(k){
-      var el = document.getElementById('chk-' + k); if (el) el.checked = !!state[k];
-    });
-    var cs = document.getElementById('inp-callsign'); if (cs) cs.value = state.callsign || 'VIGIL-01';
-    var gsChk = document.getElementById('chk-grayStreak'); if (gsChk) gsChk.checked = !!(state.grayStreak && state.grayStreak.enabled);
-    buildSwatches('sw-skin', SKIN_SWATCHES, 'skinHex');
-    buildSwatches('sw-eye',  EYE_SWATCHES,  'eyeHex');
-    buildSwatches('sw-hair', HAIR_SWATCHES, 'hairHex');
-    buildSwatches('sw-suit', SUIT_SWATCHES, 'suitTint');
-    buildSwatches('sw-nail', NAIL_SWATCHES, 'nailColor');
-    buildSwatches('sw-tattoo', TAT_SWATCHES, 'tattooColor');
-    buildSwatches('sw-pierceCol', TAT_SWATCHES, 'color', 'piercings');
-    buildSwatches('sw-uwCol', UW_SWATCHES, 'underwearColor');
-    refreshGenderAndBustVisibility();
-    refreshLockUI();
-  }
-
-  // Radio Sex Mode (Male / Female / Fine-Tune)
-  Array.prototype.slice.call(document.querySelectorAll('[name="sexMode"]')).forEach(function(r){
-    r.addEventListener('change', function(){
-      if (!r.checked) return;
-      state.sexMode = r.value;
-      if (r.value === 'male'){ state.gender = -0.85; if (state.beardStyle === 'clean' && state.tab === 'face') state.beardStyle = 'stubble'; }
-      else if (r.value === 'female'){ state.gender = 0.85; state.beardStyle = 'clean'; }
-      var rng = document.getElementById('rng-gender'), val = document.getElementById('val-gender');
-      if (rng) rng.value = state.gender;
-      if (val) val.textContent = Number(state.gender).toFixed(2);
-      var bEl = document.getElementById('sel-beardStyle'); if (bEl) bEl.value = state.beardStyle;
-      refreshGenderAndBustVisibility();
-      persistLocal();
-    });
-  });
-
-  // Bind all ranges, selects, checkboxes
-  [
-    'gender','age','muscle','weight','height','noseWidth','noseLength','noseHeight',
-    'jawWidth','chinSize','cheekbones','eyeSize','eyeSpacing','eyeTilt','lipSize',
-    'mouthWidth','earSize','forehead','cyberFace','bustSize','bustFirmness','bustHeight','bustSpacing',
-    'strideYaw','aimYaw','aimSkill'
-  ].forEach(function(k){ bindRange('rng-' + k, k, 'val-' + k); });
-
-  ['headSize','shoulderWidth','torsoWidth','armLength','hipWidth','legLength','calfBulk','footSize'].forEach(function(k){
-    bindRange('rng-skel-' + k, k, 'val-skel-' + k, 'skelProps');
-  });
-
-  ['skinFinish','expression','beardStyle','scarType','tattooStyle','tattooZone','chassisMode','skelStyle','outfit','underwearBra','underwearBottom','wristDevice','helmetMode','hairStyle','cqbSpeed'].forEach(function(k){
-    bindSelect('sel-' + k, k);
-  });
-  var selUwMale = document.getElementById('sel-uwMale');
-  if (selUwMale){
-    selUwMale.value = state.underwearBottom || 'boxers_charcoal';
-    selUwMale.addEventListener('change', function(){ state.underwearBottom = selUwMale.value; persistLocal(); });
-  }
-  ['head','torso','armL','armR','legL','legR'].forEach(function(pk){
-    bindSelect('sel-part-' + pk, pk, 'bodyParts');
-  });
-  bindSelect('sel-piercingMetal', 'metal', 'piercings');
-  ['brow','nostril','lip','ears','glow'].forEach(function(pk){
-    bindCheck('chk-piercing-' + pk, pk, 'piercings');
-  });
-  ['tattooGlow','equipRiflePreview','cqbMoving','firing','suppressed','injuredLeg','crowd25'].forEach(function(k){
-    bindCheck('chk-' + k, k);
-  });
-
-  var callsignInp = document.getElementById('inp-callsign');
-  if (callsignInp){
-    callsignInp.value = state.callsign;
-    callsignInp.addEventListener('input', function(){ state.callsign = callsignInp.value.toUpperCase() || 'VIGIL-01'; persistLocal(); });
-  }
-
-  buildSwatches('sw-skin', SKIN_SWATCHES, 'skinHex');
-  buildSwatches('sw-eye',  EYE_SWATCHES,  'eyeHex');
-  buildSwatches('sw-hair', HAIR_SWATCHES, 'hairHex');
-  buildSwatches('sw-suit', SUIT_SWATCHES, 'suitTint');
-  buildSwatches('sw-nail', NAIL_SWATCHES, 'nailColor');
-  buildSwatches('sw-tattoo', TAT_SWATCHES, 'tattooColor');
-  buildSwatches('sw-pierceCol', TAT_SWATCHES, 'color', 'piercings');
-  buildSwatches('sw-uwCol', UW_SWATCHES, 'underwearColor');
-
-  setup2DPad('pad-scar', 'dot-scar', function(){ return state.scarPos || {x:0.5,y:0.5}; }, function(x, y){
-    state.scarPos = { x: x, y: y, enabled: true };
-    if (state.scarType === 'none'){
-      state.scarType = 'slash';
-      var st = document.getElementById('sel-scarType'); if (st) st.value = 'slash';
-    }
-  });
-  setup2DPad('pad-streak', 'dot-streak', function(){ return state.grayStreak || {x:0.35,y:0.45}; }, function(x, y){
-    state.grayStreak = Object.assign({}, state.grayStreak || {}, { enabled: true, x: x, y: y });
-    var c = document.getElementById('chk-grayStreak'); if (c) c.checked = true;
-  });
-  setup2DPad('pad-bust', 'dot-bust', function(){
-    return { x: ((state.bustQuad.x || 0) + 1) * 0.5, y: (1 - (state.bustQuad.y || 0)) * 0.5 };
-  }, function(nx, ny){
-    state.bustQuad = { x: nx * 2 - 1, y: (1 - ny) * 2 - 1 };
-  });
-
-  var gsCheck = document.getElementById('chk-grayStreak');
-  if (gsCheck){
-    gsCheck.checked = !!(state.grayStreak && state.grayStreak.enabled);
-    gsCheck.addEventListener('change', function(){ state.grayStreak = Object.assign({}, state.grayStreak || {}, { enabled: gsCheck.checked }); persistLocal(); });
-  }
-  var gsAngle = document.getElementById('rng-streakAngle');
-  if (gsAngle){
-    gsAngle.value = (state.grayStreak && state.grayStreak.angle) || 0.42;
-    gsAngle.addEventListener('input', function(){ state.grayStreak = Object.assign({}, state.grayStreak || {}, { angle: parseFloat(gsAngle.value) }); persistLocal(); });
-  }
-  var gsWidth = document.getElementById('rng-streakWidth');
-  if (gsWidth){
-    gsWidth.value = (state.grayStreak && state.grayStreak.width) || 0.18;
-    gsWidth.addEventListener('input', function(){ state.grayStreak = Object.assign({}, state.grayStreak || {}, { width: parseFloat(gsWidth.value) }); persistLocal(); });
-  }
-
-  // Lock-In & Cybernetics Expert Buttons
-  var btnLock = document.getElementById('btn-lock-appearance');
-  if (btnLock){
-    btnLock.addEventListener('click', function(){
-      if (!state.appearanceLocked){
-        state.appearanceLocked = true;
-        state.cyberExpertActive = false;
-        refreshLockUI();
-        persistLocal();
-      }
-    });
-  }
-  var btnExpert = document.getElementById('btn-cyber-expert');
-  if (btnExpert){
-    btnExpert.addEventListener('click', function(){
-      state.cyberExpertActive = !state.cyberExpertActive;
-      if (state.cyberExpertActive && state.skinFinish === 'matte'){
-        state.skinFinish = 'android';
-        var sf = document.getElementById('sel-skinFinish'); if (sf) sf.value = 'android';
-      }
-      refreshLockUI();
-      persistLocal();
-    });
-  }
-
-  // Presets & Randomizer
-  var PRESETS = {
-    vanguard: { sexMode:'male',   gender:-0.85, muscle:0.80, weight:0.50, height:0.65, outfit:'armor',       helmetMode:'half',   hairStyle:'short',    beardStyle:'stubble',  chassisMode:'humanoid', suitTint:'#4d5d54' },
-    recon:    { sexMode:'female', gender: 0.85, muscle:0.45, weight:0.32, height:0.48, outfit:'jacket',      helmetMode:'open',   hairStyle:'ponytail', beardStyle:'clean',    chassisMode:'humanoid', bodyParts:{head:'organic',torso:'organic',armL:'cyber',armR:'organic',legL:'organic',legR:'organic'}, suitTint:'#2c3b47' },
-    heavy:    { sexMode:'male',   gender:-0.95, muscle:0.95, weight:0.75, height:0.82, outfit:'armor',       helmetMode:'sealed', hairStyle:'short01',  beardStyle:'long',     chassisMode:'humanoid', bodyParts:{head:'organic',torso:'cyber',armL:'cyber',armR:'cyber',legL:'organic',legR:'organic'}, suitTint:'#5e4a38' },
-    android:  { sexMode:'female', gender: 0.72, muscle:0.55, weight:0.36, height:0.58, outfit:'cyborg_suit', helmetMode:'none',   hairStyle:'bob',      beardStyle:'clean',    chassisMode:'android',  skinFinish:'android', skelStyle:'titanium', bodyParts:{head:'skeleton',torso:'skeleton',armL:'skeleton',armR:'skeleton',legL:'skeleton',legR:'skeleton'} }
-  };
-  Array.prototype.slice.call(document.querySelectorAll('[data-preset]')).forEach(function(btn){
-    btn.addEventListener('click', function(){
-      if (isBioLocked()) return;
-      var p = PRESETS[btn.getAttribute('data-preset')];
-      if (!p) return;
-      Object.assign(state, p);
-      if (p.bodyParts) state.bodyParts = Object.assign({}, p.bodyParts);
-      refreshAllControlValues();
-      persistLocal();
-    });
-  });
-
-  var randBtn = document.getElementById('btn-randomize');
-  if (randBtn){
-    randBtn.addEventListener('click', function(){
-      if (isBioLocked()) return;
-      var r = function(a,b){ return a + Math.random()*(b-a); };
-      state.sexMode = Math.random() > 0.5 ? 'female' : 'male';
-      state.gender = state.sexMode === 'female' ? 0.85 : -0.85;
-      state.muscle = r(0.25, 0.9); state.weight = r(0.25, 0.7); state.height = r(0.2, 0.85);
-      state.noseWidth = r(-0.6, 0.6); state.jawWidth = r(-0.6, 0.6); state.cheekbones = r(-0.5, 0.6);
-      state.skinHex = SKIN_SWATCHES[Math.floor(Math.random()*10)];
-      state.eyeHex  = EYE_SWATCHES[Math.floor(Math.random()*EYE_SWATCHES.length)];
-      state.hairHex = HAIR_SWATCHES[Math.floor(Math.random()*HAIR_SWATCHES.length)];
-      state.suitTint = SUIT_SWATCHES[Math.floor(Math.random()*SUIT_SWATCHES.length)];
-      var hairs = ['short01','short','sleek','messy','shaggy','bob','long','ponytail','braids','afro','buzz'];
-      state.hairStyle = hairs[Math.floor(Math.random()*hairs.length)];
-      var beards = ['clean','stubble','painted_short','goatee','short_3d','long','moustache'];
-      state.beardStyle = state.gender > 0.1 ? 'clean' : beards[Math.floor(Math.random()*beards.length)];
-      refreshAllControlValues();
-      persistLocal();
-    });
-  }
-
-  // Ramp & Action buttons
-  var btnReplay = document.getElementById('btn-replay-ramp'); if (btnReplay) btnReplay.addEventListener('click', function(){ state.rampTimer = 0.0; setTab('ramp'); });
-  var btnSeated = document.getElementById('btn-jump-seated'); if (btnSeated) btnSeated.addEventListener('click', function(){ state.rampTimer = 4.0; setTab('ramp'); });
-  var btnAccept = document.getElementById('btn-mission-accept'); if (btnAccept) btnAccept.addEventListener('click', function(){ state.missionAccepted = true; persistLocal(); });
-  var btnDecline = document.getElementById('btn-mission-decline'); if (btnDecline) btnDecline.addEventListener('click', function(){ state.missionAccepted = false; persistLocal(); });
-  var btnShipSeed = document.getElementById('btn-ship-seed'); if (btnShipSeed) btnShipSeed.addEventListener('click', function(){ state.shipSeed = (state.shipSeed + 1) % 4; persistLocal(); });
-
-  Array.prototype.slice.call(document.querySelectorAll('[data-peek]')).forEach(function(b){
-    b.addEventListener('click', function(){
-      var k = b.getAttribute('data-peek');
-      state.peek = k; state.cqbMode = k;
-      Array.prototype.slice.call(document.querySelectorAll('[data-peek]')).forEach(function(x){ x.classList.toggle('active', x === b); });
-      persistLocal();
-    });
-  });
-
-  Array.prototype.slice.call(document.querySelectorAll('[data-outfit-quick]')).forEach(function(b){
-    b.addEventListener('click', function(){
-      state.outfit = b.getAttribute('data-outfit-quick');
-      var so = document.getElementById('sel-outfit'); if (so) so.value = state.outfit;
-      persistLocal();
-    });
-  });
-
-  // D1 Authority Save
-  var btnSaveD1 = document.getElementById('btn-save-d1');
-  if (btnSaveD1){
-    btnSaveD1.addEventListener('click', async function(){
-      persistLocal();
-      d1StatusEl.textContent = 'SYNCING TO AUTHORITY D1...';
-      try {
-        var token = localStorage.getItem('ev_session_token') || '';
-        var resp = await fetch('https://ev-authority.ericautomates.workers.dev/api/v06/avatar/save', {
-          method: 'PUT',
-          headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { 'Authorization': 'Bearer ' + token } : {}),
-          body: JSON.stringify({ callsign: state.callsign, avatar: state })
-        });
-        if (resp.ok) d1StatusEl.textContent = 'COMMITTED TO D1 AUTHORITY // LOCKED';
-        else d1StatusEl.textContent = 'LOCAL CACHE SAVED (AUTH REQUIRED FOR REMOTE D1: HTTP ' + resp.status + ')';
-      } catch (_err){
-        d1StatusEl.textContent = 'LOCAL CACHE SAVED (OFFLINE SANDBOX)';
-      }
-    });
-  }
-
-  // Interactive 1-Finger Orbit, 2-Finger Pinch Zoom + 2-Finger Pan, Wheel Zoom, Shift+Drag Pan & Double-Tap Reset!
-  var activePts = new Map();
-  var lastPinchDist = 0, lastMid = null, lastTapMs = 0;
-  function applyOrbitDelta(dx, dy, shiftHeld){
-    if (shiftHeld){
-      var z = state.camZoom || 1.0;
-      state.camPanX = Math.max(-0.85, Math.min(0.85, (state.camPanX || 0) - dx * 0.0020 * z));
-      state.camPanY = Math.max(-0.85, Math.min(0.85, (state.camPanY || 0) + dy * 0.0020 * z));
-      return;
-    }
-    if (state.tab === 'action'){
-      state.aimYaw = Math.max(-1.4, Math.min(1.4, (state.aimYaw || 0) + dx * 0.008));
-      var ay = document.getElementById('rng-aimYaw'); if (ay) ay.value = state.aimYaw;
-    } else if (state.tab === 'ramp' || state.tab === 'quarters'){
-      state.stageOrbitYaw = (state.stageOrbitYaw || 0) + dx * 0.009;
-    } else {
-      state.turntableYaw = (state.turntableYaw || 0) + dx * 0.01;
-    }
-    state.camPitch = Math.max(-0.48, Math.min(0.60, (state.camPitch || 0) + dy * 0.005));
-  }
-  function resetView(){
-    state.turntableYaw = 0.18; state.camPitch = 0.0; state.camZoom = 1.0;
-    state.camPanX = 0.0; state.camPanY = 0.0; state.stageOrbitYaw = 0.0;
-    persistLocal();
-  }
-  var btnResetView = document.getElementById('btn-reset-view');
-  if (btnResetView) btnResetView.addEventListener('click', resetView);
-
-  // Purge Browser Cache for THIS Origin Only (preserves other tabs, logins & sites across Chrome / DuckDuckGo!)
-  async function purgeSiteCacheAndReload(){
-    var btn = document.getElementById('btn-purge-cache');
-    if (btn) btn.textContent = 'Purging...';
-    try {
-      if (typeof caches !== 'undefined' && caches.keys){
-        var keys = await caches.keys();
-        await Promise.all(keys.map(function(k){ return caches.delete(k); }));
-      }
-      if (typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.serviceWorker.getRegistrations){
-        var regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map(function(r){ return r.unregister(); }));
-      }
-      try {
-        localStorage.removeItem('ev_operator_forge_v06');
-        localStorage.removeItem('ev_operator_forge_v07');
-      } catch (_ls){}
-      if (typeof fetch === 'function' && window.location && /^https?:/.test(window.location.protocol)){
-        await fetch(window.location.pathname, {
-          cache: 'reload',
-          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
-        }).catch(function(){});
-      }
-    } catch (_e){}
-    try {
-      var base = (window.location.href || '').split('?')[0].split('#')[0];
-      window.location.replace(base + '?ev_bust=' + Date.now());
-    } catch (_e2){ window.location.reload(); }
-  }
-  var btnPurgeCache = document.getElementById('btn-purge-cache');
-  if (btnPurgeCache) btnPurgeCache.addEventListener('click', purgeSiteCacheAndReload);
-
-  // Force WebGL2 Safe Mode toggle (fixes blank WebGPU experimental adapters on mobile DuckDuckGo WebView!)
-  var forceMode = '';
-  try {
-    var qs = (window.location && window.location.search) || '';
-    if (qs.indexOf('backend=webgl2') !== -1 || localStorage.getItem('ev_force_webgl2') === '1') forceMode = 'webgl2';
-  } catch (_e){}
-  var btnToggleBackend = document.getElementById('btn-toggle-backend');
-  if (btnToggleBackend){
-    btnToggleBackend.textContent = forceMode === 'webgl2' ? 'Mode: WebGL2' : 'Mode: Auto';
-    btnToggleBackend.addEventListener('click', function(){
-      try { localStorage.setItem('ev_force_webgl2', forceMode === 'webgl2' ? '0' : '1'); } catch (_e){}
-      var base = (window.location.href || '').split('?')[0].split('#')[0];
-      window.location.replace(base + '?backend=' + (forceMode === 'webgl2' ? 'auto' : 'webgl2') + '&ev_bust=' + Date.now());
-    });
-  }
-  if (window.visualViewport){
-    window.visualViewport.addEventListener('resize', syncCanvasSize);
-  }
-
-  // Boot Dual WebGPU / WebGL2 Engine (with automatic WebGL2 fallback if experimental mobile WebGPU fails!)
-  refreshAllControlValues();
-  setTab(state.tab || 'face');
-  syncCanvasSize();
-  function bootEngine(modeOverride){
-    return EVGPUEngine.createEngine(canvas, window.EV_HUMANOID_KIT_PACK, modeOverride).catch(function(err){
-      if (modeOverride !== 'webgl2'){
-        var fresh = canvas.cloneNode(false);
-        canvas.parentNode.replaceChild(fresh, canvas);
-        canvas = fresh;
-        attachCanvasGestures(canvas);
-        syncCanvasSize();
-        return EVGPUEngine.createEngine(canvas, window.EV_HUMANOID_KIT_PACK, 'webgl2');
-      }
-      throw err;
-    });
-  }
-  function attachCanvasGestures(target){
-    target.addEventListener('pointerdown', function(e){
-      if (e.preventDefault) e.preventDefault();
-      try { target.setPointerCapture(e.pointerId); } catch (_err){}
-      activePts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (activePts.size === 1){
-        var nowMs = Date.now();
-        if (nowMs - lastTapMs < 280) resetView();
-        lastTapMs = nowMs;
-        lastMid = null;
-      } else if (activePts.size >= 2){
-        var pts = Array.from(activePts.values());
-        lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-        lastMid = { x: (pts[0].x + pts[1].x) * 0.5, y: (pts[0].y + pts[1].y) * 0.5 };
-      }
-    });
-    target.addEventListener('pointermove', function(e){
-      if (!activePts.has(e.pointerId)) return;
-      if (e.preventDefault) e.preventDefault();
-      var prev = activePts.get(e.pointerId);
-      var dx = e.clientX - prev.x, dy = e.clientY - prev.y;
-      activePts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (activePts.size === 1){
-        applyOrbitDelta(dx, dy, !!e.shiftKey || e.buttons === 2);
-      } else if (activePts.size >= 2){
-        var pts = Array.from(activePts.values());
-        var nd = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-        var mid = { x: (pts[0].x + pts[1].x) * 0.5, y: (pts[0].y + pts[1].y) * 0.5 };
-        if (lastPinchDist > 4 && nd > 4){
-          state.camZoom = Math.max(0.45, Math.min(1.85, (state.camZoom || 1.0) * (lastPinchDist / nd)));
-        }
-        if (lastMid){
-          var z = state.camZoom || 1.0;
-          state.camPanX = Math.max(-0.85, Math.min(0.85, (state.camPanX || 0) - (mid.x - lastMid.x) * 0.0022 * z));
-          state.camPanY = Math.max(-0.85, Math.min(0.85, (state.camPanY || 0) + (mid.y - lastMid.y) * 0.0022 * z));
-        }
-        lastPinchDist = nd;
-        lastMid = mid;
-      }
-    });
-    function endPtr(e){ activePts.delete(e.pointerId); if (activePts.size < 2){ lastPinchDist = 0; lastMid = null; } }
-    target.addEventListener('pointerup', endPtr);
-    target.addEventListener('pointercancel', endPtr);
-    target.addEventListener('contextmenu', function(e){ if (e.preventDefault) e.preventDefault(); });
-    target.addEventListener('wheel', function(e){
-      if (e.preventDefault) e.preventDefault();
-      state.camZoom = Math.max(0.45, Math.min(1.85, (state.camZoom || 1.0) + (e.deltaY > 0 ? 0.08 : -0.08)));
-    }, { passive: false });
-  }
-  attachCanvasGestures(canvas);
-
-  bootEngine(forceMode).then(function(engine){
-    var b = engine.backend.toUpperCase();
-    backendBadge.textContent = b === 'WEBGPU' ? 'WEBGPU COMPUTE SKINNING' : (b === 'WEBGL2' ? 'WEBGL2 INSTANCED PBR' : 'WEBGL1 FALLBACK PBR');
-    backendBadge.classList.toggle('is-webgpu', b === 'WEBGPU');
-
-    var lastTs = performance.now(), startTs = lastTs;
-    function tick(now){
-      var dt = Math.min(0.05, Math.max(0.001, (now - lastTs) / 1000));
-      lastTs = now;
-      var totalSec = (now - startTs) / 1000;
-      if (state.tab === 'ramp' && state.rampTimer < 4.5) state.rampTimer += dt;
-      syncCanvasSize();
-      var tel = engine.renderFrame(state, dt, totalSec);
-
-      var hm = state.helmetMode || 'none';
-      portraitTag.textContent = hm === 'sealed' ? 'SEALED VISOR' : (hm === 'half' ? 'HALF-VISOR' : (hm === 'open' ? 'OPEN VISOR' : 'UNMASKED'));
-      fadeOverlay.style.opacity = tel.fadeAlpha ? tel.fadeAlpha.toFixed(3) : '0';
-
-      telemetryEl.textContent =
-        tel.fps + ' FPS | ' + tel.drawCalls + ' DRAWS | ' + tel.tris.toLocaleString() + ' TRIS | ' +
-        'LOD0:' + Math.round(tel.lod0Tris) + ' LOD1:' + Math.round(tel.lod1Tris) + ' LOD2:' + Math.round(tel.lod2Tris) +
-        (tel.lodStats.lod2 > 0 ? (' | INST:' + tel.lodStats.lod2) : '');
-
-      requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-  }).catch(function(err){
-    backendBadge.textContent = 'ENGINE INIT ERROR';
-    telemetryEl.textContent = String(err && err.message || err);
-  });
-})();
+  body.stage-focus .inspector{height:96px}
+  body.stage-focus .view-bar,body.stage-focus .inspector-scroll,body.stage-focus .inspector-foot,body.stage-focus .progress-cluster{display:none}
+  @media (min-width:1024px){body.stage-focus .inspector{height:100%;width:74px;flex:0 0 74px}}
+  body.stage-focus .inspector-head{justify-content:center;text-align:center}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
 `;
 
+/* ------------------------------------------------------------------ *
+ * Static shell
+ * ------------------------------------------------------------------ */
 const htmlTop = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -759,609 +431,238 @@ const htmlTop = `<!DOCTYPE html>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>Endless Vigil // Operator Forge &amp; Tactical Stage</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; }
-  html, body {
-    margin: 0; padding: 0; height: 100%; max-width: 100vw; overflow-x: hidden; overflow-y: hidden;
-    background: #0a0c0f; color: #e2e9ef;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 12px; line-height: 1.4;
-  }
-  .forge-shell {
-    display: flex; flex-direction: column; height: 100dvh; width: 100%; overflow: hidden;
-  }
-  .stage-pane {
-    position: relative; width: 100%; height: min(46dvh, 420px); flex: 0 0 auto;
-    background: radial-gradient(circle at 50% 35%, #1c1f24 0%, #0a0c0f 85%);
-    overflow: hidden;
-  }
-  .control-pane {
-    width: 100%; flex: 1 1 0; min-height: 0; overflow: hidden;
-    background: #0e1217; border-top: 1px solid #28313c;
-    display: flex; flex-direction: column;
-  }
-  @media (min-width: 920px) {
-    .forge-shell { flex-direction: row; height: 100dvh; overflow: hidden; }
-    .stage-pane { flex: 1 1 0; height: 100%; min-width: 0; }
-    .control-pane {
-      width: min(100%, 420px); flex: 0 0 auto; height: 100%;
-      border-top: none; border-left: 1px solid #28313c;
-    }
-  }
-  #viewport3d {
-    display: block; width: 100%; height: 100%; touch-action: none; cursor: grab;
-  }
-  #viewport3d:active { cursor: grabbing; }
-  .stage-topbar {
-    position: absolute; top: 8px; left: 8px; right: 8px;
-    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start;
-    gap: 6px; pointer-events: none; z-index: 4;
-  }
-  .hud-pill {
-    pointer-events: auto; background: rgba(12, 15, 20, 0.86);
-    border: 1px solid #2b3642; padding: 4px 8px; border-radius: 4px;
-    display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
-  }
-  .hud-nav a {
-    color: #96aab8; text-decoration: none; font-size: 10.5px; padding: 2px 5px;
-    border-radius: 3px; border: 1px solid transparent;
-  }
-  .hud-nav a:hover { color: #00d4ff; border-color: #1f4558; }
-  .backend-tag {
-    font-weight: 700; font-size: 10px; letter-spacing: 0.06em;
-    padding: 2px 6px; border-radius: 3px; background: #221c14; color: #f29b4b;
-    border: 1px solid #593b1d;
-  }
-  .backend-tag.is-webgpu { color: #00d4ff; border-color: #0b4f5e; background: #07222b; }
-  .telemetry-line { font-size: 10px; color: #a7b9c8; }
-
-  #corner-portrait-hud {
-    position: absolute; left: 10px; bottom: 10px; width: 104px; height: 104px;
-    border: 1.5px solid #00d4ff; box-shadow: 0 0 18px rgba(0, 212, 255, 0.22);
-    border-radius: 4px; pointer-events: none; z-index: 4; overflow: hidden;
-    display: flex; flex-direction: column; justify-content: space-between;
-  }
-  .portrait-hdr {
-    background: rgba(8, 12, 16, 0.88); color: #00d4ff; font-size: 8.5px; font-weight: 700;
-    padding: 2px 4px; letter-spacing: 0.04em; border-bottom: 1px solid rgba(0,212,255,0.28);
-    display: flex; justify-content: space-between; gap: 4px; white-space: nowrap; overflow: hidden;
-  }
-  .portrait-ftr {
-    background: rgba(8, 12, 16, 0.88); color: #d0e5f2; font-size: 8px;
-    padding: 2px 4px; border-top: 1px solid rgba(0,212,255,0.22);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .gesture-hint {
-    position: absolute; right: 10px; bottom: 10px; pointer-events: none; z-index: 4;
-    background: rgba(12,15,20,0.72); border: 1px solid #26313c; border-radius: 4px;
-    padding: 3px 7px; font-size: 9.5px; color: #96aab8;
-  }
-  #cinema-fade {
-    position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none;
-    z-index: 6; display: flex; align-items: center; justify-content: center;
-    color: #00d4ff; letter-spacing: 0.2em; font-size: 11px;
-  }
-
-  .tab-bar {
-    display: flex; flex-wrap: wrap; border-bottom: 1px solid #26303b; background: #0a0d11; flex: 0 0 auto;
-  }
-  .tab-btn {
-    flex: 1 1 33%; padding: 8px 5px; background: transparent; border: none;
-    border-bottom: 2px solid transparent; color: #8c9dad; cursor: pointer;
-    font-family: inherit; font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
-  }
-  .tab-btn:hover { color: #e2e9ef; }
-  .tab-btn.active { color: #f29b4b; border-bottom-color: #f29b4b; background: #141920; }
-
-  .panel-scroll {
-    flex: 1 1 0; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain; padding: 10px;
-  }
-  .tab-panel { display: none; flex-direction: column; gap: 10px; padding-bottom: 24px; }
-  .tab-panel.active { display: flex; }
-
-  .sec-card, .sub-drawer {
-    background: #13181f; border: 1px solid #25303d; border-radius: 5px; padding: 9px 10px;
-    display: flex; flex-direction: column; gap: 8px;
-  }
-  .sub-drawer summary {
-    cursor: pointer; list-style: none; font-size: 10.5px; font-weight: 700;
-    color: #00d4ff; letter-spacing: 0.06em; text-transform: uppercase;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .sub-drawer summary::after { content: '+'; font-size: 13px; color: #f29b4b; }
-  .sub-drawer[open] summary::after { content: '−'; }
-  .sub-body { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; border-top: 1px solid #202a36; }
-
-  .sec-title {
-    font-size: 10px; font-weight: 700; color: #f29b4b; letter-spacing: 0.08em;
-    text-transform: uppercase; border-bottom: 1px solid #202a36; padding-bottom: 4px;
-  }
-  .ctrl-row { display: flex; flex-direction: column; gap: 3px; }
-  .ctrl-lbl { display: flex; justify-content: space-between; font-size: 11px; color: #c0cfdc; }
-  input[type="range"] { width: 100%; accent-color: #f29b4b; margin: 0; }
-  select, input[type="text"] {
-    width: 100%; background: #090c10; color: #e2e9ef; border: 1px solid #2a3746;
-    padding: 6px 8px; border-radius: 4px; font-family: inherit; font-size: 11px;
-  }
-  .radio-row { display: flex; flex-wrap: wrap; gap: 6px; }
-  .radio-chip {
-    flex: 1 1 30%; display: flex; align-items: center; justify-content: center; gap: 5px;
-    background: #0b0f14; border: 1px solid #293645; border-radius: 4px; padding: 6px 8px;
-    cursor: pointer; font-size: 11px; font-weight: 700; color: #c5d4e0;
-  }
-  .radio-chip input { accent-color: #f29b4b; margin: 0; }
-  .btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
-  .ev-btn {
-    flex: 1 1 auto; background: #16202a; color: #dce8f2; border: 1px solid #2b4257;
-    padding: 7px 9px; border-radius: 4px; cursor: pointer; font-family: inherit;
-    font-size: 11px; font-weight: 700; text-align: center;
-  }
-  .ev-btn:hover { border-color: #00d4ff; color: #00d4ff; }
-  .ev-btn.active { background: #0e303e; border-color: #00d4ff; color: #00d4ff; }
-  .ev-btn.warn { border-color: #6b411d; color: #f29b4b; }
-  .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
-  .swatch {
-    width: 23px; height: 23px; border-radius: 4px; border: 2px solid #253341; cursor: pointer;
-    color: #cbd5e1; font-size: 11px; display: flex; align-items: center; justify-content: center; padding: 0;
-  }
-  .swatch-none { background: #141a21; }
-  .swatch.active { border-color: #f29b4b; box-shadow: 0 0 8px rgba(242,155,75,0.65); }
-  .chk-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #cbd9e4; cursor: pointer; }
-  .pad-2d {
-    position: relative; width: 100%; height: 92px; border-radius: 4px;
-    background: linear-gradient(135deg, #0e151d 0%, #16222e 100%);
-    border: 1px solid #283a4d; cursor: crosshair; touch-action: none;
-  }
-  .pad-corner {
-    position: absolute; font-size: 8.5px; color: #8da2b3; pointer-events: none; padding: 3px 5px;
-  }
-  .pad-dot {
-    position: absolute; width: 12px; height: 12px; border-radius: 50%;
-    background: #f29b4b; border: 2px solid #fff; transform: translate(-50%, -50%);
-    pointer-events: none;
-  }
-  .part-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-  .part-cell { flex: 1 1 46%; display: flex; flex-direction: column; gap: 3px; }
-  .lore-box {
-    padding: 8px; border-radius: 4px; font-size: 10.5px; line-height: 1.45;
-    background: #0d161f; border: 1px solid #1e3b4d; color: #9fc5da;
-  }
-  .lore-box.locked { background: #1f1412; border-color: #6e3528; color: #f6b3a4; }
-  .lore-box.expert { background: #0c1f24; border-color: #00d4ff; color: #8ef2ff; }
-  .is-locked { opacity: 0.52; }
-  .status-msg { font-size: 10px; color: #7dc4d9; min-height: 14px; }
-</style>
+<title>Endless Vigil // Operator Forge Atelier</title>
+<style>${CSS}</style>
 </head>
 <body>
 <div class="forge-shell">
-  <section class="stage-pane">
-    <canvas id="viewport3d"></canvas>
-    <div class="stage-topbar">
-      <div class="hud-pill hud-nav">
-        <strong style="color:#f29b4b;">ENDLESS VIGIL // FORGE</strong>
-        <a href="index.html">Hub</a>
-        <a href="temporal-lab.html">Temporal Lab</a>
-        <a href="cuff-slate.html">Cuff Slate</a>
-        <a href="conglomerate-flowchart.html">Conglomerate</a>
-        <a href="continuum-monitor.html">Continuum</a>
-      </div>
-      <div class="hud-pill">
-        <span id="backend-badge" class="backend-tag">INITIALIZING GPU...</span>
-        <span id="hud-telemetry" class="telemetry-line">Loading CC0 asset kit...</span>
-        <button type="button" id="btn-reset-view" class="ev-btn" style="padding:2px 6px;font-size:10px;flex:0 0 auto;">Reset Cam</button>
-        <button type="button" id="btn-toggle-backend" class="ev-btn" style="padding:2px 6px;font-size:10px;flex:0 0 auto;" title="Switch between Auto WebGPU and WebGL2 Safe Mode">Mode: Auto</button>
-        <button type="button" id="btn-purge-cache" class="ev-btn warn" style="padding:2px 6px;font-size:10px;flex:0 0 auto;" title="Clear site cache & force fresh reload without affecting other browser sites">Purge Cache</button>
-      </div>
-    </div>
 
-    <div id="corner-portrait-hud">
-      <div class="portrait-hdr"><span>LIVE ID</span><span id="portrait-mode-tag">UNMASKED</span></div>
-      <div class="portrait-ftr">VITALS: 100% // RIG ONLINE</div>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z" fill="none" stroke="#61e3ff" stroke-width="1.5"/><path d="M12 7 V17 M8 12 H16" stroke="#f2ae6a" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+      <span class="brand-copy"><strong>ENDLESS VIGIL</strong><small>OPERATOR FORGE · ATELIER</small></span>
     </div>
-    <div class="gesture-hint">1-Finger: Orbit | 2-Finger: Zoom &amp; Pan | Shift+Drag: Pan</div>
-    <div id="cinema-fade">TRANSIT TO EV-74 KESTREL RAMP...</div>
-  </section>
+    <span class="topbar-step" id="topbar-step">STEP 01 · Face</span>
+    <span class="topbar-spacer"></span>
+    <div class="topbar-tools">
+      <span class="lock-badge" id="lock-state-badge">EDITABLE</span>
+      <button type="button" class="icon-btn" id="btn-undo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 7 L4 12 L9 17 M4 12 H14 A6 6 0 0 1 20 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" class="icon-btn" id="btn-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="M15 7 L20 12 L15 17 M20 12 H10 A6 6 0 0 0 4 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" class="icon-btn" id="btn-stage-focus" title="Focus on the operator (F)" aria-pressed="false" aria-label="Focus stage"><svg viewBox="0 0 24 24"><path d="M4 9 V4 H9 M15 4 H20 V9 M20 15 V20 H15 M9 20 H4 V15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      <button type="button" class="icon-btn" id="btn-diagnostics" title="Diagnostics &amp; tools" aria-expanded="false" aria-label="Diagnostics">⋯</button>
+    </div>
+  </header>
 
-  <aside class="control-pane">
-    <nav class="tab-bar" role="tablist">
-      <button type="button" class="tab-btn active" data-tab="face">1. FACE</button>
-      <button type="button" class="tab-btn" data-tab="body">2. BODY</button>
-      <button type="button" class="tab-btn" data-tab="quarters">3. QUARTERS</button>
-      <button type="button" class="tab-btn" data-tab="gear">4. GEAR/LOCK</button>
-      <button type="button" class="tab-btn" data-tab="ramp">5. RAMP</button>
-      <button type="button" class="tab-btn" data-tab="action">6. ACTION</button>
+  <main class="workspace">
+    <nav class="step-rail" aria-label="Operator Forge steps">
+      ${railBlock()}
     </nav>
 
-    <div class="panel-scroll">
-      <!-- TAB 1: FACE & BIO APPEARANCE -->
-      <div class="tab-panel active" data-panel="face">
-        <div class="sec-card">
-          <div class="sec-title">Operator Archetype</div>
-          <div class="btn-row">
-            <button type="button" class="ev-btn" data-preset="vanguard">Vanguard</button>
-            <button type="button" class="ev-btn" data-preset="recon">Recon</button>
-            <button type="button" class="ev-btn" data-preset="heavy">Heavy</button>
-            <button type="button" class="ev-btn" data-preset="android">Android</button>
-            <button type="button" id="btn-randomize" class="ev-btn warn">Randomize</button>
-          </div>
-        </div>
+    <section class="stage-pane" id="stage-pane">
+      <div class="stage-aura"></div>
+      <canvas id="viewport3d"></canvas>
+      <div class="stage-vignette"></div>
+      <div class="stage-grain"></div>
+      <div class="stage-reticle"></div>
 
-        <div class="sec-card">
-          <div class="sec-title">Sex / Gender, Skin Finish &amp; Eyes</div>
-          <div class="radio-row">
-            <label class="radio-chip"><input type="radio" class="bio-lockable" name="sexMode" value="male" checked /> Male</label>
-            <label class="radio-chip"><input type="radio" class="bio-lockable" name="sexMode" value="female" /> Female</label>
-            <label class="radio-chip"><input type="radio" class="bio-lockable" name="sexMode" value="finetune" /> Fine-Tune</label>
-          </div>
-          <div id="wrap-gender-finetune" class="ctrl-row" style="display:none;">
-            <div class="ctrl-lbl"><span>Continuous Gender Balance</span><span id="val-gender">0</span></div>
-            <input id="rng-gender" class="bio-lockable" type="range" min="-1" max="1" step="0.05" />
-          </div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Age</span><span id="val-age">0</span></div><input id="rng-age" class="bio-lockable" type="range" min="0" max="1" step="0.05" /></div>
-          <div class="ctrl-lbl"><span>Skin Tone</span></div>
-          <div id="sw-skin" class="swatches"></div>
-          <div class="ctrl-row">
-            <div class="ctrl-lbl"><span>Skin Finish / Surface</span></div>
-            <select id="sel-skinFinish" class="bio-lockable">
-              <option value="matte">Matte (Natural Biological)</option>
-              <option value="shiny">Shiny (Gloss / Hydrated)</option>
-              <option value="metallic">Metallic / Reflective Chrome</option>
-              <option value="android">Synthetic Android Dermal Panels</option>
-            </select>
-          </div>
-          <div class="ctrl-lbl"><span>Iris Color</span></div>
-          <div id="sw-eye" class="swatches"></div>
-          <div class="ctrl-row">
-            <div class="ctrl-lbl"><span>Expression</span></div>
-            <select id="sel-expression">
-              <option value="neutral">Neutral</option>
-              <option value="smirk">Smirk</option>
-              <option value="focused">Focused</option>
-              <option value="blink">Blink</option>
-              <option value="bleed">Pain / Bleed</option>
-            </select>
-          </div>
-        </div>
-
-        <details class="sub-drawer">
-          <summary>Craniofacial Morph Targets (13 Sliders)</summary>
-          <div class="sub-body">
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Nose Width</span><span id="val-noseWidth">0</span></div><input id="rng-noseWidth" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Nose Length</span><span id="val-noseLength">0</span></div><input id="rng-noseLength" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Nose Height</span><span id="val-noseHeight">0</span></div><input id="rng-noseHeight" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Jaw Width</span><span id="val-jawWidth">0</span></div><input id="rng-jawWidth" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Chin Size</span><span id="val-chinSize">0</span></div><input id="rng-chinSize" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Cheekbones</span><span id="val-cheekbones">0</span></div><input id="rng-cheekbones" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Eye Size</span><span id="val-eyeSize">0</span></div><input id="rng-eyeSize" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Eye Spacing</span><span id="val-eyeSpacing">0</span></div><input id="rng-eyeSpacing" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Eye Tilt</span><span id="val-eyeTilt">0</span></div><input id="rng-eyeTilt" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Lip Fullness</span><span id="val-lipSize">0</span></div><input id="rng-lipSize" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Mouth Width</span><span id="val-mouthWidth">0</span></div><input id="rng-mouthWidth" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Ear Size</span><span id="val-earSize">0</span></div><input id="rng-earSize" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Forehead Height</span><span id="val-forehead">0</span></div><input id="rng-forehead" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-          </div>
-        </details>
-
-        <details class="sub-drawer">
-          <summary>Hair, Facial Hair &amp; Nail Polish</summary>
-          <div class="sub-body">
-            <div class="ctrl-row">
-              <div class="ctrl-lbl"><span>Hair Style</span></div>
-              <select id="sel-hairStyle" class="bio-lockable">
-                <option value="short01">Close Crew Cut (Short 01)</option>
-                <option value="short">Tactical Fade (Short 02)</option>
-                <option value="sleek">Swept Crop (Short 04)</option>
-                <option value="messy">Messy Layered</option>
-                <option value="shaggy">Shaggy Medium</option>
-                <option value="bob">Classic Bob</option>
-                <option value="long">Long Flowing</option>
-                <option value="ponytail">High Ponytail</option>
-                <option value="braids">Twin Braids</option>
-                <option value="afro">Natural Afro</option>
-                <option value="buzz">Buzz / Clean</option>
-              </select>
-            </div>
-            <div class="ctrl-lbl"><span>Hair Color</span></div>
-            <div id="sw-hair" class="swatches"></div>
-            <div class="ctrl-row">
-              <div class="ctrl-lbl"><span>Facial Hair (Stubble &amp; 3D Mesh)</span></div>
-              <select id="sel-beardStyle" class="bio-lockable">
-                <option value="clean">Clean Shaven</option>
-                <option value="stubble">Light Stubble (Skin Follicle)</option>
-                <option value="painted_short">Heavy Stubble (Skin Follicle)</option>
-                <option value="goatee">3D Goatee</option>
-                <option value="short_3d">3D Full Short Beard</option>
-                <option value="long">3D Long Beard</option>
-                <option value="moustache">3D Handlebar Moustache</option>
-              </select>
-            </div>
-            <label class="chk-row"><input id="chk-grayStreak" type="checkbox" /> <span>Enable Gray Hair Streak</span></label>
-            <div id="pad-streak" class="pad-2d"><div id="dot-streak" class="pad-dot"></div></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Streak Angle / Width</span></div><input id="rng-streakAngle" type="range" min="-3.14" max="3.14" step="0.05" /><input id="rng-streakWidth" type="range" min="0.05" max="0.40" step="0.02" /></div>
-            <div class="ctrl-lbl"><span>Nail Polish (Default: None)</span></div>
-            <div id="sw-nail" class="swatches"></div>
-          </div>
-        </details>
-
-        <details class="sub-drawer">
-          <summary>Piercings (Default: None)</summary>
-          <div class="sub-body">
-            <label class="chk-row"><input id="chk-piercing-brow" type="checkbox" /> <span>Eyebrow Studs</span></label>
-            <label class="chk-row"><input id="chk-piercing-nostril" type="checkbox" /> <span>Nostril Stud</span></label>
-            <label class="chk-row"><input id="chk-piercing-lip" type="checkbox" /> <span>Labret / Lip Stud</span></label>
-            <label class="chk-row"><input id="chk-piercing-ears" type="checkbox" /> <span>Dual Ear Studs</span></label>
-            <div class="ctrl-row">
-              <div class="ctrl-lbl"><span>Metal Finish</span></div>
-              <select id="sel-piercingMetal">
-                <option value="silver">Brushed Silver</option>
-                <option value="gold">Warm Gold</option>
-                <option value="obsidian">Dark Obsidian</option>
-              </select>
-            </div>
-            <label class="chk-row"><input id="chk-piercing-glow" type="checkbox" /> <span>Glowing Cyber Piercing Nodes</span></label>
-            <div class="ctrl-lbl"><span>Cyber Node Color</span></div>
-            <div id="sw-pierceCol" class="swatches"></div>
-          </div>
-        </details>
-
-        <details class="sub-drawer">
-          <summary>Sci-Fi Scars &amp; Tattoos (Default: None)</summary>
-          <div class="sub-body">
-            <div class="ctrl-row">
-              <div class="ctrl-lbl"><span>Sci-Fi Scar Style</span></div>
-              <select id="sel-scarType" class="bio-lockable">
-                <option value="none">None</option>
-                <option value="slash">Blade Slash</option>
-                <option value="triple_puncture">Triple Neural Puncture Ports</option>
-                <option value="claw">Triple Claw / Shrapnel Laceration</option>
-                <option value="plasma_burn">Plasma Scorch Mark</option>
-              </select>
-            </div>
-            <div class="ctrl-lbl"><span>Drag Scar Anchor across Face UV</span></div>
-            <div id="pad-scar" class="pad-2d"><div id="dot-scar" class="pad-dot"></div></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Cybernetic Facial Seams</span><span id="val-cyberFace">0</span></div><input id="rng-cyberFace" type="range" min="0" max="1" step="0.05" /></div>
-
-            <div class="ctrl-row">
-              <div class="ctrl-lbl"><span>Tattoo Pattern</span></div>
-              <select id="sel-tattooStyle">
-                <option value="none">None</option>
-                <option value="circuit">Cyber-Circuit Trace</option>
-                <option value="tribal">Geometric / Tribal</option>
-                <option value="wing">Wing Crest</option>
-              </select>
-            </div>
-            <div class="ctrl-row">
-              <div class="ctrl-lbl"><span>Tattoo Placement</span></div>
-              <select id="sel-tattooZone">
-                <option value="arm_l">Left Upper Arm</option>
-                <option value="arm_r">Right Upper Arm</option>
-                <option value="forearm_l">Left Forearm</option>
-                <option value="chest">Chest</option>
-                <option value="neck">Neck</option>
-                <option value="face">Face / Cheek</option>
-              </select>
-            </div>
-            <label class="chk-row"><input id="chk-tattooGlow" type="checkbox" /> <span>Glowing Cyber Tattoo Ink</span></label>
-            <div class="ctrl-lbl"><span>Tattoo Ink Color</span></div>
-            <div id="sw-tattoo" class="swatches"></div>
-          </div>
-        </details>
+      <div class="stage-hud-left">
+        <button type="button" class="hud-link" id="btn-reset-view" title="Re-center the operator (R)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2 v3 M12 19 v3 M2 12 h3 M19 12 h3"/></svg>Re-center</button>
+        <span class="hud-chip cyan" id="detail-guard">LOD0 · SHARP AT EVERY DISTANCE</span>
+      </div>
+      <div class="stage-hud-right">
+        <span class="hud-chip"><strong id="backend-badge">INITIALIZING GPU...</strong></span>
+        <span class="hud-chip" id="hud-telemetry">Loading asset kit...</span>
       </div>
 
-      <!-- TAB 2: BODY, SKELETON & CYBERNETICS -->
-      <div class="tab-panel" data-panel="body">
-        <div class="sec-card">
-          <div class="sec-title">Physique Morphs</div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Muscle Mass</span><span id="val-muscle">0</span></div><input id="rng-muscle" class="bio-lockable" type="range" min="0" max="1" step="0.05" /></div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Body Weight</span><span id="val-weight">0</span></div><input id="rng-weight" class="bio-lockable" type="range" min="0" max="1" step="0.05" /></div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Stature / Height</span><span id="val-height">0</span></div><input id="rng-height" class="bio-lockable" type="range" min="0" max="1" step="0.05" /></div>
-        </div>
-
-        <div id="card-bust-controls" class="sec-card" style="display:none;">
-          <div class="sec-title">Bust Shape Pad &amp; Spring Physics</div>
-          <div class="ctrl-lbl"><span>2D Bust Archetype Quad (Drag Corner Blend)</span></div>
-          <div id="pad-bust" class="pad-2d" style="height:108px;">
-            <span class="pad-corner" style="top:0;left:0;">Teardrop</span>
-            <span class="pad-corner" style="top:0;right:0;">Full Round</span>
-            <span class="pad-corner" style="bottom:0;left:0;">Petite Athletic</span>
-            <span class="pad-corner" style="bottom:0;right:0;">Wide Heavy</span>
-            <div id="dot-bust" class="pad-dot"></div>
-          </div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Bust Volume</span><span id="val-bustSize">0</span></div><input id="rng-bustSize" class="bio-lockable" type="range" min="0" max="1" step="0.05" /></div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Firmness / Spring Damping</span><span id="val-bustFirmness">0</span></div><input id="rng-bustFirmness" class="bio-lockable" type="range" min="0" max="1" step="0.05" /></div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Vertical Set</span><span id="val-bustHeight">0</span></div><input id="rng-bustHeight" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Horizontal Spacing</span><span id="val-bustSpacing">0</span></div><input id="rng-bustSpacing" class="bio-lockable" type="range" min="-1" max="1" step="0.05" /></div>
-        </div>
-
-        <div class="sec-card">
-          <div class="sec-title">Humanoid Skeleton, Android &amp; Per-Part Cybernetics</div>
-          <div class="ctrl-row">
-            <div class="ctrl-lbl"><span>Chassis Mode</span></div>
-            <select id="sel-chassisMode">
-              <option value="humanoid">Organic Humanoid (Mix Cybernetics Below)</option>
-              <option value="android">Full Android Endoskeleton</option>
-              <option value="skeleton">Articulated Skeleton Chassis</option>
-            </select>
-          </div>
-          <div class="ctrl-row">
-            <div class="ctrl-lbl"><span>Endoskeleton Material</span></div>
-            <select id="sel-skelStyle">
-              <option value="titanium">Industrial Titanium Alloy</option>
-              <option value="carbon">Stealth Carbon Endoskeleton</option>
-              <option value="bone">Ivory Bio-Bone Frame</option>
-            </select>
-          </div>
-          <div class="part-grid">
-            <div class="part-cell"><span class="ctrl-lbl">Head / Ocular</span><select id="sel-part-head"><option value="organic">Organic</option><option value="cyber">Cybernetic</option><option value="skeleton">Skeleton</option></select></div>
-            <div class="part-cell"><span class="ctrl-lbl">Torso Core</span><select id="sel-part-torso"><option value="organic">Organic</option><option value="cyber">Cybernetic</option><option value="skeleton">Skeleton</option></select></div>
-            <div class="part-cell"><span class="ctrl-lbl">Left Arm</span><select id="sel-part-armL"><option value="organic">Organic</option><option value="cyber">Cybernetic</option><option value="skeleton">Skeleton</option></select></div>
-            <div class="part-cell"><span class="ctrl-lbl">Right Arm</span><select id="sel-part-armR"><option value="organic">Organic</option><option value="cyber">Cybernetic</option><option value="skeleton">Skeleton</option></select></div>
-            <div class="part-cell"><span class="ctrl-lbl">Left Leg</span><select id="sel-part-legL"><option value="organic">Organic</option><option value="cyber">Cybernetic</option><option value="skeleton">Skeleton</option></select></div>
-            <div class="part-cell"><span class="ctrl-lbl">Right Leg</span><select id="sel-part-legR"><option value="organic">Organic</option><option value="cyber">Cybernetic</option><option value="skeleton">Skeleton</option></select></div>
-          </div>
-        </div>
-
-        <details class="sub-drawer">
-          <summary>Skeleton Proportions (8 Frame Sliders)</summary>
-          <div class="sub-body">
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Skull / Head Scale</span><span id="val-skel-headSize">0</span></div><input id="rng-skel-headSize" type="range" min="-0.8" max="0.8" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Shoulder Span</span><span id="val-skel-shoulderWidth">0</span></div><input id="rng-skel-shoulderWidth" type="range" min="-0.8" max="0.8" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Ribcage / Torso Width</span><span id="val-skel-torsoWidth">0</span></div><input id="rng-skel-torsoWidth" type="range" min="-0.8" max="0.8" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Arm Segment Length</span><span id="val-skel-armLength">0</span></div><input id="rng-skel-armLength" type="range" min="-0.8" max="0.8" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Pelvis / Hip Span</span><span id="val-skel-hipWidth">0</span></div><input id="rng-skel-hipWidth" type="range" min="-0.8" max="0.8" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Leg Length</span><span id="val-skel-legLength">0</span></div><input id="rng-skel-legLength" type="range" min="-0.8" max="0.8" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Calf Thickness</span><span id="val-skel-calfBulk">0</span></div><input id="rng-skel-calfBulk" type="range" min="-0.8" max="0.8" step="0.05" /></div>
-            <div class="ctrl-row"><div class="ctrl-lbl"><span>Foot Frame Scale</span><span id="val-skel-footSize">0</span></div><input id="rng-skel-footSize" type="range" min="-0.8" max="0.8" step="0.05" /></div>
-          </div>
-        </details>
+      <div id="corner-portrait-hud">
+        <div class="portrait-hdr"><span>LIVE ID</span><span id="portrait-mode-tag">UNMASKED</span></div>
+        <div class="portrait-ftr">VITALS 100% · RIG ONLINE</div>
       </div>
+      <div class="stage-caption"><strong id="stage-step-label">Identity &amp; Face</strong><small id="stage-step-hint">Start with the face. Every adjustment is live.</small></div>
+      <div class="gesture-hint">DRAG: ORBIT · PINCH: ZOOM · SHIFT+DRAG: PAN</div>
+      <div id="cinema-fade">TRANSIT TO EV-74 KESTREL RAMP...</div>
 
-      <!-- TAB 3: CAPTAIN'S QUARTERS MIRROR & UNDERWEAR -->
-      <div class="tab-panel" data-panel="quarters">
-        <div class="sec-card">
-          <div class="sec-title">Captain's Quarters // Metallic Mirror Bay</div>
-          <div class="ctrl-row">
-            <div class="ctrl-lbl"><span>Cabin Attire Layer</span></div>
-            <select id="sel-outfit">
-              <option value="underwear">Underwear / Cabin Mirror Base</option>
-              <option value="jacket">Tactical Field Jacket &amp; Jeans</option>
-              <option value="hoodie">Recon Hoodie &amp; Jeans</option>
-              <option value="tee">Combat T-Shirt &amp; Jeans</option>
-              <option value="trousers">Wool Trousers &amp; Tee</option>
-              <option value="cyborg_suit">Cyborg Tactical Jumpsuit</option>
-              <option value="armor">Composite Trauma Armor</option>
-            </select>
-          </div>
-          <div id="wrap-uw-male" class="ctrl-row">
-            <div class="ctrl-lbl"><span>Compression Boxers Style</span></div>
-            <select id="sel-uwMale">
-              <option value="boxers_charcoal">Dark Tactical Boxers</option>
-              <option value="boxers_olive">Olive Compression Boxers</option>
-              <option value="classic">Slate Briefs</option>
-            </select>
-          </div>
-          <div id="wrap-uw-female" class="ctrl-row" style="display:none;gap:8px;flex-direction:column;">
-            <div class="ctrl-row">
-              <div class="ctrl-lbl"><span>Bra Design (Realistic Support &amp; Upper Plump)</span></div>
-              <select id="sel-underwearBra">
-                <option value="sport">Sport Tactical Band</option>
-                <option value="lace_delicate">Delicate Lace Filigree</option>
-                <option value="sheer_mesh">Sheer Mesh (See-Through Trim)</option>
-                <option value="strappy">Strappy Cyber Trim</option>
-                <option value="none">None (Unbra'd)</option>
-              </select>
-            </div>
-            <div class="ctrl-row">
-              <div class="ctrl-lbl"><span>Bottoms Cut</span></div>
-              <select id="sel-underwearBottom">
-                <option value="panties_classic">Classic Brief</option>
-                <option value="panties_lace">Delicate Lace Cut</option>
-                <option value="panties_sheer">Sheer Mesh Cut</option>
-                <option value="boxers_fem">Tactical Boyshort Boxers</option>
-              </select>
-            </div>
-          </div>
-          <div class="ctrl-lbl"><span>Underwear Fabric Color</span></div>
-          <div id="sw-uwCol" class="swatches"></div>
+      <div class="diagnostics" id="diagnostics">
+        <h4>Diagnostics &amp; draft tools</h4>
+        <div class="diag-note">Render backend, cache hygiene, camera height and a clean baseline reset. These never alter other sites or saved sessions.</div>
+        <div class="diag-actions">
+          <button type="button" class="ev-btn" id="btn-toggle-backend">Mode: Auto</button>
+          <button type="button" class="ev-btn warn" id="btn-purge-cache">Purge Cache</button>
+          <button type="button" class="ev-btn warn" id="btn-reset-default">Reset Draft</button>
+        </div>
+        ${rangeField('camPitch','Camera height',-0.48,0.60,0.02,{ lo:'Low', hi:'High' })}
+        <div class="diag-links"><a href="index.html">Hub</a><a href="temporal-lab.html">Temporal Lab</a><a href="cuff-slate.html">Cuff-Slate</a><a href="conglomerate-flowchart.html">Conglomerate</a><a href="continuum-monitor.html">Continuum</a></div>
+      </div>
+    </section>
+
+    <aside class="inspector">
+      <div class="inspector-head">
+        <div class="step-copy">
+          <div class="step-line"><span class="step-group" id="inspector-step-group">CREATE</span><span class="step-no" id="inspector-step-no">01 / 06</span></div>
+          <h2 id="inspector-step-title">Identity &amp; Face</h2>
+          <p id="inspector-step-sub">Start with the face. Every adjustment is live.</p>
+        </div>
+        <div class="progress-cluster">
+          <div class="progress-ring"><svg viewBox="0 0 46 46"><circle class="track" cx="23" cy="23" r="18"/><circle class="fill" id="progress-ring" cx="23" cy="23" r="18"/></svg><span id="progress-pct">0%</span></div>
+          <div class="progress-meta"><strong id="inspector-progress-label">0 / 25 traits refined</strong><div class="progress-track"><i id="progress-bar"></i></div></div>
         </div>
       </div>
 
-      <!-- TAB 4: GEAR & LOCK-IN -->
-      <div class="tab-panel" data-panel="gear">
-        <div class="sec-card">
-          <div class="sec-title">Identity, Armor &amp; Helmet Visors</div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Operator Callsign</span></div><input id="inp-callsign" type="text" maxlength="14" /></div>
-          <div class="ctrl-lbl"><span>Quick Loadout Swap</span></div>
-          <div class="btn-row">
-            <button type="button" class="ev-btn" data-outfit-quick="jacket">Jacket</button>
-            <button type="button" class="ev-btn" data-outfit-quick="hoodie">Hoodie</button>
-            <button type="button" class="ev-btn" data-outfit-quick="tee">Tee</button>
-            <button type="button" class="ev-btn" data-outfit-quick="trousers">Trousers</button>
-            <button type="button" class="ev-btn" data-outfit-quick="cyborg_suit">Cyborg Suit</button>
-            <button type="button" class="ev-btn" data-outfit-quick="armor">Armor</button>
-            <button type="button" class="ev-btn" data-outfit-quick="underwear">Underwear</button>
-          </div>
-          <div class="ctrl-lbl"><span>Suit &amp; Armor Tint</span></div>
-          <div id="sw-suit" class="swatches"></div>
-          <div class="ctrl-row">
-            <div class="ctrl-lbl"><span>Left Wrist Emitter Socket</span></div>
-            <select id="sel-wristDevice">
-              <option value="watch">Tactical Wrist Watch (Holo Emitter)</option>
-              <option value="gauntlet">Armored Gauntlet (Holo Emitter)</option>
-            </select>
-          </div>
-          <div class="ctrl-row">
-            <div class="ctrl-lbl"><span>Combat Helmet (Syncs 3D Corner Portrait)</span></div>
-            <select id="sel-helmetMode">
-              <option value="none">No Helmet (Unmasked)</option>
-              <option value="open">Open Visor (Shell + Tucked Hair)</option>
-              <option value="half">Half-Visor (Upper Eye Shield)</option>
-              <option value="sealed">Sealed Full Visor</option>
-            </select>
-          </div>
-          <label class="chk-row"><input id="chk-equipRiflePreview" type="checkbox" /> <span>Preview Carbine in Turntable</span></label>
+      <div class="view-bar">
+        <span class="view-label">FRAME</span>
+        <div class="segment" role="group" aria-label="Camera framing">
+          <button type="button" data-frame="auto">Auto</button>
+          <button type="button" data-frame="head">Face</button>
+          <button type="button" data-frame="torso">Torso</button>
+          <button type="button" data-frame="full">Full</button>
         </div>
-
-        <div class="sec-card">
-          <div class="sec-title">Continuum Manifest Lock &amp; Cybernetics Expert</div>
-          <div id="lock-lore-banner" class="lore-box">OPEN BIO-FORGE</div>
-          <button type="button" id="btn-lock-appearance" class="ev-btn warn">Finalize &amp; Lock Biological Appearance</button>
-          <button type="button" id="btn-cyber-expert" class="ev-btn" style="display:none;">Consult Cybernetics Expert</button>
-        </div>
+        <div class="view-zoom"><span class="view-label">ZOOM</span>${rangeField('camZoom','Framing zoom',0.45,1.85,0.05,{ lo:'Near', hi:'Far' }).replace('<div class="ctrl-row">','<div class="ctrl-row compact-zoom">')}</div>
       </div>
 
-      <!-- TAB 5: HANGAR RAMP FINALE -->
-      <div class="tab-panel" data-panel="ramp">
-        <div class="sec-card">
-          <div class="sec-title">EV-74 Kestrel Hangar Briefing</div>
-          <div class="btn-row">
-            <button type="button" id="btn-replay-ramp" class="ev-btn">Replay Full Transition</button>
-            <button type="button" id="btn-jump-seated" class="ev-btn">Jump Seated</button>
-          </div>
-          <div class="btn-row">
-            <button type="button" id="btn-mission-accept" class="ev-btn active">Accept Mission (Holo)</button>
-            <button type="button" id="btn-mission-decline" class="ev-btn warn">Decline Mission (Holo)</button>
-          </div>
-          <button type="button" id="btn-ship-seed" class="ev-btn">Randomize EV-74 Ship Variant</button>
-          <button type="button" id="btn-save-d1" class="ev-btn active">Commit Loadout to Authority D1</button>
-          <div id="d1-save-status" class="status-msg"></div>
+      <div class="inspector-scroll">
+
+        <!-- 01 · IDENTITY & FACE -->
+        <div class="tab-panel active" data-panel="face">
+          ${card('01 · START HERE','Choose a starting point',`<div class="preset-grid">${PRESET_CARDS}</div><div class="btn-row"><button type="button" class="ev-btn primary" id="btn-randomize">✦ Surprise me</button></div>`, { desc:'Archetypes are a starting sketch — every trait stays editable.' })}
+          ${card('BODY FRAME','A continuous balance',`${GENDER_SEGMENTS}
+            <div class="collapsible" id="wrap-gender-finetune">
+              <div class="ctrl-row"><div class="ctrl-lbl"><span>Fine-tune balance</span><span class="val-pill" id="val-gender">0.00</span></div>
+                <input class="ev-range bio-lockable" id="rng-gender" type="range" min="-1" max="1" step="0.05" aria-label="Fine-tune body frame" />
+                <div class="range-scale"><span>Masculine</span><span id="gender-balance-label">Masculine</span><span>Feminine</span></div></div>
+            </div>
+            <div class="sr-only"><input type="radio" name="sexMode" value="male" checked /><input type="radio" name="sexMode" value="female" /><input type="radio" name="sexMode" value="finetune" /></div>
+            ${rangeField('age','Age character',0,1,0.05,{ bio:true, lo:'Younger', hi:'Older' })}`, { desc:'No hard switch — the mesh eases into the new frame.' })}
+          ${card('COMPLEXION','Skin, finish & gaze',`
+            ${swatchField('skin','Skin tone','Twelve calibrated tones, from porcelain to deep umber.')}
+            ${selectField('sel-skinFinish','Skin surface',[['matte','Matte · natural'],['shiny','Shiny · hydrated'],['metallic','Metallic · chrome'],['android','Android · dermal panels']],{ bio:true, chips:true, prop:'skinFinish' })}
+            ${swatchField('eye','Iris color','Paired with live subsurface eye shading.')}
+            ${selectField('sel-expression','Expression',[['neutral','Neutral'],['smirk','Smirk'],['focused','Focused'],['blink','Blink'],['gasp','Startled'],['bleed','Pain / bleed']],{ prop:'expression' })}
+            ${rangeField('blink','Eye closure',0,1,0.05,{ lo:'Open', hi:'Closed' })}`)}
+          ${disclosure('STYLE','Hair, facial hair & finish',`
+            ${selectField('sel-hairStyle','Hair style',[['short01','Close crew cut'],['short','Tactical fade'],['sleek','Swept crop'],['messy','Messy layered'],['shaggy','Shaggy medium'],['bob','Classic bob'],['long','Long flowing'],['ponytail','High ponytail'],['braids','Twin braids'],['afro','Natural afro'],['buzz','Buzz / clean']],{ bio:true })}
+            ${swatchField('hair','Hair color','')}
+            ${selectField('sel-beardStyle','Facial hair',[['clean','Clean shaven'],['stubble','Light stubble'],['painted_short','Heavy stubble'],['goatee','3D goatee'],['short_3d','3D short beard'],['long','3D long beard'],['moustache','Handlebar moustache']],{ bio:true })}
+            ${swatchField('beard','Facial hair tone','Independent tint for 3D beard meshes.')}
+            ${toggleField('grayStreak','Gray streak','Add a movable silver streak across the hair texture.')}
+            ${padField('pad-streak','dot-streak','Streak placement',[['top:0;left:0;','Upper left'],['top:0;right:0;','Upper right'],['bottom:0;left:0;','Lower left'],['bottom:0;right:0;','Lower right']],'Drag to position. Angle and width are below.')}
+            ${rangeField('streakAngle','Streak angle',-3.14,3.14,0.05,{ lo:'−180°', hi:'+180°' })}
+            ${rangeField('streakWidth','Streak width',0.05,0.40,0.02,{ lo:'Fine', hi:'Broad' })}
+            ${swatchField('nail','Nail finish','')}`,{ open:false })}
+          ${disclosure('ADVANCED · 13 MORPHS','Fine facial sculpt',FACE_SCULPT,{ open:false })}
+          ${disclosure('DETAIL','Marks, ink & piercings',`
+            ${selectField('sel-scarType','Scar style',[['none','None'],['slash','Blade slash'],['triple_puncture','Neural ports'],['claw','Shrapnel laceration'],['plasma_burn','Plasma scorch']],{ bio:true, chips:true, prop:'scarType' })}
+            ${padField('pad-scar','dot-scar','Scar anchor',[['top:0;left:0;','Temple'],['top:0;right:0;','Brow'],['bottom:0;left:0;','Jaw'],['bottom:0;right:0;','Cheek']],'Drag across the face UV to place the mark.')}
+            ${rangeField('cyberFace','Cybernetic facial seams',0,1,0.05,{ lo:'Subtle', hi:'Pronounced' })}
+            ${selectField('sel-tattooStyle','Tattoo pattern',[['none','None'],['circuit','Cyber-circuit'],['tribal','Geometric'],['wing','Wing crest']],{ chips:true, prop:'tattooStyle' })}
+            ${selectField('sel-tattooZone','Placement',[['arm_l','Left upper arm'],['arm_r','Right upper arm'],['forearm_l','Left forearm'],['chest','Chest'],['neck','Neck'],['face','Face / cheek']])}
+            ${toggleField('tattooGlow','Glowing ink','Emissive cyber-tattoo trace.')}
+            ${swatchField('tattoo','Ink color','')}
+            ${toggleField('piercing-brow','Brow studs','')}
+            ${toggleField('piercing-nostril','Nostril stud','')}
+            ${toggleField('piercing-lip','Labret stud','')}
+            ${toggleField('piercing-ears','Dual ear studs','')}
+            ${selectField('sel-piercingMetal','Metal finish',[['silver','Brushed silver'],['gold','Warm gold'],['obsidian','Dark obsidian']],{ chips:true, prop:'metal', sub:'piercings' })}
+            ${toggleField('piercing-glow','Glowing cyber nodes','')}
+            ${swatchField('pierceCol','Node color','')}`)}
         </div>
+
+        <!-- 02 · PHYSIQUE -->
+        <div class="tab-panel" data-panel="body">
+          ${card('PHYSIQUE','Build the silhouette',`
+            ${rangeField('muscle','Muscle mass',0,1,0.05,{ bio:true, lo:'Lean', hi:'Heavy' })}
+            ${rangeField('weight','Body weight',0,1,0.05,{ bio:true, lo:'Light', hi:'Full' })}
+            ${rangeField('height','Stature',0,1,0.05,{ bio:true, lo:'Compact', hi:'Tall' })}
+            <div class="fine-note">Frame balance lives in <strong>Identity &amp; Face</strong>; use this quick control here too.</div>
+            ${GENDER_SEGMENTS}`)}
+          ${card('BUST ARCHETYPE','Shape & spring physics',`
+            ${padField('pad-bust','dot-bust','Four-corner archetype',[['top:0;left:0;','Teardrop'],['top:0;right:0;','Full round'],['bottom:0;left:0;','Petite athletic'],['bottom:0;right:0;','Wide heavy']],'Drag to blend between all four shapes.')}
+            ${rangeField('bustSize','Volume',0,1,0.05,{ bio:true })}
+            ${rangeField('bustFirmness','Firmness / damping',0,1,0.05,{ bio:true })}
+            ${rangeField('bustHeight','Vertical set',-1,1,0.05,{ bio:true })}
+            ${rangeField('bustSpacing','Horizontal spacing',-1,1,0.05,{ bio:true })}`, { id:'card-bust-controls', cls:'collapsible' })}
+          ${card('CHASSIS','Organic, synthetic or skeletal',`
+            ${selectField('sel-chassisMode','Chassis mode',[['humanoid','Organic humanoid'],['android','Full android'],['skeleton','Skeleton chassis']],{ chips:true, prop:'chassisMode' })}
+            ${selectField('sel-skelStyle','Endoskeleton material',[['titanium','Industrial titanium'],['carbon','Stealth carbon'],['bone','Ivory bio-bone']],{ chips:true, prop:'skelStyle' })}
+            <div class="part-grid">${PART_SELECTS}</div>`)}
+          ${disclosure('ADVANCED · 8 SLIDERS','Skeleton proportions',SKEL_RANGES)}
+        </div>
+
+        <!-- 03 · WARDROBE -->
+        <div class="tab-panel" data-panel="quarters">
+          ${card('CABIN ATTIRE','Layers in the mirror bay',`
+            ${selectField('sel-outfit','Attire layer',[['underwear','Cabin mirror base'],['jacket','Field jacket & jeans'],['hoodie','Recon hoodie'],['tee','Combat tee'],['trousers','Wool trousers'],['cyborg_suit','Cyborg jumpsuit'],['armor','Composite trauma armor']])}
+            <div class="collapsible" id="wrap-uw-male">${selectField('sel-uwMale','Compression fit',[['boxers_charcoal','Dark tactical boxers'],['boxers_olive','Olive compression'],['classic','Slate briefs']])}</div>
+            <div class="collapsible is-collapsed" id="wrap-uw-female">
+              ${selectField('sel-underwearBra','Bra design',[['sport','Sport band'],['lace_delicate','Delicate lace'],['sheer_mesh','Sheer mesh'],['strappy','Cyber strappy'],['none','None']],{ chips:true, prop:'underwearBra' })}
+              ${selectField('sel-underwearBottom','Bottoms cut',[['panties_classic','Classic brief'],['panties_lace','Lace cut'],['panties_sheer','Sheer cut'],['boxers_fem','Boyshort boxers']],{ chips:true, prop:'underwearBottom' })}
+            </div>
+            ${swatchField('uwCol','Fabric color','')}`)}
+          ${card('MIRROR BAY','A full-length view',`<div class="fine-note">The operator stays centered while you dress them. Switch framing any time; the 3D kit keeps hero-level detail at every distance.</div><div class="btn-row"><button type="button" class="ev-btn" data-frame="full">Full-length view</button><button type="button" class="ev-btn" data-frame="auto">Re-center</button></div>`)}
+        </div>
+
+        <!-- 04 · GEAR & MANIFEST -->
+        <div class="tab-panel" data-panel="gear">
+          ${card('IDENTITY','Callsign',`<div class="ctrl-row"><div class="ctrl-lbl"><span>Operator callsign</span></div><input class="ev-select" id="inp-callsign" type="text" maxlength="14" aria-label="Operator callsign" /></div>`)}
+          ${card('LOADOUT','Quick layers & tint',`
+            <div class="chip-row">${QUICK_OUTFITS}</div>
+            ${swatchField('suit','Suit & armor tint','')}
+            ${selectField('sel-wristDevice','Left wrist emitter',[['watch','Tactical wrist watch'],['gauntlet','Armored gauntlet']],{ chips:true, prop:'wristDevice' })}
+            ${selectField('sel-helmetMode','Helmet visor',[['none','Unmasked'],['open','Open visor'],['half','Half visor'],['sealed','Sealed visor']],{ chips:true, prop:'helmetMode' })}
+            ${toggleField('equipRiflePreview','Preview carbine','Show the carbine in the turntable.')}`)}
+          ${card('CONTINUUM MANIFEST','Seal the biological draft',`
+            <div id="lock-lore-banner" class="lore-box">OPEN BIO-FORGE</div>
+            <div class="btn-row"><button type="button" class="ev-btn warn" id="btn-lock-appearance">Seal Biological Appearance</button></div>
+            <button type="button" class="ev-btn" id="btn-cyber-expert" style="display:none;">Consult Cybernetics Expert</button>`)}
+        </div>
+
+        <!-- 05 · HANGAR RAMP -->
+        <div class="tab-panel" data-panel="ramp">
+          ${card('PREVIEW','EV-74 Kestrel hangar briefing',`
+            <div class="btn-row"><button type="button" class="ev-btn" id="btn-replay-ramp">Replay transition</button><button type="button" class="ev-btn" id="btn-jump-seated">Jump to seated</button></div>
+            <div class="btn-row"><button type="button" class="ev-btn active" id="btn-mission-accept">Accept briefing</button><button type="button" class="ev-btn warn" id="btn-mission-decline">Decline briefing</button></div>
+            <button type="button" class="ev-btn" id="btn-ship-seed">Cycle ship variant</button>
+            <button type="button" class="ev-btn primary" id="btn-save-d1">Commit Loadout to Authority D1</button>
+            <div id="d1-save-status" class="status-msg"></div>`, { desc:'Preview stages never overwrite your creation draft.' })}
+        </div>
+
+        <!-- 06 · ACTION STAGE -->
+        <div class="tab-panel" data-panel="action">
+          ${card('PREVIEW','Sector 4 · drone-angle kinematics',`
+            <div class="ctrl-row"><div class="ctrl-lbl"><span>Corner slicing</span></div><div class="segment" role="group" aria-label="Corner angle">
+              <button type="button" class="chip" data-peek="pie_left">Pie left</button>
+              <button type="button" class="chip active" data-peek="center">Hold center</button>
+              <button type="button" class="chip" data-peek="pie_right">Pie right</button></div></div>
+            ${selectField('sel-cqbSpeed','Entry pace',[['slow','Deliberate slow pie'],['fast','Dynamic fast breach']],{ chips:true, prop:'cqbSpeed' })}
+            ${rangeField('aimSkill','Aim skill',0.15,0.98,0.05)}
+            ${rangeField('strideYaw','Pelvis stride yaw',-1.5,1.5,0.05)}
+            ${rangeField('aimYaw','Upper-body aim yaw',-1.5,1.5,0.05)}
+            ${toggleField('cqbMoving','Tactical walk / pie strafe','')}
+            ${toggleField('firing','Fire cycle','')}
+            ${toggleField('suppressed','Incoming suppression flinch','')}
+            ${toggleField('injuredLeg','Right leg trauma','')}
+            ${toggleField('crowd25','25-unit LOD2 crowd','')}`)}
+        </div>
+
       </div>
 
-      <!-- TAB 6: DRONE-ANGLE CQB & KINEMATICS -->
-      <div class="tab-panel" data-panel="action">
-        <div class="sec-card">
-          <div class="sec-title">Sector 4 Ore Depot // Drone-Angle CQB</div>
-          <div class="ctrl-lbl"><span>Corner Slicing ("Slicing the Pie") &amp; Outside-Foot Plant</span></div>
-          <div class="btn-row">
-            <button type="button" class="ev-btn" data-peek="pie_left">Pie Left Corner</button>
-            <button type="button" class="ev-btn active" data-peek="center">Hold Center</button>
-            <button type="button" class="ev-btn" data-peek="pie_right">Pie Right Corner</button>
-          </div>
-          <div class="ctrl-row">
-            <div class="ctrl-lbl"><span>Entry Pace &amp; Lean Angle</span></div>
-            <select id="sel-cqbSpeed">
-              <option value="slow">Deliberate Slow Pie (Tight Lean, Eyes/Muzzle First)</option>
-              <option value="fast">Dynamic Fast Breach (Deep Lean + Momentum)</option>
-            </select>
-          </div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Operator Aim Skill</span><span id="val-aimSkill">0.85</span></div><input id="rng-aimSkill" type="range" min="0.15" max="0.98" step="0.05" /></div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Pelvis Stride Yaw</span><span id="val-strideYaw">0</span></div><input id="rng-strideYaw" type="range" min="-1.5" max="1.5" step="0.05" /></div>
-          <div class="ctrl-row"><div class="ctrl-lbl"><span>Upper-Body Aim Yaw</span><span id="val-aimYaw">0</span></div><input id="rng-aimYaw" type="range" min="-1.5" max="1.5" step="0.05" /></div>
-          <label class="chk-row"><input id="chk-cqbMoving" type="checkbox" /> <span>Toggle Tactical Walk / Pie Strafe</span></label>
-          <label class="chk-row"><input id="chk-firing" type="checkbox" /> <span>Fire Cycle (Shows Cyber-Arm vs Organic Torso Torque!)</span></label>
-          <label class="chk-row"><input id="chk-suppressed" type="checkbox" /> <span>Incoming Suppression Flinch</span></label>
-          <label class="chk-row"><input id="chk-injuredLeg" type="checkbox" /> <span>Right Leg Trauma (Asymmetric Limp)</span></label>
-          <label class="chk-row"><input id="chk-crowd25" type="checkbox" /> <span>25-Unit Instanced LOD2 Crowd</span></label>
-        </div>
+      <div class="inspector-foot">
+        <button type="button" class="nav-btn" id="btn-step-prev">← Back</button>
+        <div class="step-dots">${STEP_DOTS}</div>
+        <button type="button" class="save-local" id="btn-save-local">SAVE DRAFT</button>
+        <button type="button" class="nav-btn primary" id="btn-step-next">Next →</button>
       </div>
-    </div>
-  </aside>
+    </aside>
+  </main>
+  <div id="ev-toast" role="status" aria-live="polite"></div>
 </div>
 `;
 
-const htmlOut = htmlTop + '\n<script>\n' + kitJs + '\n' + engineJs + '\n' + uiControllerJs + '\n</script>\n</body>\n</html>\n';
+function railBlock(){
+  const create = RAIL_STEPS.slice(0, 4);
+  const preview = RAIL_STEPS.slice(4);
+  return `<span class="rail-group">CREATE</span>${create.join('')}<span class="rail-divider"></span><span class="rail-group">PREVIEW</span>${preview.join('')}`;
+}
+
+const htmlOut = htmlTop + '\n<script>\n' + kitJs + '\n' + engineJs + '\n' + uiJs + '\n</script>\n</body>\n</html>\n';
 fs.writeFileSync(path.join(rootDir, 'operator-forge.html'), htmlOut, 'utf8');
-console.log('Assembled operator-forge.html:', (Buffer.byteLength(htmlOut, 'utf8') / 1024).toFixed(1), 'KB');
+console.log('Assembled operator-forge.html (Atelier UI):', (Buffer.byteLength(htmlOut, 'utf8') / 1024).toFixed(1), 'KB');

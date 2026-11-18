@@ -1,4 +1,4 @@
-# GITHUB & TERMUX TWO-REPO WORKFLOW (`v0.7.0-alpha`)
+# GITHUB & TERMUX TWO-REPO WORKFLOW (`v0.7.1-alpha`)
 
 > **Why Two Repos (`Public` vs. `Private`):** GitHub does **not** let you hide individual files inside a Public repository. Never put server code, signing secrets, anti-cheat thresholds, or live player item/credit databases inside a Public repo. Keep **2 repositories** total:
 > 1. **`endless-vigil` (PUBLIC + GitHub Pages):** Public HTML entry (`index.html`), 3D CC0 Operator Forge (`operator-forge.html`), Cuff-Slate PDA (`cuff-slate.html`), Temporal Lab (`temporal-lab.html`), Overwatch Monitor (`continuum-monitor.html`), Flowchart (`conglomerate-flowchart.html`), CC0 binary kit/engine (`assets/ev-humanoid-kit.bin`, `js/ev-humanoid-kit.js`, `js/ev-gpu-engine.js`), Design Vault (`data/design-vault.json`), docs, and public schemas (`ev-release-bundle.zip`).
@@ -21,14 +21,14 @@ Whenever modifying the 3D kit or engine:
 python3 scripts/build-cc0-humanoid-kit.py
 node scripts/assemble-operator-forge.mjs
 node scripts/dev-verify-forge.mjs && python3 scripts/dev-render-inspect.py
-node scripts/build-release.mjs v0.7.0-alpha
+node scripts/build-release.mjs v0.7.1-alpha
 ```
 
 Download `ev-release-bundle.zip`, `ev-private-server-bundle.zip`, and `RELEASE_SHA256.txt` into your Android `Downloads` folder, then run your Termux one-liners:
 
 ```bash
-evpub v0.7.0-alpha "v0.7.0-alpha CC0 73-Morph Kit, Quarters Mirror, Modular Skeleton/Cybernetics & Drone CQB"
-evpriv v0.7.0-alpha "v0.7.0-alpha Private Worker + D1 Schema"
+evpub v0.7.1-alpha "v0.7.1-alpha Vigil Atelier UI, CC0 58-Morph Kit, Quarters Mirror, Modular Skeleton/Cybernetics & Drone CQB"
+evpriv v0.7.1-alpha "v0.7.1-alpha Private Worker + D1 Schema"
 ```
 
 *(Note: `termux-push.sh` verifies SHA-256 integrity, preserves your live `wrangler.jsonc` with your real D1 `database_id`, runs audits, commits, tags, and pushes safely.)*

@@ -74,3 +74,18 @@
 | **`GAP-009`** | `EVA` | **NEXT (`v0.6b`):** Mobile-first free-orbit isometric 3D voxel asteroid (`75s` breach, cold patch fail -> NASA `4.3 psid` hold test, crashed Earth-era satellite wing, betrayed Firefly-scale derelict ship + guard bot combat) & optional self-hosted MediaPipe 478-point auto-snap. |
 | **`GAP-008`** | `SHIP` | **ACTIVE SPEC (`v0.6+`):** 3D WebGL Ship Construction using **Baked Voxel-Chunk Greedy Meshing / CSG Rebaking** so cut hulls dynamically display clean breaches. |
 | **`GAP-007`** | `PDA` | **SHELVED:** Optional Mobile/Watch Companion App & Sleeping Bunk Proximity Alert Feed (alongside active `temporal-lab.html` balance tuning). |
+
+---
+
+## 6. Resolved `v0.7.1` UI Rules — "Vigil Atelier" Operator Forge Polish (`FORGE-002` … `FORGE-005`)
+
+The Creator's directive was explicit: the character creator had to arrive **polished**, not as a jumbled work-in-progress. These decisions are now locked.
+
+1. **Persistent Centered Stage:** The operator viewport is a dedicated, always-visible region on every step and every viewport tier. Changing step, applying a preset, or hitting **Re-center** resets camera pan/pitch/orbit so the operator is never "lost" off-center. `AUTO_ZOOM` boots each step into a readable framing (face `1.42×`, full-body steps `1.04×`) — no cropped extreme close-up.
+2. **Progressive, Calm Navigation:** Six steps split into **CREATE** (`01 Face`, `02 Physique`, `03 Wardrobe`, `04 Gear`) and **PREVIEW** (`05 Ramp`, `06 Action`). Advanced sculpt groups (13 facial morphs, 8 skeleton proportions, hair detail, marks/ink/piercings) are collapsed by default. Card titles, kickers and short descriptions replace dense numbered dumps.
+3. **Modern Controls, No Dead Sliders:** Custom filled range tracks with live value pills and double-click reset; chip/segment rows for short option sets; styled native selects for long lists; larger swatches with active rings; real switches; labeled 2D pads. Every control maps to a real `EVGPUEngine` state key — newly exposed: `blink`, `beardHex`, `grayStreak.angle/width`, `camZoom`, `camPitch`. No control exists that the engine ignores.
+4. **Frame Balance Without the Clunky Switch:** Three animated segments (`Masculine / Balanced / Feminine`) ease `state.gender` with a 460 ms cubic tween, plus an always-visible continuous fine-tune slider. Bust and wardrobe groups cross-fade instead of snapping in/out. Hidden `[name="sexMode"]` radios remain for tooling/keyboard contracts.
+5. **Refinement Feels Rewarding:** A progress ring counts refined traits, quiet toasts confirm each change, four archetype cards and a deterministic seeded "Surprise me" give safe starting points. **40-step undo/redo**, local draft save, reset-to-baseline and offline D1 fallback make experimentation reversible (`FORGE-004`).
+6. **Detail At Every Distance (`FORGE-005`):** The hero mesh stays at `LOD0` (`26,756` tris) at all zoom levels — no blocky distance swap. Explicit `Face / Torso / Full` framing presets smoothly tween `camPanY` + `camZoom`; a visible `LOD0 · 26.8K TRIS · SHARP AT DISTANCE` chip states the guarantee. LOD1/LOD2 remain reserved for crowds.
+7. **Verification Gate Extended:** `scripts/dev-verify-ui.mjs` checks the single-script contract, ids, wording, flex containment, then (optionally, via Playwright) screenshots and measures `320×640`, `360×800`, `412×915`, `768×1024`, `1280×800`, `1920×1080` for horizontal overflow, plus step/frame/undo/diagnostics interactions. Zero offenders at all six tiers.
+8. **Unchanged Priorities:** `GAP-009` (next build), `GAP-008` (active spec), `GAP-007` (shelved) are untouched. This UI work is an additive presentation layer; no 3D kit, UV, shader, culling, auth, or two-repo contract was altered.
