@@ -222,7 +222,7 @@ function createDomAndContext(prof){
     const raw = zlib.inflateSync(fs.readFileSync(path.join(rootDir, 'assets/ev-humanoid-kit.bin')));
     const hlen = raw.readUInt32LE(0);
     return JSON.parse(raw.subarray(4, 4 + hlen).toString('utf8')).texB64;
-  })()), 'dyn_skin', 'dyn_hair', 'dyn_holo', 'dyn_bra', 'dyn_panties', 'dyn_briefs'];
+  })()), 'dyn_skin', 'dyn_hair', 'dyn_holo', 'dyn_bra', 'dyn_panties', 'dyn_briefs', 'dyn_beard', 'flat_normal'];
   let texSeq = 0;
   const gpuDevice = {
     features: new Set(),
@@ -322,6 +322,7 @@ function createDomAndContext(prof){
               capturedGpuDraws.push({
                 pass: passNum, viewport: vpRect, scissor: scRect, ic, inst,
                 texKey: curBg.desc.entries[2] && curBg.desc.entries[2].resource ? curBg.desc.entries[2].resource.texKey : 'white',
+                normKey: curBg.desc.entries[3] && curBg.desc.entries[3].resource ? curBg.desc.entries[3].resource.texKey : 'flat_normal',
                 vb0Id: vb0Key,
                 vb1Id: vb1Key,
                 vb2Id: vb2Key,
@@ -337,6 +338,7 @@ function createDomAndContext(prof){
                 tint:  Array.from(uFloats.subarray(32, 36)),
                 camPos: Array.from(uFloats.subarray(36, 39)),
                 keyDir: Array.from(uFloats.subarray(40, 44)),
+                rimCol: Array.from(uFloats.subarray(48, 52)),
                 flags: Array.from(uFloats.subarray(52, 56)),
                 extra: Array.from(uFloats.subarray(56, 60)),
               });
@@ -517,6 +519,7 @@ async function runProfile(prof){
       sim.els.get('sel-outfit').value = 'armor'; sim.els.get('sel-outfit').dispatch('change');
       sim.els.get('sel-helmetMode').value = 'half'; sim.els.get('sel-helmetMode').dispatch('change');
       sim.els.get('sel-hairStyle').value = 'short'; sim.els.get('sel-hairStyle').dispatch('change');
+      sim.els.get('sel-beardStyle').value = 'short_3d'; sim.els.get('sel-beardStyle').dispatch('change');
       sim.els.get('chk-equipRiflePreview').checked = true; sim.els.get('chk-equipRiflePreview').dispatch('change');
     }
     if (tabName === 'ramp'){

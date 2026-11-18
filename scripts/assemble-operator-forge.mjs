@@ -132,7 +132,7 @@ const uiControllerJs = `
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_e){}
   }
 
-  var SKIN_SWATCHES = ['#f2cbb8','#dfb197','#cf9170','#b67552','#8d5538','#5e3824','#8b99a6','#3b454e'];
+  var SKIN_SWATCHES = ['#f5d9cb','#edc2ad','#dfb197','#cf9170','#be7f5d','#a46343','#8d5538','#6f422b','#54311f','#3a2115','#8b99a6','#3b454e'];
   var EYE_SWATCHES  = ['#3aa7d6','#44b89a','#c89b3c','#7a6652','#92a6b8','#ff6a33'];
   var HAIR_SWATCHES = ['#1a1614','#2a1f1a','#4e3424','#8c5230','#c49a52','#aeb7be','#b4384e','#2894b8'];
   var SUIT_SWATCHES = ['#4d5d54','#2c3b47','#3a3f47','#5e4a38','#6e2b2b','#222830'];
@@ -487,10 +487,10 @@ const uiControllerJs = `
 
   // Presets & Randomizer
   var PRESETS = {
-    vanguard: { sexMode:'male',   gender:-0.85, muscle:0.80, weight:0.50, height:0.65, outfit:'armor',  helmetMode:'half',   hairStyle:'short',  beardStyle:'stubble', chassisMode:'humanoid', suitTint:'#4d5d54' },
-    recon:    { sexMode:'female', gender: 0.85, muscle:0.45, weight:0.32, height:0.48, outfit:'jacket', helmetMode:'open',   hairStyle:'braids', beardStyle:'clean',   chassisMode:'humanoid', bodyParts:{head:'organic',torso:'organic',armL:'cyber',armR:'organic',legL:'organic',legR:'organic'}, suitTint:'#2c3b47' },
-    heavy:    { sexMode:'male',   gender:-0.95, muscle:0.95, weight:0.75, height:0.82, outfit:'armor',  helmetMode:'sealed', hairStyle:'buzz',   beardStyle:'full',    chassisMode:'humanoid', bodyParts:{head:'organic',torso:'cyber',armL:'cyber',armR:'cyber',legL:'organic',legR:'organic'}, suitTint:'#5e4a38' },
-    android:  { sexMode:'female', gender: 0.72, muscle:0.55, weight:0.36, height:0.58, outfit:'underwear', helmetMode:'none', hairStyle:'sleek', beardStyle:'clean',   chassisMode:'android',  skinFinish:'android', skelStyle:'titanium', bodyParts:{head:'skeleton',torso:'skeleton',armL:'skeleton',armR:'skeleton',legL:'skeleton',legR:'skeleton'} }
+    vanguard: { sexMode:'male',   gender:-0.85, muscle:0.80, weight:0.50, height:0.65, outfit:'armor',       helmetMode:'half',   hairStyle:'short',    beardStyle:'stubble',  chassisMode:'humanoid', suitTint:'#4d5d54' },
+    recon:    { sexMode:'female', gender: 0.85, muscle:0.45, weight:0.32, height:0.48, outfit:'jacket',      helmetMode:'open',   hairStyle:'ponytail', beardStyle:'clean',    chassisMode:'humanoid', bodyParts:{head:'organic',torso:'organic',armL:'cyber',armR:'organic',legL:'organic',legR:'organic'}, suitTint:'#2c3b47' },
+    heavy:    { sexMode:'male',   gender:-0.95, muscle:0.95, weight:0.75, height:0.82, outfit:'armor',       helmetMode:'sealed', hairStyle:'short01',  beardStyle:'long',     chassisMode:'humanoid', bodyParts:{head:'organic',torso:'cyber',armL:'cyber',armR:'cyber',legL:'organic',legR:'organic'}, suitTint:'#5e4a38' },
+    android:  { sexMode:'female', gender: 0.72, muscle:0.55, weight:0.36, height:0.58, outfit:'cyborg_suit', helmetMode:'none',   hairStyle:'bob',      beardStyle:'clean',    chassisMode:'android',  skinFinish:'android', skelStyle:'titanium', bodyParts:{head:'skeleton',torso:'skeleton',armL:'skeleton',armR:'skeleton',legL:'skeleton',legR:'skeleton'} }
   };
   Array.prototype.slice.call(document.querySelectorAll('[data-preset]')).forEach(function(btn){
     btn.addEventListener('click', function(){
@@ -513,12 +513,14 @@ const uiControllerJs = `
       state.gender = state.sexMode === 'female' ? 0.85 : -0.85;
       state.muscle = r(0.25, 0.9); state.weight = r(0.25, 0.7); state.height = r(0.2, 0.85);
       state.noseWidth = r(-0.6, 0.6); state.jawWidth = r(-0.6, 0.6); state.cheekbones = r(-0.5, 0.6);
-      state.skinHex = SKIN_SWATCHES[Math.floor(Math.random()*6)];
+      state.skinHex = SKIN_SWATCHES[Math.floor(Math.random()*10)];
       state.eyeHex  = EYE_SWATCHES[Math.floor(Math.random()*EYE_SWATCHES.length)];
       state.hairHex = HAIR_SWATCHES[Math.floor(Math.random()*HAIR_SWATCHES.length)];
       state.suitTint = SUIT_SWATCHES[Math.floor(Math.random()*SUIT_SWATCHES.length)];
-      state.hairStyle = ['short','sleek','braids','buzz'][Math.floor(Math.random()*4)];
-      state.beardStyle = state.gender > 0.1 ? 'clean' : ['clean','stubble','goatee','full'][Math.floor(Math.random()*4)];
+      var hairs = ['short01','short','sleek','messy','shaggy','bob','long','ponytail','braids','afro','buzz'];
+      state.hairStyle = hairs[Math.floor(Math.random()*hairs.length)];
+      var beards = ['clean','stubble','painted_short','goatee','short_3d','long','moustache'];
+      state.beardStyle = state.gender > 0.1 ? 'clean' : beards[Math.floor(Math.random()*beards.length)];
       refreshAllControlValues();
       persistLocal();
     });
@@ -1048,21 +1050,31 @@ const htmlTop = `<!DOCTYPE html>
             <div class="ctrl-row">
               <div class="ctrl-lbl"><span>Hair Style</span></div>
               <select id="sel-hairStyle" class="bio-lockable">
-                <option value="short">Short Tactical Fade</option>
-                <option value="sleek">Sleek Swept Crop</option>
-                <option value="braids">Braided Utility Style</option>
+                <option value="short01">Close Crew Cut (Short 01)</option>
+                <option value="short">Tactical Fade (Short 02)</option>
+                <option value="sleek">Swept Crop (Short 04)</option>
+                <option value="messy">Messy Layered</option>
+                <option value="shaggy">Shaggy Medium</option>
+                <option value="bob">Classic Bob</option>
+                <option value="long">Long Flowing</option>
+                <option value="ponytail">High Ponytail</option>
+                <option value="braids">Twin Braids</option>
+                <option value="afro">Natural Afro</option>
                 <option value="buzz">Buzz / Clean</option>
               </select>
             </div>
             <div class="ctrl-lbl"><span>Hair Color</span></div>
             <div id="sw-hair" class="swatches"></div>
             <div class="ctrl-row">
-              <div class="ctrl-lbl"><span>Facial Hair</span></div>
+              <div class="ctrl-lbl"><span>Facial Hair (Stubble &amp; 3D Mesh)</span></div>
               <select id="sel-beardStyle" class="bio-lockable">
                 <option value="clean">Clean Shaven</option>
-                <option value="stubble">Tactical Stubble</option>
-                <option value="goatee">Goatee</option>
-                <option value="full">Full Beard</option>
+                <option value="stubble">Light Stubble (Skin Follicle)</option>
+                <option value="painted_short">Heavy Stubble (Skin Follicle)</option>
+                <option value="goatee">3D Goatee</option>
+                <option value="short_3d">3D Full Short Beard</option>
+                <option value="long">3D Long Beard</option>
+                <option value="moustache">3D Handlebar Moustache</option>
               </select>
             </div>
             <label class="chk-row"><input id="chk-grayStreak" type="checkbox" /> <span>Enable Gray Hair Streak</span></label>
@@ -1214,9 +1226,11 @@ const htmlTop = `<!DOCTYPE html>
             <div class="ctrl-lbl"><span>Cabin Attire Layer</span></div>
             <select id="sel-outfit">
               <option value="underwear">Underwear / Cabin Mirror Base</option>
-              <option value="jacket">Tactical Field Jacket</option>
-              <option value="hoodie">Recon Hoodie</option>
-              <option value="tee">Combat T-Shirt</option>
+              <option value="jacket">Tactical Field Jacket &amp; Jeans</option>
+              <option value="hoodie">Recon Hoodie &amp; Jeans</option>
+              <option value="tee">Combat T-Shirt &amp; Jeans</option>
+              <option value="trousers">Wool Trousers &amp; Tee</option>
+              <option value="cyborg_suit">Cyborg Tactical Jumpsuit</option>
               <option value="armor">Composite Trauma Armor</option>
             </select>
           </div>
@@ -1264,6 +1278,8 @@ const htmlTop = `<!DOCTYPE html>
             <button type="button" class="ev-btn" data-outfit-quick="jacket">Jacket</button>
             <button type="button" class="ev-btn" data-outfit-quick="hoodie">Hoodie</button>
             <button type="button" class="ev-btn" data-outfit-quick="tee">Tee</button>
+            <button type="button" class="ev-btn" data-outfit-quick="trousers">Trousers</button>
+            <button type="button" class="ev-btn" data-outfit-quick="cyborg_suit">Cyborg Suit</button>
             <button type="button" class="ev-btn" data-outfit-quick="armor">Armor</button>
             <button type="button" class="ev-btn" data-outfit-quick="underwear">Underwear</button>
           </div>

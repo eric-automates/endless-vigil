@@ -248,11 +248,24 @@
         morphs[mk] = { idx: midx, delta: md };
       }
 
+      var hairSpringW = null;
+      if (mname.indexOf('hair_') === 0){
+        hairSpringW = new Float32Array(vc);
+        for (var svi = 0; svi < vc; svi++){
+          var sx = pos[svi*3], sy = pos[svi*3+1], sz = pos[svi*3+2];
+          // Rooted firmly on crown above ear line (y >= 1.56), ramping smoothly down nape/shoulders/ends!
+          var dropW = Math.max(0.0, Math.min(1.0, (1.565 - sy) / 0.16));
+          var tipR  = Math.max(0.0, Math.min(1.0, (Math.hypot(sx, sz - 0.02) - 0.105) / 0.08));
+          hairSpringW[svi] = Math.min(1.0, Math.max(dropW, tipR * 0.75));
+        }
+      }
+
       meshes[mname] = {
         name: mname, vcount: vc, icount: ic,
         restPos: pos, dynPos: new Float32Array(pos), norm: nrm, uv: uv,
         joints: joints, weights: weights, indices: indices,
         cczone: cczone, hairTuck: hairTuck, hairCrown: hairCrown,
+        hairSpringW: hairSpringW,
         morphs: morphs
       };
     });
@@ -467,31 +480,49 @@
     };
   }
 
-  // --- Dynamic Face/Body Skin, Nails, Scars, Tattoos & Hair Streak Compositors (Exact MakeHuman UV Anchors!) ---
-  function createSkinCompositor(baseImg, faceUV, nailUVs, tattooUV){
+  // --- Dynamic Face/Body Skin, Nails, Scars, Tattoos & Hair/Beard Compositors (Exact MakeHuman UV Anchors!) ---
+  function createSkinCompositor(lightImg, darkImg, beardMaskImg, faceUV, nailUVs, tattooUV, lipMaskImg){
     var canvas = (typeof document !== 'undefined' && document.createElement) ? document.createElement('canvas') : null;
     if (!canvas) return null;
     canvas.width = 512; canvas.height = 512;
     var ctx = canvas.getContext('2d');
+    var darkCanvas = document.createElement('canvas'); darkCanvas.width = 512; darkCanvas.height = 512;
+    var maskCanvas = document.createElement('canvas'); maskCanvas.width = 512; maskCanvas.height = 512;
     return {
       canvas: canvas,
       update: function(state){
         ctx.clearRect(0,0,512,512);
-        if (baseImg && baseImg.width > 0) ctx.drawImage(baseImg, 0, 0, 512, 512);
+        var rgb = hexToRgb01(state.skinHex || '#cf9170');
+        var luma = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+        var darkMix = Math.max(0, Math.min(1, (0.60 - luma) / 0.38));
+
+        if (lightImg && lightImg.width > 0) ctx.drawImage(lightImg, 0, 0, 512, 512);
         else { ctx.fillStyle = '#e8c4b0'; ctx.fillRect(0,0,512,512); }
 
-        // Apply rich warm skin pigmentation tint (or cool metallic/synth tone when finish=android/metallic)
-        var rgb = hexToRgb01(state.skinHex || '#cf9170');
+        if (darkImg && darkImg.width > 0 && darkMix > 0.02){
+          ctx.save();
+          ctx.globalAlpha = darkMix;
+          ctx.drawImage(darkImg, 0, 0, 512, 512);
+          ctx.restore();
+        }
+
+        // Normalize tint relative to base skin photo midtone (#cf9170) so default & lighter/darker tones stay true-to-life without oversaturated orange!
+        var relR = rgb[0] / 0.812, relG = rgb[1] / 0.569, relB = rgb[2] / 0.439;
+        var relL = luma / 0.625;
+        var lift = 1.0 + darkMix * 0.42;
+        var mulR = Math.min(255, Math.max(24, Math.round((relR * 0.65 + relL * 0.35) * lift * 255)));
+        var mulG = Math.min(255, Math.max(20, Math.round((relG * 0.65 + relL * 0.35) * lift * 255)));
+        var mulB = Math.min(255, Math.max(18, Math.round((relB * 0.65 + relL * 0.35) * lift * 255)));
         ctx.globalCompositeOperation = 'multiply';
-        ctx.fillStyle = 'rgb('+Math.round(rgb[0]*255)+','+Math.round(rgb[1]*255)+','+Math.round(rgb[2]*255)+')';
+        ctx.fillStyle = 'rgb(' + mulR + ',' + mulG + ',' + mulB + ')';
         ctx.fillRect(0,0,512,512);
 
-        // Subtle cheek/nose/lip subsurface warmth boost on face UV island
+        // Subtle cheek/nose capillary warmth (no full-face orange soft-light!)
         ctx.globalCompositeOperation = 'soft-light';
         var nose = (faceUV && faceUV.nose) || [0.87, 0.52];
         var grad = ctx.createRadialGradient(nose[0]*512, nose[1]*512, 8, nose[0]*512, nose[1]*512, 95);
-        grad.addColorStop(0, 'rgba(245,145,118,0.42)');
-        grad.addColorStop(1, 'rgba(245,145,118,0.0)');
+        grad.addColorStop(0, 'rgba(218,118,98,0.18)');
+        grad.addColorStop(1, 'rgba(218,118,98,0.0)');
         ctx.fillStyle = grad;
         ctx.fillRect(340, 120, 172, 280);
 
@@ -503,7 +534,7 @@
           ctx.beginPath(); ctx.moveTo(410, 140); ctx.lineTo(432, 200); ctx.lineTo(445, 224); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(410, 370); ctx.lineTo(432, 310); ctx.lineTo(445, 286); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(155, 65); ctx.lineTo(205, 92); ctx.lineTo(255, 65); ctx.stroke();
-          ctx.fillStyle = 'rgba(0,224,255,0.68)';
+          ctx.fillStyle = 'rgba(120,210,235,0.70)';
           ctx.fillRect(431, 198, 3, 3); ctx.fillRect(431, 309, 3, 3);
         }
 
@@ -564,26 +595,44 @@
           ctx.restore();
         }
 
-        // Beard / Stubble / Goatee directly along jaw/chin/lip UV anchors
-        if (state.beardStyle && state.beardStyle !== 'clean'){
+        // Natural dermal lip warmth via alpha-keyed MakeHuman lip mask
+        if (lipMaskImg && lipMaskImg.width > 0){
+          var lctx = maskCanvas.getContext('2d');
+          lctx.clearRect(0, 0, 512, 512);
+          lctx.globalCompositeOperation = 'source-over';
+          lctx.drawImage(lipMaskImg, 0, 0, 512, 512);
+          lctx.globalCompositeOperation = 'source-in';
+          lctx.fillStyle = state.gender >= 0.45 ? 'rgb(196,102,102)' : 'rgb(176,106,96)';
+          lctx.fillRect(0, 0, 512, 512);
+          lctx.globalCompositeOperation = 'source-over';
+          ctx.save();
+          ctx.globalAlpha = state.gender >= 0.45 ? 0.34 : 0.22;
+          ctx.drawImage(maskCanvas, 0, 0, 512, 512);
+          ctx.restore();
+        }
+
+        // Authentic CC0 MakeHuman Follicle Beard / Stubble Shading Mask (underneath 3D beard meshes or standalone stubble!)
+        var bs = state.beardStyle || 'clean';
+        if (bs !== 'clean'){
           var hrgb = hexToRgb01(state.hairHex || '#2a1f1a');
-          var alpha = state.beardStyle === 'stubble' ? 0.34 : 0.72;
-          ctx.fillStyle = 'rgba('+Math.round(hrgb[0]*255)+','+Math.round(hrgb[1]*255)+','+Math.round(hrgb[2]*255)+','+alpha+')';
-          var chin = faceUV.chin || [0.97, 0.51];
-          var ulip = faceUV.ulip || [0.89, 0.51];
-          var ljaw = faceUV.ljaw || [0.94, 0.42];
-          var rjaw = faceUV.rjaw || [0.94, 0.60];
-          ctx.beginPath(); ctx.ellipse(chin[0]*512, chin[1]*512, 18, 28, 0, 0, Math.PI*2); ctx.fill();
-          ctx.beginPath(); ctx.ellipse(ulip[0]*512, ulip[1]*512, 6, 18, 0, 0, Math.PI*2); ctx.fill();
-          if (state.beardStyle !== 'goatee'){
-            ctx.beginPath(); ctx.ellipse(ljaw[0]*512, ljaw[1]*512, 22, 34, 0.25, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(rjaw[0]*512, rjaw[1]*512, 22, 34, -0.25, 0, Math.PI*2); ctx.fill();
-          }
-          ctx.fillStyle = 'rgba(20,14,12,0.18)';
-          for (var fi = 0; fi < 160; fi++){
-            var fx = (ulip[0] + ((fi*37)%100)/1000) * 512;
-            var fy = (0.38 + ((fi*61)%26)/100) * 512;
-            ctx.fillRect(fx, fy, 1.5, 1.5);
+          var bAlpha = bs === 'stubble' ? 0.28 : (bs === 'painted_short' ? 0.78 : (bs === 'goatee' || bs === 'moustache' ? 0.26 : 0.56));
+          if (beardMaskImg && beardMaskImg.width > 0){
+            var mctx = maskCanvas.getContext('2d');
+            mctx.clearRect(0, 0, 512, 512);
+            mctx.globalCompositeOperation = 'source-over';
+            mctx.drawImage(beardMaskImg, 0, 0, 512, 512);
+            mctx.globalCompositeOperation = 'source-in';
+            mctx.fillStyle = 'rgb(' + Math.round(hrgb[0]*125) + ',' + Math.round(hrgb[1]*120) + ',' + Math.round(hrgb[2]*115) + ')';
+            mctx.fillRect(0, 0, 512, 512);
+            mctx.globalCompositeOperation = 'source-over';
+            ctx.save();
+            ctx.globalAlpha = bAlpha;
+            if (bs === 'goatee' || bs === 'moustache'){
+              // Restrict follicle mask cleanly to upper lip / chin center
+              ctx.beginPath(); ctx.rect(418, 195, 94, 125); ctx.clip();
+            }
+            ctx.drawImage(maskCanvas, 0, 0, 512, 512);
+            ctx.restore();
           }
         }
 
@@ -724,6 +773,51 @@
     };
   }
 
+  function _tintHairTexture(ctx, img, hexCol, streak){
+    ctx.clearRect(0, 0, 512, 512);
+    if (img && img.width > 0){
+      ctx.drawImage(img, 0, 0, 512, 512);
+      try {
+        var id = ctx.getImageData(0, 0, 512, 512);
+        var d = id.data;
+        var sum = 0, cnt = 0;
+        for (var i = 0; i < d.length; i += 4){
+          if (d[i+3] > 20){ sum += 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]; cnt++; }
+        }
+        if (cnt > 64 && sum > 10){
+          var mean = Math.max(48.0, sum / cnt);
+          var rgb = hexToRgb01(hexCol || '#2e221b');
+          var tr = Math.max(0.035, rgb[0]), tg = Math.max(0.030, rgb[1]), tb = Math.max(0.025, rgb[2]);
+          for (var j = 0; j < d.length; j += 4){
+            if (d[j+3] === 0) continue;
+            var lum = (0.299*d[j] + 0.587*d[j+1] + 0.114*d[j+2]) / mean;
+            var v = Math.min(1.32, 0.38 + 0.62 * Math.pow(Math.max(0.02, lum), 0.88));
+            d[j]   = Math.min(255, Math.round(tr * v * 255));
+            d[j+1] = Math.min(255, Math.round(tg * v * 255));
+            d[j+2] = Math.min(255, Math.round(tb * v * 255));
+          }
+          ctx.putImageData(id, 0, 0);
+        }
+      } catch (_e){}
+    } else {
+      ctx.fillStyle = hexCol || '#2e221b'; ctx.fillRect(0, 0, 512, 512);
+    }
+
+    if (streak && streak.enabled){
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.translate(streak.x * 512, streak.y * 512);
+      ctx.rotate(streak.angle || 0);
+      var sg = ctx.createLinearGradient(-512*streak.width, 0, 512*streak.width, 0);
+      sg.addColorStop(0, 'rgba(225,234,242,0.0)');
+      sg.addColorStop(0.5, 'rgba(235,244,252,0.92)');
+      sg.addColorStop(1, 'rgba(225,234,242,0.0)');
+      ctx.fillStyle = sg;
+      ctx.fillRect(-512*streak.width, -512, 1024*streak.width, 1024);
+      ctx.restore();
+    }
+  }
+
   function createHairCompositor(baseImg){
     var canvas = (typeof document !== 'undefined' && document.createElement) ? document.createElement('canvas') : null;
     if (!canvas) return null;
@@ -732,26 +826,20 @@
     return {
       canvas: canvas,
       update: function(state, activeBaseImg){
-        var img = activeBaseImg || baseImg;
-        ctx.clearRect(0,0,512,512);
-        if (img && img.width > 0) ctx.drawImage(img, 0, 0, 512, 512);
-        else { ctx.fillStyle = '#fff'; ctx.fillRect(0,0,512,512); }
+        _tintHairTexture(ctx, activeBaseImg || baseImg, state.hairHex || '#2e221b', state.grayStreak);
+      }
+    };
+  }
 
-        // Movable/Rotatable Gray Streaks composited directly into hair alpha mask!
-        var streak = state.grayStreak || { enabled: false, x: 0.38, y: 0.45, angle: 0.4, width: 0.18 };
-        if (streak.enabled){
-          ctx.save();
-          ctx.globalCompositeOperation = 'source-atop';
-          ctx.translate(streak.x * 512, streak.y * 512);
-          ctx.rotate(streak.angle || 0);
-          var sg = ctx.createLinearGradient(-512*streak.width, 0, 512*streak.width, 0);
-          sg.addColorStop(0, 'rgba(225,234,242,0.0)');
-          sg.addColorStop(0.5, 'rgba(235,244,252,0.92)');
-          sg.addColorStop(1, 'rgba(225,234,242,0.0)');
-          ctx.fillStyle = sg;
-          ctx.fillRect(-512*streak.width, -512, 1024*streak.width, 1024);
-          ctx.restore();
-        }
+  function createBeardCompositor(baseImg){
+    var canvas = (typeof document !== 'undefined' && document.createElement) ? document.createElement('canvas') : null;
+    if (!canvas) return null;
+    canvas.width = 512; canvas.height = 512;
+    var ctx = canvas.getContext('2d');
+    return {
+      canvas: canvas,
+      update: function(state, activeBaseImg){
+        _tintHairTexture(ctx, activeBaseImg || baseImg, state.beardHex || state.hairHex || '#2e221b', null);
       }
     };
   }
@@ -1035,7 +1123,7 @@
     return w;
   }
 
-  function applyMeshMorphsAndTuck(mesh, morphWeights, tuckAmount){
+  function applyMeshMorphsAndTuck(mesh, morphWeights, tuckAmount, hairSpringDisp){
     var p = mesh.dynPos, rp = mesh.restPos;
     p.set(rp);
     var keys = Object.keys(morphWeights);
@@ -1052,20 +1140,34 @@
       var ht = mesh.hairTuck;
       for (var hi = 0; hi < p.length; hi++) p[hi] += ht[hi] * tuckAmount;
     } else if (mesh.hairCrown){
-      // Gently clear skull surface by +3.5mm so crown hair strands never z-fight into scalp
+      // Gently clear skull crown by +2.0mm so scalp strands never z-fight
       for (var vi = 0; vi < p.length; vi += 3){
         var dx = p[vi], dy = p[vi+1] - 1.545, dz = p[vi+2] - 0.020;
         var rl = Math.hypot(dx, dy, dz);
-        if (rl > 0.04 && rl < 0.135 && p[vi+1] > 1.52){
-          var lift = 0.0035 / rl;
+        if (rl > 0.04 && rl < 0.125 && p[vi+1] > 1.54){
+          var lift = 0.0020 / rl;
           p[vi] += dx * lift; p[vi+1] += dy * lift; p[vi+2] += dz * lift;
+        }
+      }
+    }
+    if (hairSpringDisp && mesh.hairSpringW){
+      var sw = mesh.hairSpringW;
+      var sx = hairSpringDisp[0] * (1.0 - 0.65 * (tuckAmount || 0));
+      var sy = hairSpringDisp[1] * (1.0 - 0.65 * (tuckAmount || 0));
+      var sz = hairSpringDisp[2] * (1.0 - 0.65 * (tuckAmount || 0));
+      for (var wi = 0; wi < sw.length; wi++){
+        var wv = sw[wi];
+        if (wv > 0.001){
+          p[wi*3]   += sx * wv;
+          p[wi*3+1] += sy * wv;
+          p[wi*3+2] += sz * wv;
         }
       }
     }
     return p;
   }
 
-  // --- GLSL Shaders (WebGL2 & WebGL1-safe: explicit 3-column mat3 constructors!) ---
+  // --- GLSL Shaders (WebGL1 fallback + WebGL2 ES 3.00 Mikkelsen Derivative Normal Mapping!) ---
   var VS_SKINNED =
     'attribute vec3 aPos;\n' +
     'attribute vec3 aNorm;\n' +
@@ -1158,47 +1260,168 @@
     'void main(){\n' +
     '  vec4 tex = uHasTex > 0.5 ? texture2D(uAlbedo, vUV) : vec4(1.0);\n' +
     '  if (uAlphaCut > 0.01 && tex.a < uAlphaCut) discard;\n' +
-    '  vec3 base = tex.rgb * uTint.rgb;\n' +
+    '  vec3 base = pow(max(tex.rgb, vec3(0.001)), vec3(2.2)) * pow(max(uTint.rgb, vec3(0.001)), vec3(2.2));\n' +
     '  float met = uMetallic; float rough = clamp(uRoughness, 0.08, 0.96); float skinW = uIsSkin; float emW = uEmissive;\n' +
-    '  float bitDiv = pow(2.0, floor(vBodyPart + 0.5));\n' +
-    '  float isCyberPart = floor(mod(uCyberMask / bitDiv, 2.0));\n' +
-    '  if (uIsSkin > 0.5 && isCyberPart > 0.5){\n' +
-    '    float seam = step(0.92, abs(sin(vUV.x * 165.0)) * abs(cos(vUV.y * 165.0)));\n' +
-    '    base = mix(vec3(0.24, 0.28, 0.34), vec3(0.04, 0.85, 0.96), seam * 0.72);\n' +
-    '    met = 0.88; rough = 0.22; skinW = 0.0; emW += seam * 0.50;\n' +
-    '  } else if (uIsSkin > 0.5 && uSkinFinish > 0.5){\n' +
-    '    if (uSkinFinish < 1.5){ rough = 0.26; met = 0.08; }\n' +
-    '    else if (uSkinFinish < 2.5){ rough = 0.14; met = 0.88; skinW = 0.25; }\n' +
+    '  if (skinW > 0.5 && uSkinFinish > 0.5){\n' +
+    '    if (uSkinFinish < 1.5){ rough = 0.30; met = 0.04; }\n' +
+    '    else if (uSkinFinish < 2.5){ rough = 0.16; met = 0.88; skinW = 0.15; }\n' +
     '    else {\n' +
-    '      float hexG = step(0.94, abs(sin(vUV.x * 210.0)) * abs(cos(vUV.y * 210.0)));\n' +
-    '      base = mix(base * vec3(0.92, 0.95, 1.02), vec3(0.14, 0.75, 0.92), hexG * 0.25);\n' +
-    '      rough = 0.26; met = 0.42; skinW = 0.20; emW += hexG * 0.16;\n' +
+    '      rough = 0.28; met = 0.45; skinW = 0.18; base *= vec3(0.92, 0.95, 1.00);\n' +
     '    }\n' +
     '  }\n' +
+    '  vec3 V = normalize(uCamPos - vWorldPos);\n' +
     '  vec3 N = normalize(vNorm);\n' +
-    '  if (uHasNormal > 0.5 && skinW > 0.5){\n' +
+    '  if (!gl_FrontFacing) N = -N;\n' +
+    '  if (uHasNormal > 0.5){\n' +
     '    vec3 nm = texture2D(uNormalMap, vUV).xyz * 2.0 - 1.0;\n' +
     '    vec3 upv = abs(N.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);\n' +
     '    vec3 T = normalize(cross(upv, N));\n' +
     '    vec3 B = cross(N, T);\n' +
-    '    N = normalize(N + (T * nm.x + B * nm.y) * 0.45);\n' +
+    '    float nStr = skinW > 0.5 ? 0.52 : 0.78;\n' +
+    '    N = normalize(N + (T * nm.x + B * nm.y) * nStr);\n' +
     '  }\n' +
-    '  vec3 V = normalize(uCamPos - vWorldPos);\n' +
+    '  if (skinW < -0.5 && dot(N, V) < 0.0) N = -N;\n' +
     '  vec3 L = normalize(uKeyDir);\n' +
     '  vec3 H = normalize(L + V);\n' +
+    '  vec3 Lfill = normalize(vec3(-0.65, 0.38, 0.52));\n' +
     '  float ndl = dot(N, L);\n' +
-    '  float diff = skinW > 0.5 ? clamp((ndl + 0.38) / 1.38, 0.0, 1.0) : max(ndl, 0.0);\n' +
-    '  vec3 sssTint = skinW > 0.5 ? vec3(0.92, 0.34, 0.20) * smoothstep(-0.35, 0.25, ndl) * (1.0 - max(ndl, 0.0)) * 0.52 : vec3(0.0);\n' +
-    '  float specPow = mix(112.0, 8.0, rough);\n' +
-    '  float spec = pow(max(dot(N, H), 0.0001), specPow) * mix(0.30, 0.98, met);\n' +
-    '  float fres = pow(max(1.0 - max(dot(N, V), 0.0), 0.0001), 3.4);\n' +
-    '  vec3 rim = uRimCol * fres * mix(0.68, 1.15, met);\n' +
-    '  vec3 hemi = mix(vec3(0.09, 0.08, 0.09), vec3(0.24, 0.25, 0.28), N.y * 0.5 + 0.5);\n' +
-    '  vec3 col = base * (hemi + uKeyCol * diff + sssTint) + vec3(spec) * mix(vec3(1.0, 0.94, 0.88), base, met) + rim;\n' +
-    '  col += base * emW;\n' +
-    '  if (uEmissive > 0.5 || uTint.a < 0.99 || tex.a < 0.98){ col = aces(col * 1.12); gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), tex.a * uTint.a); return; }\n' +
-    '  col = aces(col * 1.16);\n' +
+    '  float ndf = max(dot(N, Lfill), 0.0);\n' +
+    '  float diff = skinW > 0.5 ? clamp((ndl + 0.36) / 1.36, 0.0, 1.0) : (skinW < -0.5 ? clamp((ndl + 0.42) / 1.42, 0.0, 1.0) : max(ndl, 0.0));\n' +
+    '  vec3 sssTint = skinW > 0.5 ? vec3(0.88, 0.28, 0.16) * smoothstep(-0.32, 0.24, ndl) * (1.0 - max(ndl, 0.0)) * 0.42 : vec3(0.0);\n' +
+    '  float ndv = max(dot(N, V), 0.001);\n' +
+    '  vec3 F0 = mix(vec3(0.032), base, met);\n' +
+    '  vec3 F = F0 + (vec3(1.0) - F0) * pow(1.0 - ndv, 5.0);\n' +
+    '  float spPow = mix(128.0, 6.0, rough);\n' +
+    '  vec3 specTerm = F * pow(max(dot(N, H), 0.0001), spPow) * ((spPow + 2.0) * 0.042) * (1.0 - rough * 0.65);\n' +
+    '  if (skinW < -0.5){\n' +
+    '    vec3 Th = normalize(vec3(0.0, 1.0, 0.0) - N * N.y + vec3(0.0001));\n' +
+    '    float th = dot(Th, H);\n' +
+    '    float sinTH = sqrt(max(0.0, 1.0 - th * th));\n' +
+    '    vec3 hSpec = mix(base * 1.45, vec3(0.92, 0.86, 0.78), 0.18);\n' +
+    '    specTerm = hSpec * (pow(sinTH, 56.0) * 0.065 + pow(sinTH, 14.0) * 0.032) * clamp(ndl + 0.35, 0.0, 1.0);\n' +
+    '  }\n' +
+    '  float backHit = max(dot(N, normalize(vec3(-0.32, 0.72, -0.64))), 0.0);\n' +
+    '  float fres = pow(1.0 - ndv, 4.0);\n' +
+    '  vec3 rim = uRimCol * fres * backHit * mix(0.28, 0.72, met);\n' +
+    '  vec3 hemi = mix(vec3(0.11, 0.10, 0.10), vec3(0.27, 0.28, 0.30), N.y * 0.5 + 0.5);\n' +
+    '  vec3 diffLight = hemi + uKeyCol * diff + vec3(0.28, 0.31, 0.36) * ndf + sssTint;\n' +
+    '  vec3 col = base * (1.0 - met * 0.65) * diffLight + specTerm + rim + base * emW;\n' +
+    '  if (uEmissive > 0.5 || uTint.a < 0.99 || tex.a < 0.98){ col = aces(col * 1.10); gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), tex.a * uTint.a); return; }\n' +
+    '  col = aces(col * 1.12);\n' +
     '  gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), uTint.a);\n' +
+    '}\n';
+
+  var VS_SKINNED_GL2 =
+    '#version 300 es\n' +
+    'in vec3 aPos;\n' +
+    'in vec3 aNorm;\n' +
+    'in vec2 aUV;\n' +
+    'in vec4 aJoint;\n' +
+    'in vec4 aWeight;\n' +
+    'uniform mat4 uProj;\n' +
+    'uniform mat4 uView;\n' +
+    'uniform mat4 uModel;\n' +
+    'uniform mat4 uJointMats[53];\n' +
+    'uniform float uUseSkin;\n' +
+    'out vec3 vWorldPos;\n' +
+    'out vec3 vNorm;\n' +
+    'out vec2 vUV;\n' +
+    'void main(){\n' +
+    '  vec4 lp = vec4(aPos, 1.0);\n' +
+    '  vec3 ln = aNorm;\n' +
+    '  if (uUseSkin > 0.5){\n' +
+    '    mat4 sm = uJointMats[int(aJoint.x)] * aWeight.x\n' +
+    '            + uJointMats[int(aJoint.y)] * aWeight.y\n' +
+    '            + uJointMats[int(aJoint.z)] * aWeight.z\n' +
+    '            + uJointMats[int(aJoint.w)] * aWeight.w;\n' +
+    '    lp = sm * lp;\n' +
+    '    mat3 snm = mat3(sm[0].xyz, sm[1].xyz, sm[2].xyz);\n' +
+    '    ln = normalize(snm * ln);\n' +
+    '  }\n' +
+    '  vec4 wp = uModel * lp;\n' +
+    '  mat3 m3 = mat3(uModel[0].xyz, uModel[1].xyz, uModel[2].xyz);\n' +
+    '  vWorldPos = wp.xyz;\n' +
+    '  vNorm = normalize(m3 * ln);\n' +
+    '  vUV = aUV;\n' +
+    '  gl_Position = uProj * uView * wp;\n' +
+    '}\n';
+
+  var FS_PBR_SSS_GL2 =
+    '#version 300 es\n' +
+    'precision highp float;\n' +
+    'in vec3 vWorldPos;\n' +
+    'in vec3 vNorm;\n' +
+    'in vec2 vUV;\n' +
+    'out vec4 fragColor;\n' +
+    'uniform sampler2D uAlbedo;\n' +
+    'uniform sampler2D uNormalMap;\n' +
+    'uniform float uHasTex;\n' +
+    'uniform float uHasNormal;\n' +
+    'uniform float uIsSkin;\n' +
+    'uniform float uMetallic;\n' +
+    'uniform float uRoughness;\n' +
+    'uniform float uAlphaCut;\n' +
+    'uniform float uEmissive;\n' +
+    'uniform vec4 uTint;\n' +
+    'uniform vec3 uCamPos;\n' +
+    'uniform vec3 uKeyDir;\n' +
+    'uniform vec3 uKeyCol;\n' +
+    'uniform vec3 uRimCol;\n' +
+    'uniform float uCyberMask;\n' +
+    'uniform float uSkinFinish;\n' +
+    'vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14), 0.0, 1.0); }\n' +
+    'vec3 perturbNormal(vec3 N, vec3 wp, vec2 uv, vec3 mapN, float strength){\n' +
+    '  vec3 dp1 = dFdx(wp); vec3 dp2 = dFdy(wp);\n' +
+    '  vec2 duv1 = dFdx(uv); vec2 duv2 = dFdy(uv);\n' +
+    '  vec3 dp2perp = cross(dp2, N); vec3 dp1perp = cross(N, dp1);\n' +
+    '  vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;\n' +
+    '  vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;\n' +
+    '  float invmax = inversesqrt(max(dot(T,T), dot(B,B)) + 1e-8);\n' +
+    '  return normalize(N + (T * (mapN.x * strength) + B * (mapN.y * strength)) * invmax);\n' +
+    '}\n' +
+    'void main(){\n' +
+    '  vec4 tex = uHasTex > 0.5 ? texture(uAlbedo, vUV) : vec4(1.0);\n' +
+    '  vec3 nmRaw = texture(uNormalMap, vUV).xyz * 2.0 - 1.0;\n' +
+    '  vec3 Ngeom = normalize(vNorm);\n' +
+    '  vec3 Npert = uHasNormal > 0.5 ? perturbNormal(Ngeom, vWorldPos, vUV, nmRaw, uIsSkin > 0.5 ? 0.52 : 0.80) : Ngeom;\n' +
+    '  if (uAlphaCut > 0.01 && tex.a < uAlphaCut) discard;\n' +
+    '  vec3 base = pow(max(tex.rgb, vec3(0.001)), vec3(2.2)) * pow(max(uTint.rgb, vec3(0.001)), vec3(2.2));\n' +
+    '  float met = uMetallic; float rough = clamp(uRoughness, 0.08, 0.96); float skinW = uIsSkin; float emW = uEmissive;\n' +
+    '  if (skinW > 0.5 && uSkinFinish > 0.5){\n' +
+    '    if (uSkinFinish < 1.5){ rough = 0.30; met = 0.04; }\n' +
+    '    else if (uSkinFinish < 2.5){ rough = 0.16; met = 0.88; skinW = 0.15; }\n' +
+    '    else { rough = 0.28; met = 0.45; skinW = 0.18; base *= vec3(0.92, 0.95, 1.00); }\n' +
+    '  }\n' +
+    '  vec3 V = normalize(uCamPos - vWorldPos);\n' +
+    '  vec3 N = (!gl_FrontFacing || (skinW < -0.5 && dot(Npert, V) < 0.0)) ? -Npert : Npert;\n' +
+    '  vec3 L = normalize(uKeyDir);\n' +
+    '  vec3 H = normalize(L + V);\n' +
+    '  vec3 Lfill = normalize(vec3(-0.65, 0.38, 0.52));\n' +
+    '  float ndl = dot(N, L);\n' +
+    '  float ndf = max(dot(N, Lfill), 0.0);\n' +
+    '  float diff = skinW > 0.5 ? clamp((ndl + 0.36) / 1.36, 0.0, 1.0) : (skinW < -0.5 ? clamp((ndl + 0.42) / 1.42, 0.0, 1.0) : max(ndl, 0.0));\n' +
+    '  vec3 sssTint = skinW > 0.5 ? vec3(0.88, 0.28, 0.16) * smoothstep(-0.32, 0.24, ndl) * (1.0 - max(ndl, 0.0)) * 0.42 : vec3(0.0);\n' +
+    '  float ndv = max(dot(N, V), 0.001);\n' +
+    '  vec3 F0 = mix(vec3(0.032), base, met);\n' +
+    '  vec3 F = F0 + (vec3(1.0) - F0) * pow(1.0 - ndv, 5.0);\n' +
+    '  float spPow = mix(128.0, 6.0, rough);\n' +
+    '  vec3 specTerm = F * pow(max(dot(N, H), 0.0001), spPow) * ((spPow + 2.0) * 0.042) * (1.0 - rough * 0.65);\n' +
+    '  if (skinW < -0.5){\n' +
+    '    vec3 Th = normalize(vec3(0.0, 1.0, 0.0) - N * N.y + vec3(0.0001));\n' +
+    '    float th = dot(Th, H);\n' +
+    '    float sinTH = sqrt(max(0.0, 1.0 - th * th));\n' +
+    '    vec3 hSpec = mix(base * 1.45, vec3(0.92, 0.86, 0.78), 0.18);\n' +
+    '    specTerm = hSpec * (pow(sinTH, 56.0) * 0.065 + pow(sinTH, 14.0) * 0.032) * clamp(ndl + 0.35, 0.0, 1.0);\n' +
+    '  }\n' +
+    '  float backHit = max(dot(N, normalize(vec3(-0.32, 0.72, -0.64))), 0.0);\n' +
+    '  float fres = pow(1.0 - ndv, 4.0);\n' +
+    '  vec3 rim = uRimCol * fres * backHit * mix(0.28, 0.72, met);\n' +
+    '  vec3 hemi = mix(vec3(0.11, 0.10, 0.10), vec3(0.27, 0.28, 0.30), N.y * 0.5 + 0.5);\n' +
+    '  vec3 diffLight = hemi + uKeyCol * diff + vec3(0.28, 0.31, 0.36) * ndf + sssTint;\n' +
+    '  vec3 col = base * (1.0 - met * 0.65) * diffLight + specTerm + rim + base * emW;\n' +
+    '  if (uEmissive > 0.5 || uTint.a < 0.99 || tex.a < 0.98){ col = aces(col * 1.10); fragColor = vec4(pow(col, vec3(1.0/2.2)), tex.a * uTint.a); return; }\n' +
+    '  col = aces(col * 1.12);\n' +
+    '  fragColor = vec4(pow(col, vec3(1.0/2.2)), uTint.a);\n' +
     '}\n';
 
   var FS_INSTANCED =
@@ -1213,8 +1436,9 @@
     '  vec3 N = normalize(vNorm);\n' +
     '  vec3 V = normalize(uCamPos - vWorldPos);\n' +
     '  float diff = max(dot(N, normalize(uKeyDir)), 0.0);\n' +
-    '  float fres = pow(max(1.0 - max(dot(N, V), 0.0), 0.0001), 3.2);\n' +
-    '  vec3 col = vInstTint * (0.24 + 0.85 * diff) + vec3(0.08, 0.25, 0.34) * fres;\n' +
+    '  float fres = pow(max(1.0 - max(dot(N, V), 0.0), 0.0001), 4.0);\n' +
+    '  vec3 base = pow(max(vInstTint, vec3(0.001)), vec3(2.2));\n' +
+    '  vec3 col = base * (0.20 + 0.95 * diff) + vec3(0.05, 0.05, 0.055) * fres;\n' +
     '  col = clamp((col*(2.51*col+0.03))/(col*(2.43*col+0.59)+0.14), 0.0, 1.0);\n' +
     '  gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), 1.0);\n' +
     '}\n';
@@ -1255,13 +1479,14 @@
     '  camPos: vec4<f32>,\n' +
     '  keyDir: vec4<f32>, // xyz = dir, w = skinFinish\n' +
     '  keyCol: vec4<f32>,\n' +
-    '  rimCol: vec4<f32>,\n' +
-    '  flags: vec4<f32>, // x=hasTex, y=isSkin, z=metallic, w=roughness\n' +
+    '  rimCol: vec4<f32>, // xyz = neutral studio rim, w = hasNormal\n' +
+    '  flags: vec4<f32>, // x=hasTex, y=isSkin (-1=hair, 0=std, 1=skin), z=metallic, w=roughness\n' +
     '  extra: vec4<f32>, // x=alphaCut, y=emissive, z=instanced, w=cyberMask\n' +
     '};\n' +
     '@group(0) @binding(0) var<uniform> u: DrawU;\n' +
     '@group(0) @binding(1) var samp: sampler;\n' +
     '@group(0) @binding(2) var texAlbedo: texture_2d<f32>;\n' +
+    '@group(0) @binding(3) var texNormal: texture_2d<f32>;\n' +
     'struct VOut { @builtin(position) pos: vec4<f32>, @location(0) wp: vec3<f32>, @location(1) n: vec3<f32>, @location(2) uv: vec2<f32>, @location(3) tint: vec4<f32>, @location(4) partId: f32 };\n' +
     '@vertex fn vsMain(@location(0) p: vec3<f32>, @location(1) n: vec3<f32>, @location(2) uv: vec2<f32>, @location(3) iOff: vec4<f32>, @location(4) iCol: vec4<f32>, @location(5) jPk: u32) -> VOut {\n' +
     '  var o: VOut;\n' +
@@ -1288,36 +1513,51 @@
     '  return o;\n' +
     '}\n' +
     'fn aces(x: vec3<f32>) -> vec3<f32> { return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14), vec3<f32>(0.0), vec3<f32>(1.0)); }\n' +
-    '@fragment fn fsMain(v: VOut) -> @location(0) vec4<f32> {\n' +
+    '@fragment fn fsMain(v: VOut, @builtin(front_facing) isFront: bool) -> @location(0) vec4<f32> {\n' +
     '  let t = textureSample(texAlbedo, samp, v.uv);\n' +
-    '  var base = select(vec3<f32>(1.0), t.rgb, u.flags.x > 0.5) * v.tint.rgb;\n' +
+    '  let tn = textureSample(texNormal, samp, v.uv).xyz * 2.0 - 1.0;\n' +
+    '  let dp1 = dpdx(v.wp); let dp2 = dpdy(v.wp);\n' +
+    '  let duv1 = dpdx(v.uv); let duv2 = dpdy(v.uv);\n' +
     '  if (u.extra.x > 0.01 && t.a < u.extra.x) { discard; }\n' +
-    '  var met = u.flags.z; var rough = clamp(u.flags.w, 0.08, 0.96); var isSkin = u.flags.y; var em = u.extra.y;\n' +
-    '  let bit = 1u << u32(round(v.partId));\n' +
-    '  let isCyberPart = (u32(round(u.extra.w)) & bit) != 0u;\n' +
-    '  if (isSkin > 0.5 && isCyberPart){\n' +
-    '    let seam = step(0.92, abs(sin(v.uv.x * 165.0)) * abs(cos(v.uv.y * 165.0)));\n' +
-    '    base = mix(vec3<f32>(0.24, 0.28, 0.34), vec3<f32>(0.04, 0.85, 0.96), seam * 0.72);\n' +
-    '    met = 0.88; rough = 0.22; isSkin = 0.0; em += seam * 0.50;\n' +
-    '  } else if (isSkin > 0.5 && u.keyDir.w > 0.5){\n' +
-    '    if (u.keyDir.w < 1.5){ rough = 0.26; met = 0.08; }\n' +
-    '    else if (u.keyDir.w < 2.5){ rough = 0.14; met = 0.88; isSkin = 0.25; }\n' +
-    '    else {\n' +
-    '      let hexG = step(0.94, abs(sin(v.uv.x * 210.0)) * abs(cos(v.uv.y * 210.0)));\n' +
-    '      base = mix(base * vec3<f32>(0.92, 0.95, 1.02), vec3<f32>(0.14, 0.75, 0.92), hexG * 0.25);\n' +
-    '      rough = 0.26; met = 0.42; isSkin = 0.20; em += hexG * 0.16;\n' +
-    '    }\n' +
+    '  var base = pow(max(select(vec3<f32>(1.0), t.rgb, u.flags.x > 0.5), vec3<f32>(0.001)), vec3<f32>(2.2)) * pow(max(v.tint.rgb, vec3<f32>(0.001)), vec3<f32>(2.2));\n' +
+    '  var met = u.flags.z; var rough = clamp(u.flags.w, 0.08, 0.96); var isSkin = u.flags.y; let em = u.extra.y;\n' +
+    '  if (isSkin > 0.5 && u.keyDir.w > 0.5){\n' +
+    '    if (u.keyDir.w < 1.5){ rough = 0.30; met = 0.04; }\n' +
+    '    else if (u.keyDir.w < 2.5){ rough = 0.16; met = 0.88; isSkin = 0.15; }\n' +
+    '    else { rough = 0.28; met = 0.45; isSkin = 0.18; base = base * vec3<f32>(0.92, 0.95, 1.00); }\n' +
     '  }\n' +
-    '  let N = normalize(v.n); let V = normalize(u.camPos.xyz - v.wp); let L = normalize(u.keyDir.xyz); let H = normalize(L+V);\n' +
-    '  let ndl = dot(N, L);\n' +
-    '  let diff = select(max(ndl, 0.0), clamp((ndl+0.38)/1.38, 0.0, 1.0), isSkin > 0.5);\n' +
-    '  let sss = select(vec3<f32>(0.0), vec3<f32>(0.92,0.34,0.20)*smoothstep(-0.35,0.25,ndl)*(1.0-max(ndl,0.0))*0.52, isSkin > 0.5);\n' +
-    '  let spPow = mix(112.0, 8.0, rough);\n' +
-    '  let sp = pow(max(dot(N, H), 0.0001), spPow) * mix(0.30, 0.98, met);\n' +
-    '  let fr = pow(max(1.0 - max(dot(N, V), 0.0), 0.0001), 3.4);\n' +
-    '  let hemi = mix(vec3<f32>(0.09,0.08,0.09), vec3<f32>(0.24,0.25,0.28), N.y*0.5+0.5);\n' +
-    '  var col = base*(hemi + u.keyCol.xyz*diff + sss) + vec3<f32>(sp)*mix(vec3<f32>(1.0,0.94,0.88), base, met) + u.rimCol.xyz*fr*mix(0.68,1.15,met) + base*em;\n' +
-    '  col = aces(col * 1.15);\n' +
+    '  let Ngeom = normalize(v.n);\n' +
+    '  let dp2perp = cross(dp2, Ngeom); let dp1perp = cross(Ngeom, dp1);\n' +
+    '  let Tt = dp2perp * duv1.x + dp1perp * duv2.x;\n' +
+    '  let Bt = dp2perp * duv1.y + dp1perp * duv2.y;\n' +
+    '  let invmax = inverseSqrt(max(dot(Tt,Tt), dot(Bt,Bt)) + 1e-8);\n' +
+    '  let nStr = select(0.80, 0.52, isSkin > 0.5);\n' +
+    '  var N = select(Ngeom, normalize(Ngeom + (Tt * (tn.x * nStr) + Bt * (tn.y * nStr)) * invmax), u.rimCol.w > 0.5);\n' +
+    '  let V = normalize(u.camPos.xyz - v.wp); let L = normalize(u.keyDir.xyz); let H = normalize(L+V);\n' +
+    '  if (!isFront || (isSkin < -0.5 && dot(N, V) < 0.0)) { N = -N; }\n' +
+    '  let Lfill = normalize(vec3<f32>(-0.65, 0.38, 0.52));\n' +
+    '  let ndl = dot(N, L); let ndf = max(dot(N, Lfill), 0.0);\n' +
+    '  var diff = max(ndl, 0.0);\n' +
+    '  if (isSkin > 0.5) { diff = clamp((ndl+0.36)/1.36, 0.0, 1.0); }\n' +
+    '  else if (isSkin < -0.5) { diff = clamp((ndl+0.42)/1.42, 0.0, 1.0); }\n' +
+    '  let sss = select(vec3<f32>(0.0), vec3<f32>(0.88,0.28,0.16)*smoothstep(-0.32,0.24,ndl)*(1.0-max(ndl,0.0))*0.42, isSkin > 0.5);\n' +
+    '  let ndv = max(dot(N, V), 0.001);\n' +
+    '  let F0 = mix(vec3<f32>(0.032), base, met);\n' +
+    '  let F = F0 + (vec3<f32>(1.0) - F0) * pow(1.0 - ndv, 5.0);\n' +
+    '  let spPow = mix(128.0, 6.0, rough);\n' +
+    '  var sp = F * pow(max(dot(N, H), 0.0001), spPow) * ((spPow + 2.0) * 0.042) * (1.0 - rough * 0.65);\n' +
+    '  if (isSkin < -0.5){\n' +
+    '    let Th = normalize(vec3<f32>(0.0, 1.0, 0.0) - N * N.y + vec3<f32>(0.0001));\n' +
+    '    let th = dot(Th, H); let sinTH = sqrt(max(0.0, 1.0 - th * th));\n' +
+    '    let hSpec = mix(base * 1.45, vec3<f32>(0.92, 0.86, 0.78), 0.18);\n' +
+    '    sp = hSpec * (pow(sinTH, 56.0) * 0.065 + pow(sinTH, 14.0) * 0.032) * clamp(ndl + 0.35, 0.0, 1.0);\n' +
+    '  }\n' +
+    '  let backHit = max(dot(N, normalize(vec3<f32>(-0.32, 0.72, -0.64))), 0.0);\n' +
+    '  let fr = pow(1.0 - ndv, 4.0);\n' +
+    '  let hemi = mix(vec3<f32>(0.11,0.10,0.10), vec3<f32>(0.27,0.28,0.30), N.y*0.5+0.5);\n' +
+    '  let diffLight = hemi + u.keyCol.xyz*diff + vec3<f32>(0.28,0.31,0.36)*ndf + sss;\n' +
+    '  var col = base*(1.0 - met*0.65)*diffLight + sp + u.rimCol.xyz*fr*backHit*mix(0.28,0.72,met) + base*em;\n' +
+    '  col = aces(col * 1.12);\n' +
     '  return vec4<f32>(pow(col, vec3<f32>(1.0/2.2)), select(v.tint.a, t.a*v.tint.a, u.extra.y > 0.5 || v.tint.a < 0.99 || t.a < 0.98));\n' +
     '}\n';
 
@@ -1374,10 +1614,36 @@
       });
     }));
 
-    var skinComp = createSkinCompositor(loadedImgs.body_skin_albedo, kit.faceUV, kit.nailUVs, kit.tattooUV);
+    var skinComp = createSkinCompositor(loadedImgs.body_skin_light, loadedImgs.body_skin_dark, loadedImgs.body_beard_mask, kit.faceUV, kit.nailUVs, kit.tattooUV, loadedImgs.body_lip_mask);
     var uwComp = createUnderwearCompositor(loadedImgs.bra_cloth_bra_albedo, loadedImgs.panties_cloth_panties_albedo, loadedImgs.briefs_cloth_briefs_albedo);
-    var hairComp = createHairCompositor(loadedImgs.hair_short02_hair_short02);
+    var hairComp = createHairCompositor(loadedImgs.tex_hair_short02);
+    var beardComp = createBeardCompositor(loadedImgs.tex_beard_short);
     var holoComp = createHologramCanvas();
+
+    function resolveHairMeshKey(style){
+      if (!style || style === 'bald' || style === 'buzz') return null;
+      var map = {
+        short01: 'hair_short01', short: 'hair_short02', short02: 'hair_short02',
+        sleek: 'hair_short04', short04: 'hair_short04',
+        messy: 'hair_messy', shaggy: 'hair_shaggy',
+        bob: 'hair_bob02', bob02: 'hair_bob02',
+        long: 'hair_long01', long01: 'hair_long01',
+        ponytail: 'hair_ponytail01', ponytail01: 'hair_ponytail01',
+        braids: 'hair_braid01', braid01: 'hair_braid01',
+        afro: 'hair_afro01', afro01: 'hair_afro01'
+      };
+      return map[style] || (kit.meshes[style] ? style : 'hair_short02');
+    }
+    function resolveBeardMeshKey(style){
+      if (!style || style === 'clean' || style === 'stubble' || style === 'painted_short') return null;
+      var map = {
+        goatee: 'beard_goatee',
+        short_3d: 'beard_short', jawline: 'beard_short', full: 'beard_short',
+        long: 'beard_long', viking: 'beard_long',
+        moustache: 'beard_moustache'
+      };
+      return map[style] || (kit.meshes[style] ? style : null);
+    }
 
     // --- Backend Implementation: WebGL2 / WebGL1 Hardware Skinning + Instanced Crowd ---
     var glState = null;
@@ -1393,7 +1659,7 @@
       if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('LINK: ' + gl.getProgramInfoLog(prog));
       return prog;
     }
-    function uploadGlTexture(source, isAlpha){
+    function uploadGlTexture(source, isAlpha, isRepeat){
       var t = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, t);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -1402,15 +1668,16 @@
       } else {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255,255,255,255]));
       }
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      var wrap = isRepeat ? gl.REPEAT : gl.CLAMP_TO_EDGE;
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       return t;
     }
 
     function initGl(){
-      var progSkin = compileGlProgram(VS_SKINNED, FS_PBR_SSS);
+      var progSkin = compileGlProgram(isWebGL2 ? VS_SKINNED_GL2 : VS_SKINNED, isWebGL2 ? FS_PBR_SSS_GL2 : FS_PBR_SSS);
       var progInst = compileGlProgram(VS_INSTANCED, FS_INSTANCED);
       var meshBufs = {};
       function mkBufs(m, isSkinned){
@@ -1437,15 +1704,26 @@
       var instOffBuf = gl.createBuffer(), instColBuf = gl.createBuffer();
       var texMap = {};
       Object.keys(loadedImgs).forEach(function(tk){
-        texMap[tk] = uploadGlTexture(loadedImgs[tk], tk.indexOf('hair')>=0 || tk.indexOf('eyebrow')>=0 || tk.indexOf('eyelash')>=0);
+        var isAlpha = tk.indexOf('hair')>=0 || tk.indexOf('beard_')>=0 || tk.indexOf('eyebrow')>=0 || tk.indexOf('eyelash')>=0 || tk.indexOf('_mask')>=0;
+        var isRep = (tk.indexOf('_normal')>=0 && tk !== 'body_skin_normal') || tk.indexOf('_cloth_')>=0 || tk.indexOf('trousers')>=0 || tk.indexOf('cyborg_suit')>=0;
+        texMap[tk] = uploadGlTexture(loadedImgs[tk], isAlpha, isRep);
       });
-      texMap.dyn_skin = uploadGlTexture(skinComp ? skinComp.canvas : null, false);
-      texMap.dyn_hair = uploadGlTexture(hairComp ? hairComp.canvas : null, true);
-      texMap.dyn_holo = uploadGlTexture(holoComp ? holoComp.canvas : null, true);
-      texMap.dyn_bra = uploadGlTexture(uwComp ? uwComp.braCanvas : null, true);
-      texMap.dyn_panties = uploadGlTexture(uwComp ? uwComp.pantiesCanvas : null, true);
-      texMap.dyn_briefs = uploadGlTexture(uwComp ? uwComp.briefsCanvas : null, false);
-      texMap.white = uploadGlTexture(null, true);
+      texMap.dyn_skin = uploadGlTexture(skinComp ? skinComp.canvas : null, false, false);
+      texMap.dyn_hair = uploadGlTexture(hairComp ? hairComp.canvas : null, true, false);
+      texMap.dyn_holo = uploadGlTexture(holoComp ? holoComp.canvas : null, true, false);
+      texMap.dyn_bra = uploadGlTexture(uwComp ? uwComp.braCanvas : null, true, false);
+      texMap.dyn_panties = uploadGlTexture(uwComp ? uwComp.pantiesCanvas : null, true, false);
+      texMap.dyn_briefs = uploadGlTexture(uwComp ? uwComp.briefsCanvas : null, false, false);
+      texMap.dyn_beard = uploadGlTexture(beardComp ? beardComp.canvas : null, true, false);
+      var fnTex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, fnTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([128,128,255,255]));
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      texMap.flat_normal = fnTex;
+      texMap.white = uploadGlTexture(null, true, false);
 
       glState = {
         progSkin: progSkin, progInst: progInst, meshBufs: meshBufs, texMap: texMap,
@@ -1556,11 +1834,11 @@
       });
       Object.keys(props).forEach(function(pk){ meshesGPU['prop_' + pk] = mkGpuMesh(props[pk], false); });
 
-      function mkGpuTex(src){
+      function mkGpuTex(src, fallbackRgba){
         var w = (src && src.width) || 1, h = (src && src.height) || 1;
         var tex = gpuDevice.createTexture({ size:[w, h, 1], format:'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
         if (src && src.width > 0) gpuDevice.queue.copyExternalImageToTexture({ source: src }, { texture: tex }, [w, h]);
-        else gpuDevice.queue.writeTexture({ texture: tex }, new Uint8Array([255,255,255,255]), { bytesPerRow: 4 }, [1,1]);
+        else gpuDevice.queue.writeTexture({ texture: tex }, new Uint8Array(fallbackRgba || [255,255,255,255]), { bytesPerRow: 4 }, [1,1]);
         return tex;
       }
       var gpuTex = { white: mkGpuTex(null) };
@@ -1571,6 +1849,8 @@
       gpuTex.dyn_bra = mkGpuTex(uwComp ? uwComp.braCanvas : null);
       gpuTex.dyn_panties = mkGpuTex(uwComp ? uwComp.pantiesCanvas : null);
       gpuTex.dyn_briefs = mkGpuTex(uwComp ? uwComp.briefsCanvas : null);
+      gpuTex.dyn_beard = mkGpuTex(beardComp ? beardComp.canvas : null);
+      gpuTex.flat_normal = mkGpuTex(null, [128,128,255,255]);
 
       var depthTex = gpuDevice.createTexture({ size:[Math.max(1,canvas.width), Math.max(1,canvas.height)], format:'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT });
       var portraitJointMatBuf = gpuDevice.createBuffer({ size: 53 * 64, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
@@ -1613,12 +1893,13 @@
 
     if (backend === 'webgpu') initWebGPU(); else initGl();
 
-    // Track dirty states + damped spring bust oscillator + biomechanical recoil state
-    var lastMorphSig = '', lastWearSig = '', lastSkinSig = '', lastHairSig = '', lastHoloSig = '', lastUwSig = '', lastShipSeed = 0;
+    // Track dirty states + damped spring bust oscillator + secondary hair sway + biomechanical recoil state
+    var lastMorphSig = '', lastWearSig = '', lastSkinSig = '', lastHairSig = '', lastBeardSig = '', lastHoloSig = '', lastUwSig = '', lastShipSeed = 0;
     var activeCulledBodyIdx = null;
     var activeCulledHairIdx = {};
     var lastCrowdCount = 0;
     var bustSpring = { pos: [0,0,0], vel: [0,0,0], prevSpine: null };
+    var hairSpring = { pos: [0,0,0], vel: [0,0,0], prevHead: null };
 
     function getPartMode(state, partKey){
       var bp = state.bodyParts || {};
@@ -1655,27 +1936,33 @@
         if (state.gender >= 0.35) hide |= (bz.underwear_f | bz.bra);
         else hide |= bz.underwear_m;
       }
-      if (outfit === 'tee' || outfit === 'armor'){ hide |= (bz.torso | bz.shirt | bz.hips | bz.legs | bz.feet | bz.boots); }
+      if (outfit === 'tee' || outfit === 'armor' || outfit === 'trousers'){ hide |= (bz.torso | bz.hips | bz.legs | bz.feet | bz.boots); }
       else if (outfit === 'hoodie'){ hide |= (bz.hoodie | bz.torso | bz.shirt | bz.hips | bz.legs | bz.feet | bz.boots); }
-      else if (outfit === 'jacket'){ hide |= (bz.torso | bz.shirt | bz.jacket | bz.hips | bz.legs | bz.feet | bz.boots); }
+      else if (outfit === 'jacket' || outfit === 'cyborg_suit'){ hide |= (bz.torso | bz.shirt | bz.jacket | bz.hips | bz.legs | bz.feet | bz.boots); }
 
-      var skHead  = getPartMode(state, 'head')  === 'skeleton';
-      var skTorso = getPartMode(state, 'torso') === 'skeleton';
-      var skArmL  = getPartMode(state, 'armL')  === 'skeleton';
-      var skArmR  = getPartMode(state, 'armR')  === 'skeleton';
-      var skLegL  = getPartMode(state, 'legL')  === 'skeleton';
-      var skLegR  = getPartMode(state, 'legR')  === 'skeleton';
+      var mHead  = getPartMode(state, 'head');
+      var mTorso = getPartMode(state, 'torso');
+      var mArmL  = getPartMode(state, 'armL');
+      var mArmR  = getPartMode(state, 'armR');
+      var mLegL  = getPartMode(state, 'legL');
+      var mLegR  = getPartMode(state, 'legR');
+      var cullHead  = (mHead  === 'skeleton' || mHead  === 'cyber');
+      var cullTorso = (mTorso === 'skeleton' || mTorso === 'cyber');
+      var cullArmL  = (mArmL  === 'skeleton' || mArmL  === 'cyber');
+      var cullArmR  = (mArmR  === 'skeleton' || mArmR  === 'cyber');
+      var cullLegL  = (mLegL  === 'skeleton' || mLegL  === 'cyber');
+      var cullLegR  = (mLegR  === 'skeleton' || mLegR  === 'cyber');
 
-      var raw = m.indices, ccz = m.cczone, jts = m.joints, out = [];
+      var raw = m.indices, ccz = m.cczone, jts = m.joints, rp = m.restPos, out = [];
       for (var i = 0; i < raw.length; i += 3){
         var a = raw[i], b = raw[i+1], c = raw[i+2];
         var ja = jts[a*4], jb = jts[b*4], jc = jts[c*4];
-        if (skHead  && (ja===43||ja===44) && (jb===43||jb===44) && (jc===43||jc===44)) continue;
-        if (skTorso && (ja<=5||ja===24) && (jb<=5||jb===24) && (jc<=5||jc===24)) continue;
-        if (skArmL  && (ja>=6&&ja<=23) && (jb>=6&&jb<=23) && (jc>=6&&jc<=23)) continue;
-        if (skArmR  && (ja>=25&&ja<=42) && (jb>=25&&jb<=42) && (jc>=25&&jc<=42)) continue;
-        if (skLegL  && (ja>=45&&ja<=48) && (jb>=45&&jb<=48) && (jc>=45&&jc<=48)) continue;
-        if (skLegR  && (ja>=49&&ja<=52) && (jb>=49&&jb<=52) && (jc>=49&&jc<=52)) continue;
+        if (cullHead  && (ja===43||ja===44) && (jb===43||jb===44) && (jc===43||jc===44)) continue;
+        if (cullTorso && (ja<=5||ja===24) && (jb<=5||jb===24) && (jc<=5||jc===24)) continue;
+        if (cullArmL  && (ja>=6&&ja<=23) && (jb>=6&&jb<=23) && (jc>=6&&jc<=23) && (rp[a*3]>0.172 && rp[b*3]>0.172 && rp[c*3]>0.172)) continue;
+        if (cullArmR  && (ja>=25&&ja<=42) && (jb>=25&&jb<=42) && (jc>=25&&jc<=42) && (rp[a*3]<-0.172 && rp[b*3]<-0.172 && rp[c*3]<-0.172)) continue;
+        if (cullLegL  && (ja>=45&&ja<=48) && (jb>=45&&jb<=48) && (jc>=45&&jc<=48) && (rp[a*3]>0.095 || rp[a*3+1]<0.83)) continue;
+        if (cullLegR  && (ja>=49&&ja<=52) && (jb>=49&&jb<=52) && (jc>=49&&jc<=52) && (rp[a*3]<-0.095 || rp[a*3+1]<0.83)) continue;
         var hits = ((ccz[a] & hide) !== 0 ? 1 : 0) + ((ccz[b] & hide) !== 0 ? 1 : 0) + ((ccz[c] & hide) !== 0 ? 1 : 0);
         if (hits >= 2) continue;
         out.push(a, b, c);
@@ -1691,34 +1978,49 @@
         wgpuState.meshesGPU.base_body.icount = activeCulledBodyIdx.length;
       }
 
-      // Cull tshirt sleeves/back/shoulders when jacket is worn so only front V-chest panel shows cleanly
-      var tm = kit.meshes.tshirt;
-      if (tm){
-        var tIdxArr;
-        if (outfit === 'jacket'){
-          var tr = tm.indices, tp = tm.restPos, tout = [];
-          for (var ti = 0; ti < tr.length; ti += 3){
-            var ta = tr[ti], tb = tr[ti+1], tc = tr[ti+2];
-            var cx = (tp[ta*3] + tp[tb*3] + tp[tc*3]) / 3;
-            var cy = (tp[ta*3+1] + tp[tb*3+1] + tp[tc*3+1]) / 3;
-            var cz = (tp[ta*3+2] + tp[tb*3+2] + tp[tc*3+2]) / 3;
-            if (Math.abs(cx) < 0.135 && cz > 0.032 && cy > 0.96 && cy < 1.38) tout.push(ta, tb, tc);
-          }
-          tIdxArr = new Uint16Array(tout);
-        } else {
-          tIdxArr = tm.indices;
+      // Cull clothes on bionic/skeletal limbs so swapped cybernetic/skeletal arms & legs show cleanly without cloth Z-fighting
+      function cullClothingByLimbs(meshKey, extraFn){
+        var gm = kit.meshes[meshKey];
+        if (!gm || !gm.joints) return;
+        var gr = gm.indices, gj = gm.joints, grp = gm.restPos, gout = [];
+        for (var gi = 0; gi < gr.length; gi += 3){
+          var ga = gr[gi], gb = gr[gi+1], gc = gr[gi+2];
+          var gja = gj[ga*4], gjb = gj[gb*4], gjc = gj[gc*4];
+          if (cullArmL && gja>=6  && gja<=23 && gjb>=6  && gjb<=23 && gjc>=6  && gjc<=23 && (grp[ga*3]>0.172 && grp[gb*3]>0.172 && grp[gc*3]>0.172)) continue;
+          if (cullArmR && gja>=25 && gja<=42 && gjb>=25 && gjb<=42 && gjc>=25 && gjc<=42 && (grp[ga*3]<-0.172 && grp[gb*3]<-0.172 && grp[gc*3]<-0.172)) continue;
+          if (cullLegL && gja>=45 && gja<=48 && gjb>=45 && gjb<=48 && gjc>=45 && gjc<=48) continue;
+          if (cullLegR && gja>=49 && gja<=52 && gjb>=49 && gjb<=52 && gjc>=49 && gjc<=52) continue;
+          if (extraFn && !extraFn(gm, ga, gb, gc)) continue;
+          gout.push(ga, gb, gc);
         }
-        if (glState){
-          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glState.meshBufs.tshirt.bIdx);
-          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tIdxArr, gl.DYNAMIC_DRAW);
-          glState.meshBufs.tshirt.icount = tIdxArr.length;
-        } else if (wgpuState){
-          var tpad = new Uint16Array((tIdxArr.length + 1) & ~1); tpad.set(tIdxArr);
-          gpuDevice.queue.writeBuffer(wgpuState.meshesGPU.tshirt.idxBuf, 0, tpad);
-          wgpuState.meshesGPU.tshirt.icount = tIdxArr.length;
+        var gArr = new Uint16Array(gout);
+        if (glState && glState.meshBufs[meshKey]){
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glState.meshBufs[meshKey].bIdx);
+          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, gArr, gl.DYNAMIC_DRAW);
+          glState.meshBufs[meshKey].icount = gArr.length;
+        } else if (wgpuState && wgpuState.meshesGPU[meshKey]){
+          var gpad = new Uint16Array((gArr.length + 1) & ~1); gpad.set(gArr);
+          gpuDevice.queue.writeBuffer(wgpuState.meshesGPU[meshKey].idxBuf, 0, gpad);
+          wgpuState.meshesGPU[meshKey].icount = gArr.length;
         }
       }
+
+      cullClothingByLimbs('tshirt', outfit === 'jacket' ? function(tm, ta, tb, tc){
+        var tp = tm.restPos;
+        var cx = (tp[ta*3] + tp[tb*3] + tp[tc*3]) / 3;
+        var cy = (tp[ta*3+1] + tp[tb*3+1] + tp[tc*3+1]) / 3;
+        var cz = (tp[ta*3+2] + tp[tb*3+2] + tp[tc*3+2]) / 3;
+        return Math.abs(cx) < 0.135 && cz > 0.032 && cy > 0.96 && cy < 1.38;
+      } : null);
+      cullClothingByLimbs('jacket', null);
+      cullClothingByLimbs('hoodie', null);
+      cullClothingByLimbs('jeans', null);
+      cullClothingByLimbs('trousers', null);
+      cullClothingByLimbs('cyborg_suit', null);
     }
+
+    var ALL_HAIR_MESHES = ['hair_short01','hair_short02','hair_short04','hair_messy','hair_shaggy','hair_bob02','hair_long01','hair_ponytail01','hair_braid01','hair_afro01'];
+    var ALL_BEARD_MESHES = ['beard_goatee','beard_short','beard_long','beard_moustache'];
 
     function rebuildHairVisibility(hairKey, helmetOn){
       var m = kit.meshes[hairKey];
@@ -1726,16 +2028,16 @@
       var raw = m.indices, mask = m.hairCrown, out = [];
       for (var i = 0; i < raw.length; i += 3){
         var a=raw[i], b=raw[i+1], c=raw[i+2];
-        if (helmetOn && mask[a] >= 128 && mask[b] >= 128 && mask[c] >= 128) continue;
+        if (helmetOn && mask && mask[a] >= 128 && mask[b] >= 128 && mask[c] >= 128) continue;
         out.push(a,b,c);
       }
       var arr = new Uint16Array(out);
       activeCulledHairIdx[hairKey] = arr;
-      if (glState){
+      if (glState && glState.meshBufs[hairKey]){
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glState.meshBufs[hairKey].bIdx);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, arr, gl.DYNAMIC_DRAW);
         glState.meshBufs[hairKey].icount = arr.length;
-      } else if (wgpuState){
+      } else if (wgpuState && wgpuState.meshesGPU[hairKey]){
         var pad = new Uint16Array((arr.length + 1) & ~1); pad.set(arr);
         gpuDevice.queue.writeBuffer(wgpuState.meshesGPU[hairKey].idxBuf, 0, pad);
         wgpuState.meshesGPU[hairKey].icount = arr.length;
@@ -1751,7 +2053,7 @@
       var az = (spineWorldPos[2] - prev[2]) / dt;
       bustSpring.prevSpine = [spineWorldPos[0], spineWorldPos[1], spineWorldPos[2]];
 
-      // 2.6 Hz damped harmonic oscillator + garment damping (bra=0.55, clothes=0.78, nude/sheer=0.28)
+      // 2.6 Hz damped harmonic oscillator + garment damping
       var firm = Number(state.bustFirmness !== undefined ? state.bustFirmness : 0.5);
       var omega = 2 * Math.PI * (2.3 + firm * 0.9);
       var braSupport = state.outfit === 'underwear' ? ((state.underwearBra === 'none' || state.underwearBra === 'sheer_mesh') ? 0.35 : 0.58) : 0.80;
@@ -1768,7 +2070,28 @@
       return bustSpring.pos;
     }
 
-    function syncCharacterAssets(state, springDisp){
+    function stepHairSpring(dtSec, headWorldPos){
+      if (!headWorldPos) return [0,0,0];
+      var dt = Math.min(0.04, Math.max(0.004, dtSec || 0.016));
+      var prev = hairSpring.prevHead || headWorldPos;
+      var ax = (headWorldPos[0] - prev[0]) / dt;
+      var ay = (headWorldPos[1] - prev[1]) / dt;
+      var az = (headWorldPos[2] - prev[2]) / dt;
+      hairSpring.prevHead = [headWorldPos[0], headWorldPos[1], headWorldPos[2]];
+
+      var omega = 2 * Math.PI * 3.1, zeta = 0.38;
+      var k = omega * omega, c = 2 * zeta * omega;
+      var acc = [Math.max(-8, Math.min(8, -ax*0.20)), Math.max(-8, Math.min(8, -ay*0.14)), Math.max(-8, Math.min(8, -az*0.20))];
+      for (var d = 0; d < 3; d++){
+        var f = -k * hairSpring.pos[d] - c * hairSpring.vel[d] + acc[d];
+        hairSpring.vel[d] += f * dt;
+        hairSpring.pos[d] = Math.max(-0.014, Math.min(0.014, hairSpring.pos[d] + hairSpring.vel[d] * dt));
+      }
+      return hairSpring.pos;
+    }
+
+    var lastHairSpringSig = '';
+    function syncCharacterAssets(state, springDisp, hairSpringDisp){
       var morphSig = [
         state.gender, state.muscle, state.weight, state.height, state.age,
         JSON.stringify(state.bustQuad), state.bustSize, state.bustFirmness, state.bustHeight, state.bustSpacing,
@@ -1781,15 +2104,21 @@
       ].join('|');
 
       var helmetOn = state.helmetMode && state.helmetMode !== 'none';
+      var activeHairKey = resolveHairMeshKey(state.hairStyle);
+      var hairSpringSig = (activeHairKey || 'none') + '|' + (hairSpringDisp ? Math.round(hairSpringDisp[0]*2000)+','+Math.round(hairSpringDisp[1]*2000)+','+Math.round(hairSpringDisp[2]*2000) : '0');
+      var mw = null;
+
       if (morphSig !== lastMorphSig){
         lastMorphSig = morphSig;
-        var mw = computeMorphWeights(state, springDisp);
-        var morphMeshes = ['base_body','eye_sclera','eye_iris','eye_cornea','eyebrows','eyelashes','briefs','bra','panties','tshirt','hoodie','jacket','jeans','boots','hair_short02','hair_short04','hair_braid01','wrist_watch','wrist_gauntlet','piercing_brow','piercing_nostril','piercing_lip','piercing_ears'];
+        lastHairSpringSig = hairSpringSig;
+        mw = computeMorphWeights(state, springDisp);
+        var morphMeshes = ['base_body','eye_sclera','eye_iris','eye_cornea','eyebrows','eyelashes','briefs','bra','panties','tshirt','hoodie','jacket','jeans','trousers','cyborg_suit','boots','wrist_watch','wrist_gauntlet','piercing_brow','piercing_nostril','piercing_lip','piercing_ears'].concat(ALL_HAIR_MESHES).concat(ALL_BEARD_MESHES);
         morphMeshes.forEach(function(mk){
           var m = kit.meshes[mk];
           if (!m) return;
           var tuck = (mk.indexOf('hair_') === 0 && helmetOn) ? 1.0 : 0.0;
-          var buf = applyMeshMorphsAndTuck(m, mw, tuck);
+          var hDisp = (mk.indexOf('hair_') === 0) ? hairSpringDisp : null;
+          var buf = applyMeshMorphsAndTuck(m, mw, tuck, hDisp);
           if (glState && glState.meshBufs[mk]){
             gl.bindBuffer(gl.ARRAY_BUFFER, glState.meshBufs[mk].bPos);
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, buf);
@@ -1797,18 +2126,29 @@
             gpuDevice.queue.writeBuffer(wgpuState.meshesGPU[mk].posIn, 0, buf);
           }
         });
+      } else if (hairSpringSig !== lastHairSpringSig && activeHairKey && kit.meshes[activeHairKey]){
+        lastHairSpringSig = hairSpringSig;
+        mw = computeMorphWeights(state, springDisp);
+        var hmMesh = kit.meshes[activeHairKey];
+        var hbuf = applyMeshMorphsAndTuck(hmMesh, mw, helmetOn ? 1.0 : 0.0, hairSpringDisp);
+        if (glState && glState.meshBufs[activeHairKey]){
+          gl.bindBuffer(gl.ARRAY_BUFFER, glState.meshBufs[activeHairKey].bPos);
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, hbuf);
+        } else if (wgpuState && wgpuState.meshesGPU[activeHairKey]){
+          gpuDevice.queue.writeBuffer(wgpuState.meshesGPU[activeHairKey].posIn, 0, hbuf);
+        }
       }
 
       var wearSig = [state.outfit, state.gender, state.helmetMode, state.hairStyle, state.chassisMode, JSON.stringify(state.bodyParts), state.cyberArm].join('|');
       if (wearSig !== lastWearSig){
         lastWearSig = wearSig;
         rebuildBodyCulledIndices(state);
-        ['hair_short02','hair_short04','hair_braid01'].forEach(function(hk){
+        ALL_HAIR_MESHES.forEach(function(hk){
           rebuildHairVisibility(hk, helmetOn);
         });
       }
 
-      var skinSig = [state.skinHex, state.skinFinish, state.beardStyle, state.hairHex, state.scars, state.scarType, state.cyberFace, state.nailColor, state.tattooStyle, state.tattooZone, state.tattooColor, state.tattooGlow, JSON.stringify(state.scarPos)].join('|');
+      var skinSig = [state.skinHex, state.skinFinish, state.beardStyle, state.hairHex, state.scars, state.scarType, state.cyberFace, state.nailColor, state.tattooStyle, state.tattooZone, state.tattooColor, state.tattooGlow, JSON.stringify(state.scarPos), state.gender].join('|');
       if (skinSig !== lastSkinSig && skinComp){
         lastSkinSig = skinSig;
         skinComp.update(state);
@@ -1816,7 +2156,7 @@
           gl.bindTexture(gl.TEXTURE_2D, glState.texMap.dyn_skin);
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, skinComp.canvas);
         } else if (wgpuState){
-          gpuDevice.queue.copyExternalImageToTexture({ source: skinComp.canvas }, { texture: wgpuState.gpuTex.dyn_skin }, [512, 512]);
+          gpuDevice.queue.copyExternalImageToTexture({ source: skinComp.canvas }, { texture: wgpuState.gpuTex.dyn_skin }, [skinComp.canvas.width, skinComp.canvas.height]);
         }
       }
 
@@ -1829,15 +2169,15 @@
           gl.bindTexture(gl.TEXTURE_2D, glState.texMap.dyn_panties); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, uwComp.pantiesCanvas);
           gl.bindTexture(gl.TEXTURE_2D, glState.texMap.dyn_briefs);  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, uwComp.briefsCanvas);
         } else if (wgpuState){
-          gpuDevice.queue.copyExternalImageToTexture({ source: uwComp.braCanvas },     { texture: wgpuState.gpuTex.dyn_bra },     [256, 256]);
-          gpuDevice.queue.copyExternalImageToTexture({ source: uwComp.pantiesCanvas }, { texture: wgpuState.gpuTex.dyn_panties }, [256, 256]);
-          gpuDevice.queue.copyExternalImageToTexture({ source: uwComp.briefsCanvas },  { texture: wgpuState.gpuTex.dyn_briefs },  [256, 256]);
+          gpuDevice.queue.copyExternalImageToTexture({ source: uwComp.braCanvas },     { texture: wgpuState.gpuTex.dyn_bra },     [uwComp.braCanvas.width, uwComp.braCanvas.height]);
+          gpuDevice.queue.copyExternalImageToTexture({ source: uwComp.pantiesCanvas }, { texture: wgpuState.gpuTex.dyn_panties }, [uwComp.pantiesCanvas.width, uwComp.pantiesCanvas.height]);
+          gpuDevice.queue.copyExternalImageToTexture({ source: uwComp.briefsCanvas },  { texture: wgpuState.gpuTex.dyn_briefs },  [uwComp.briefsCanvas.width, uwComp.briefsCanvas.height]);
         }
       }
 
-      var hairKey = state.hairStyle === 'braids' ? 'hair_braid01' : (state.hairStyle === 'sleek' ? 'hair_short04' : 'hair_short02');
-      var hairImgKey = hairKey + '_' + hairKey;
-      var hairSig = [hairKey, JSON.stringify(state.grayStreak)].join('|');
+      var hairKey = activeHairKey || 'hair_short02';
+      var hairImgKey = 'tex_' + hairKey;
+      var hairSig = [hairKey, state.hairHex, JSON.stringify(state.grayStreak)].join('|');
       if (hairSig !== lastHairSig && hairComp){
         lastHairSig = hairSig;
         hairComp.update(state, loadedImgs[hairImgKey]);
@@ -1845,7 +2185,21 @@
           gl.bindTexture(gl.TEXTURE_2D, glState.texMap.dyn_hair);
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, hairComp.canvas);
         } else if (wgpuState){
-          gpuDevice.queue.copyExternalImageToTexture({ source: hairComp.canvas }, { texture: wgpuState.gpuTex.dyn_hair }, [512, 512]);
+          gpuDevice.queue.copyExternalImageToTexture({ source: hairComp.canvas }, { texture: wgpuState.gpuTex.dyn_hair }, [hairComp.canvas.width, hairComp.canvas.height]);
+        }
+      }
+
+      var beardKey = resolveBeardMeshKey(state.beardStyle);
+      var beardImgKey = beardKey ? ('tex_' + beardKey) : 'tex_beard_short';
+      var beardSig = [beardKey || 'none', state.hairHex, JSON.stringify(state.grayStreak)].join('|');
+      if (beardSig !== lastBeardSig && beardComp){
+        lastBeardSig = beardSig;
+        beardComp.update(state, loadedImgs[beardImgKey]);
+        if (glState){
+          gl.bindTexture(gl.TEXTURE_2D, glState.texMap.dyn_beard);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, beardComp.canvas);
+        } else if (wgpuState){
+          gpuDevice.queue.copyExternalImageToTexture({ source: beardComp.canvas }, { texture: wgpuState.gpuTex.dyn_beard }, [beardComp.canvas.width, beardComp.canvas.height]);
         }
       }
 
@@ -1857,7 +2211,7 @@
           gl.bindTexture(gl.TEXTURE_2D, glState.texMap.dyn_holo);
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, holoComp.canvas);
         } else if (wgpuState){
-          gpuDevice.queue.copyExternalImageToTexture({ source: holoComp.canvas }, { texture: wgpuState.gpuTex.dyn_holo }, [256, 192]);
+          gpuDevice.queue.copyExternalImageToTexture({ source: holoComp.canvas }, { texture: wgpuState.gpuTex.dyn_holo }, [holoComp.canvas.width, holoComp.canvas.height]);
         }
       }
 
@@ -1896,17 +2250,21 @@
       var eyeTint = hexToRgb01(state.eyeHex || '#3aa7d6');
       var browTint = [hairTint[0]*0.85, hairTint[1]*0.85, hairTint[2]*0.85];
 
-      var skHead  = getPartMode(state, 'head')  === 'skeleton';
-      var skTorso = getPartMode(state, 'torso') === 'skeleton';
-      draws.push({ mesh:'base_body', tex:'dyn_skin', norm:'body_skin_normal', isSkin:1, tint:[1,1,1,1], met:0.04, rough:0.65, cut:0, em:0 });
-      if (!hideEyesInsideSealed && !skHead){
-        draws.push({ mesh:'eye_sclera', tex:'body_eye', isSkin:0, tint:[1,1,1,1], met:0.05, rough:0.22, cut:0, em:0 });
-        draws.push({ mesh:'eye_iris',   tex:'body_eye', isSkin:0, tint:[eyeTint[0], eyeTint[1], eyeTint[2], 1], met:0.08, rough:0.15, cut:0, em:0.05 });
-        draws.push({ mesh:'eye_cornea', tex:'white',    isSkin:0, tint:[1,1,1,0.18], met:0.9, rough:0.06, cut:0, em:0 });
+      var mHead  = getPartMode(state, 'head');
+      var mTorso = getPartMode(state, 'torso');
+      var skHead = (mHead === 'skeleton');
+      var bioHead = (mHead === 'organic');
+      var skTorso = (mTorso === 'skeleton' || mTorso === 'cyber');
+
+      draws.push({ mesh:'base_body', tex:'dyn_skin', norm:'body_skin_normal', isSkin:1, tint:[1,1,1,1], met:0.03, rough:0.62, cut:0, em:0 });
+      if (!hideEyesInsideSealed && bioHead){
+        draws.push({ mesh:'eye_sclera', tex:'body_eye', isSkin:0, tint:[1,1,1,1], met:0.05, rough:0.20, cut:0, em:0 });
+        draws.push({ mesh:'eye_iris',   tex:'body_eye', isSkin:0, tint:[eyeTint[0], eyeTint[1], eyeTint[2], 1], met:0.08, rough:0.14, cut:0, em:0.04 });
+        draws.push({ mesh:'eye_cornea', tex:'white',    isSkin:0, tint:[1,1,1,0.16], met:0.9, rough:0.06, cut:0, em:0 });
         draws.push({ mesh:'eyebrows',   tex:'body_eyebrow', isSkin:0, tint:[browTint[0],browTint[1],browTint[2],1], met:0.0, rough:0.85, cut:0.32, em:0 });
         draws.push({ mesh:'eyelashes',  tex:'body_eyelash', isSkin:0, tint:[0.08,0.06,0.06,1], met:0.0, rough:0.8, cut:0.35, em:0 });
       }
-      // Underwear renders only when outfit is 'underwear' & torso is not stripped to bare skeleton
+      // Underwear renders only when outfit is 'underwear' & torso is organic
       if (outfit === 'underwear' && !skTorso){
         if (state.gender >= 0.35){
           if (state.underwearBottom === 'boxers_fem'){
@@ -1922,16 +2280,25 @@
         }
       }
 
-      // Modular Humanoid Skeleton / Android Chassis modules (independent per body part!)
+      // Modular Humanoid Skeleton / Cybernetic Prosthetic modules (independent per body part!)
       var skCol = state.skelStyle === 'bone' ? [0.84, 0.80, 0.72, 1] : (state.skelStyle === 'carbon' ? [0.16, 0.19, 0.23, 1] : [0.58, 0.64, 0.70, 1]);
       var skMet = state.skelStyle === 'bone' ? 0.08 : 0.88;
       var skRgh = state.skelStyle === 'bone' ? 0.62 : 0.24;
-      if (getPartMode(state, 'head')  === 'skeleton') draws.push({ mesh:'skel_head',  tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.04 });
-      if (getPartMode(state, 'torso') === 'skeleton') draws.push({ mesh:'skel_torso', tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
-      if (getPartMode(state, 'armL')  === 'skeleton') draws.push({ mesh:'skel_arm_l', tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
-      if (getPartMode(state, 'armR')  === 'skeleton') draws.push({ mesh:'skel_arm_r', tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
-      if (getPartMode(state, 'legL')  === 'skeleton') draws.push({ mesh:'skel_leg_l', tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
-      if (getPartMode(state, 'legR')  === 'skeleton') draws.push({ mesh:'skel_leg_r', tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+      var skNorm = state.skelStyle === 'bone' ? null : 'cyber_normal';
+      if (mHead  === 'skeleton') draws.push({ mesh:'skel_head',  tex:'white', norm:skNorm, isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.04 });
+      if (mTorso === 'skeleton') draws.push({ mesh:'skel_torso', tex:'white', norm:skNorm, isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+      if (getPartMode(state, 'armL') === 'skeleton') draws.push({ mesh:'skel_arm_l', tex:'white', norm:skNorm, isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+      if (getPartMode(state, 'armR') === 'skeleton') draws.push({ mesh:'skel_arm_r', tex:'white', norm:skNorm, isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+      if (getPartMode(state, 'legL') === 'skeleton') draws.push({ mesh:'skel_leg_l', tex:'white', norm:skNorm, isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+      if (getPartMode(state, 'legR') === 'skeleton') draws.push({ mesh:'skel_leg_r', tex:'white', norm:skNorm, isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+
+      var cyCol = state.skelStyle === 'bone' ? [0.74, 0.70, 0.64, 1] : (state.skelStyle === 'carbon' ? [0.18, 0.20, 0.24, 1] : [0.46, 0.52, 0.58, 1]);
+      if (mHead  === 'cyber') draws.push({ mesh:'cyber_head',  tex:'white', norm:'cyber_normal', isSkin:0, tint:cyCol, met:0.86, rough:0.24, cut:0, em:0.04 });
+      if (mTorso === 'cyber') draws.push({ mesh:'cyber_torso', tex:'white', norm:'cyber_normal', isSkin:0, tint:cyCol, met:0.86, rough:0.24, cut:0, em:0.02 });
+      if (getPartMode(state, 'armL') === 'cyber') draws.push({ mesh:'cyber_arm_l', tex:'white', norm:'cyber_normal', isSkin:0, tint:cyCol, met:0.88, rough:0.22, cut:0, em:0.02 });
+      if (getPartMode(state, 'armR') === 'cyber') draws.push({ mesh:'cyber_arm_r', tex:'white', norm:'cyber_normal', isSkin:0, tint:cyCol, met:0.88, rough:0.22, cut:0, em:0.02 });
+      if (getPartMode(state, 'legL') === 'cyber') draws.push({ mesh:'cyber_leg_l', tex:'white', norm:'cyber_normal', isSkin:0, tint:cyCol, met:0.88, rough:0.22, cut:0, em:0.02 });
+      if (getPartMode(state, 'legR') === 'cyber') draws.push({ mesh:'cyber_leg_r', tex:'white', norm:'cyber_normal', isSkin:0, tint:cyCol, met:0.88, rough:0.22, cut:0, em:0.02 });
 
       // 3D Morph-Tracked Facial Piercings (default = none; supports glowing cyber or brushed metal!)
       var prc = state.piercings || {};
@@ -1943,34 +2310,53 @@
       if (prc.ears)    draws.push({ mesh:'piercing_ears',    tex:'white', isSkin:0, tint:pTint, met:0.92, rough:0.14, cut:0, em:pEm });
 
       if (outfit !== 'underwear'){
-        draws.push({ mesh:'jeans', tex:'jeans_cloth_jeans_albedo', isSkin:0, tint:[armorTint[0]*0.78+0.15, armorTint[1]*0.78+0.15, armorTint[2]*0.78+0.15, 1], met:0.04, rough:0.82, cut:0, em:0 });
-        draws.push({ mesh:'boots', tex:'boots_cloth_boots_albedo', isSkin:0, tint:[0.52,0.48,0.44,1], met:0.15, rough:0.62, cut:0, em:0 });
-        if (outfit !== 'hoodie') draws.push({ mesh:'tshirt', tex:'tshirt_cloth_tshirt_albedo', isSkin:0, tint:[0.32,0.38,0.42,1], met:0.04, rough:0.85, cut:0, em:0 });
-        if (outfit === 'hoodie') draws.push({ mesh:'hoodie', tex:'hoodie_cloth_hoodie_albedo', isSkin:0, tint:[armorTint[0]*0.9+0.1, armorTint[1]*0.9+0.1, armorTint[2]*0.9+0.1, 1], met:0.04, rough:0.84, cut:0, em:0 });
-        if (outfit === 'jacket') draws.push({ mesh:'jacket', tex:'jacket_cloth_jacket_albedo', isSkin:0, tint:[armorTint[0]*0.9+0.18, armorTint[1]*0.9+0.18, armorTint[2]*0.9+0.18, 1], met:0.08, rough:0.75, cut:0, em:0 });
+        if (outfit === 'trousers'){
+          draws.push({ mesh:'trousers', tex:'trousers_albedo', norm:'trousers_normal', isSkin:0, tint:[0.92,0.92,0.94,1], met:0.02, rough:0.86, cut:0, em:0 });
+        } else if (outfit === 'cyborg_suit'){
+          draws.push({ mesh:'cyborg_suit', tex:'cyborg_suit_albedo', norm:'cyborg_suit_normal', isSkin:0, tint:[armorTint[0]*0.45+0.55, armorTint[1]*0.45+0.55, armorTint[2]*0.45+0.55, 1], met:0.42, rough:0.34, cut:0, em:0 });
+        } else {
+          draws.push({ mesh:'jeans', tex:'jeans_cloth_jeans_albedo', norm:'jeans_cloth_jeans_normal', isSkin:0, tint:[0.90,0.92,0.96,1], met:0.03, rough:0.84, cut:0, em:0 });
+        }
+        draws.push({ mesh:'boots', tex:'boots_cloth_boots_albedo', norm:'boots_cloth_boots_normal', isSkin:0, tint:[0.92,0.90,0.88,1], met:0.16, rough:0.56, cut:0, em:0 });
+        if (outfit !== 'hoodie' && outfit !== 'cyborg_suit'){
+          var teeTint = outfit === 'jacket' ? [0.40,0.44,0.48,1] : [0.86,0.88,0.90,1];
+          draws.push({ mesh:'tshirt', tex:'tshirt_cloth_tshirt_albedo', norm:'tshirt_cloth_tshirt_normal', isSkin:0, tint:teeTint, met:0.02, rough:0.86, cut:0, em:0 });
+        }
+        if (outfit === 'hoodie'){
+          draws.push({ mesh:'hoodie', tex:'hoodie_cloth_hoodie_albedo', norm:'hoodie_cloth_hoodie_normal', isSkin:0, tint:[armorTint[0]*0.45+0.55, armorTint[1]*0.45+0.55, armorTint[2]*0.45+0.55, 1], met:0.02, rough:0.86, cut:0, em:0 });
+        }
+        if (outfit === 'jacket'){
+          draws.push({ mesh:'jacket', tex:'jacket_cloth_jacket_albedo', norm:'jacket_cloth_jacket_normal', isSkin:0, tint:[armorTint[0]*0.48+0.54, armorTint[1]*0.48+0.54, armorTint[2]*0.48+0.54, 1], met:0.05, rough:0.76, cut:0, em:0 });
+        }
         if (outfit === 'armor'){
-          draws.push({ mesh:'armor_cuirass',    tex:'white', isSkin:0, tint:[armorTint[0], armorTint[1], armorTint[2], 1], met:0.55, rough:0.38, cut:0, em:0 });
-          draws.push({ mesh:'armor_pauldrons',  tex:'white', isSkin:0, tint:[0.72, 0.50, 0.20, 1], met:0.62, rough:0.34, cut:0, em:0 });
-          draws.push({ mesh:'armor_belt_knees', tex:'white', isSkin:0, tint:[0.36, 0.30, 0.24, 1], met:0.25, rough:0.65, cut:0, em:0 });
+          draws.push({ mesh:'armor_cuirass',    tex:'white', norm:'armor_normal', isSkin:0, tint:[armorTint[0], armorTint[1], armorTint[2], 1], met:0.55, rough:0.38, cut:0, em:0 });
+          draws.push({ mesh:'armor_pauldrons',  tex:'white', norm:'armor_normal', isSkin:0, tint:[armorTint[0]*0.72+0.12, armorTint[1]*0.72+0.11, armorTint[2]*0.72+0.09, 1], met:0.52, rough:0.36, cut:0, em:0 });
+          draws.push({ mesh:'armor_belt_knees', tex:'white', norm:'armor_normal', isSkin:0, tint:[0.22, 0.24, 0.26, 1], met:0.28, rough:0.58, cut:0, em:0 });
         }
       }
       // Left wrist device (shown when wearing tactical gear or during Ramp briefing, omitted in underwear/skeleton)
       if ((outfit !== 'underwear' && getPartMode(state, 'armL') !== 'skeleton') || state.tab === 'ramp'){
-        draws.push({ mesh: state.wristDevice === 'gauntlet' ? 'wrist_gauntlet' : 'wrist_watch', tex:'white', isSkin:0, tint:[0.18,0.22,0.28,1], met:0.78, rough:0.28, cut:0, em:0.04 });
+        draws.push({ mesh: state.wristDevice === 'gauntlet' ? 'wrist_gauntlet' : 'wrist_watch', tex:'white', norm:'cyber_normal', isSkin:0, tint:[0.22,0.26,0.32,1], met:0.78, rough:0.26, cut:0, em:0.03 });
       }
 
-      // Hair style (except buzz/bald or bare skel_head)
-      if (!skHead && state.hairStyle !== 'bald' && state.hairStyle !== 'buzz'){
-        var hk = state.hairStyle === 'braids' ? 'hair_braid01' : (state.hairStyle === 'sleek' ? 'hair_short04' : 'hair_short02');
-        draws.push({ mesh: hk, tex:'dyn_hair', isSkin:0, tint:[hairTint[0], hairTint[1], hairTint[2], 1], met:0.05, rough:0.68, cut:0.34, em:0 });
+      // 3D Beard / Facial Hair (when head is organic and sealed visor isn't hiding lower face)
+      var bk = (!skHead && state.helmetMode !== 'sealed') ? resolveBeardMeshKey(state.beardStyle) : null;
+      if (bk){
+        draws.push({ mesh: bk, tex:'dyn_beard', isSkin:-1, tint:[1,1,1,1], met:0.04, rough:0.62, cut:0.18, em:0 });
+      }
+
+      // 10 CC0 MakeHuman Hairstyles (color + gray streak already tinted in dyn_hair!)
+      var hk = !skHead ? resolveHairMeshKey(state.hairStyle) : null;
+      if (hk){
+        draws.push({ mesh: hk, tex:'dyn_hair', isSkin:-1, tint:[1,1,1,1], met:0.04, rough:0.60, cut:0.16, em:0 });
       }
 
       // Helmet Modes
       var hm = state.helmetMode || 'none';
       if (includeHelmetShell && hm !== 'none'){
-        draws.push({ mesh:'helmet_shell', tex:'white', isSkin:0, tint:[armorTint[0]*0.85+0.08, armorTint[1]*0.85+0.12, armorTint[2]*0.85+0.10, 1], met:0.68, rough:0.30, cut:0, em:0 });
-        if (hm === 'half')   draws.push({ mesh:'helmet_half_visor',   tex:'white', isSkin:0, tint:[0.14,0.50,0.68,0.62], met:0.88, rough:0.10, cut:0, em:0.10 });
-        if (hm === 'sealed') draws.push({ mesh:'helmet_sealed_visor', tex:'white', isSkin:0, tint:[0.10,0.44,0.56,1], met:0.92, rough:0.10, cut:0, em:0.15 });
+        draws.push({ mesh:'helmet_shell', tex:'white', norm:'armor_normal', isSkin:0, tint:[armorTint[0]*0.85+0.08, armorTint[1]*0.85+0.12, armorTint[2]*0.85+0.10, 1], met:0.68, rough:0.30, cut:0, em:0 });
+        if (hm === 'half')   draws.push({ mesh:'helmet_half_visor',   tex:'white', isSkin:0, tint:[0.14,0.46,0.62,0.62], met:0.88, rough:0.10, cut:0, em:0.08 });
+        if (hm === 'sealed') draws.push({ mesh:'helmet_sealed_visor', tex:'white', isSkin:0, tint:[0.12,0.40,0.52,1], met:0.92, rough:0.10, cut:0, em:0.10 });
       }
       return draws;
     }
@@ -2035,15 +2421,15 @@
           if (tp < 3.45) fadeAlpha = 1.0 - (tp - 2.9) / 0.55;
           anim = 'rest'; showHolo = true;
           worldOvr = {
-            pelvis:     [-0.26, 0.0, 0.0],
-            spine_01:   [-0.12, 0.0, 0.0],
-            thigh_l:    [-1.42, 0.08, 0.06],  calf_l: [0.25, 0.0, 0.0],
-            thigh_r:    [-1.48, 0.42,-0.12],  calf_r: [0.55, 0.48, 0.10],
+            pelvis:     [-0.24, 0.0, 0.0],
+            spine_01:   [-0.10, 0.0, 0.0],
+            thigh_l:    [-1.40, 0.06, 0.06],  calf_l: [1.30, 0.0, 0.0],
+            thigh_r:    [-1.38,-0.08,-0.06],  calf_r: [1.28, 0.08, 0.0],
             upperarm_l: [-0.38,-0.25,-0.58],  lowerarm_l: [-1.45,-0.75, 0.12],
             upperarm_r: [-0.22, 0.0,  0.52],  lowerarm_r: [-0.82,-0.32, 0.0],
             head:       [0.24, 0.14, 0.0]
           };
-          rootOff = [0.0, -0.34, -0.04];
+          rootOff = [0.0, -0.36, -0.06];
         }
       } else if (tab === 'action'){
         // @lastmaglab-inspired Drone-Angle CQB: Corner Slicing ("Pieing"), Outside-Foot Plant, Speed Lean, Aim Skill & Cyber-Arm Torque!
@@ -2114,7 +2500,15 @@
       frameCount++; fpsTimer += dtSec;
       if (fpsTimer >= 0.5){ lastFps = Math.round(frameCount / fpsTimer); frameCount = 0; fpsTimer = 0; }
       var springDisp = stepBustSpring(state, dtSec, bustSpring.prevSpine || [0,1.1,0]);
-      syncCharacterAssets(state, springDisp);
+      var hairWorldDisp = stepHairSpring(dtSec, hairSpring.prevHead || [0,1.56,0]);
+      var prevY = Number(state.turntableYaw || 0);
+      var cyw = Math.cos(prevY), syw = Math.sin(prevY);
+      var hairSpringDisp = [
+        hairWorldDisp[0]*cyw - hairWorldDisp[2]*syw,
+        hairWorldDisp[1],
+        hairWorldDisp[0]*syw + hairWorldDisp[2]*cyw
+      ];
+      syncCharacterAssets(state, springDisp, hairSpringDisp);
 
       var W = canvas.width || 960, H = canvas.height || 640;
       var aspect = W / Math.max(1, H);
@@ -2122,6 +2516,9 @@
       var stage = computeStageTransformAndPose(state, totalSec, mw);
       if (stage.pose && stage.pose.worlds[4]){
         bustSpring.prevSpine = [stage.pose.worlds[4][12], stage.pose.worlds[4][13], stage.pose.worlds[4][14]];
+      }
+      if (stage.pose && stage.pose.worlds[43]){
+        hairSpring.prevHead = mat4TransformPoint(stage.modelMat, [stage.pose.worlds[43][12], stage.pose.worlds[43][13], stage.pose.worlds[43][14]]);
       }
       var hs = stage.hScale || 1.0;
       var tab = state.tab || 'face';
@@ -2242,7 +2639,7 @@
       if (backend === 'webgl2' || backend === 'webgl1'){
         gl.viewport(0, 0, W, H);
         gl.disable(gl.SCISSOR_TEST);
-        gl.clearColor(0.044, 0.048, 0.058, 1.0);
+        gl.clearColor(0.068, 0.074, 0.086, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.enable(gl.DEPTH_TEST);
 
@@ -2252,8 +2649,8 @@
         gl.uniformMatrix4fv(ls.uView, false, view);
         gl.uniform3fv(ls.uCamPos, camEye);
         gl.uniform3f(ls.uKeyDir, 0.58, 0.72, 0.68);
-        gl.uniform3f(ls.uKeyCol, 1.26, 1.06, 0.86);
-        gl.uniform3f(ls.uRimCol, 0.12, 0.72, 0.90);
+        gl.uniform3f(ls.uKeyCol, 1.36, 1.24, 1.12);
+        gl.uniform3f(ls.uRimCol, 0.92, 0.90, 0.86);
         gl.uniform1f(ls.uCyberMask, cyberMaskBits);
         gl.uniform1f(ls.uSkinFinish, skinFinishCode);
 
@@ -2275,7 +2672,7 @@
           gl.bindTexture(gl.TEXTURE_2D, glState.texMap[texKey] || glState.texMap.white);
           gl.uniform1i(ls.uAlbedo, 0);
           gl.activeTexture(gl.TEXTURE1);
-          gl.bindTexture(gl.TEXTURE_2D, glState.texMap[normKey] || glState.texMap.white);
+          gl.bindTexture(gl.TEXTURE_2D, glState.texMap[normKey] || glState.texMap.flat_normal);
           gl.uniform1i(ls.uNormalMap, 1);
 
           gl.bindBuffer(gl.ARRAY_BUFFER, mb.bPos); gl.enableVertexAttribArray(ls.aPos); gl.vertexAttribPointer(ls.aPos, 3, gl.FLOAT, false, 0, 0);
@@ -2298,17 +2695,17 @@
         // Environment Props
         var idMat = mat4Identity();
         if (tab === 'face' || tab === 'body' || tab === 'gear' || tab === 'hair'){
-          drawGlMesh('prop_turntableDisk', idMat, false, 'white', null, [0.06,0.07,0.09,1], 0, 0.55, 0.45, 0, 0.02);
+          drawGlMesh('prop_turntableDisk', idMat, false, 'white', null, [0.10,0.11,0.13,1], 0, 0.50, 0.45, 0, 0.02);
         } else if (tab === 'quarters'){
           drawGlMesh('prop_cabin', idMat, false, 'white', null, [0.16,0.18,0.22,1], 0, 0.65, 0.36, 0, 0);
         } else if (tab === 'ramp'){
-          drawGlMesh('prop_floorPlane', idMat, false, 'white', null, [0.07,0.09,0.11,1], 0, 0.45, 0.25, 0, 0);
+          drawGlMesh('prop_floorPlane', idMat, false, 'white', null, [0.09,0.10,0.12,1], 0, 0.45, 0.25, 0, 0);
           drawGlMesh('prop_ramp',  idMat, false, 'white', null, [0.22,0.25,0.28,1], 0, 0.55, 0.45, 0, 0);
           drawGlMesh('prop_ship',  idMat, false, 'white', null, [0.26,0.30,0.34,1], 0, 0.60, 0.40, 0, 0);
           drawGlMesh('prop_chair', idMat, false, 'white', null, [0.32,0.34,0.38,1], 0, 0.72, 0.38, 0, 0);
           drawGlMesh('prop_crate', idMat, false, 'white', null, [0.28,0.32,0.26,1], 0, 0.35, 0.65, 0, 0);
         } else if (tab === 'action'){
-          drawGlMesh('prop_floorPlane', idMat, false, 'white', null, [0.09,0.11,0.13,1], 0, 0.4, 0.5, 0, 0);
+          drawGlMesh('prop_floorPlane', idMat, false, 'white', null, [0.10,0.11,0.13,1], 0, 0.4, 0.5, 0, 0);
           drawGlMesh('prop_corridor', idMat, false, 'white', null, [0.22,0.26,0.30,1], 0, 0.5, 0.48, 0, 0);
         }
 
@@ -2377,7 +2774,7 @@
           gl.enable(gl.SCISSOR_TEST);
           gl.scissor(px, py, pw, ph);
           gl.viewport(px, py, pw, ph);
-          gl.clearColor(0.025, 0.055, 0.085, 1.0);
+          gl.clearColor(0.045, 0.052, 0.064, 1.0);
           gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
           var hm = state.helmetMode || 'none';
@@ -2397,7 +2794,7 @@
           var pId = mat4Identity();
           for (var pdi = 0; pdi < pDraws.length; pdi++){
             var pd = pDraws[pdi];
-            if (pd.mesh === 'jeans' || pd.mesh === 'boots' || pd.mesh === 'armor_belt_knees' || pd.mesh === 'briefs' || pd.mesh === 'panties' || pd.mesh === 'bra') continue;
+            if (pd.mesh === 'jeans' || pd.mesh === 'trousers' || pd.mesh === 'cyborg_suit' || pd.mesh === 'boots' || pd.mesh === 'armor_belt_knees' || pd.mesh === 'briefs' || pd.mesh === 'panties' || pd.mesh === 'bra' || pd.mesh === 'skel_leg_l' || pd.mesh === 'skel_leg_r' || pd.mesh === 'cyber_leg_l' || pd.mesh === 'cyber_leg_r') continue;
             drawGlMesh(pd.mesh, pId, true, pd.tex, pd.norm, pd.tint, pd.isSkin, pd.met, pd.rough, pd.cut, pd.em);
           }
           gl.disable(gl.SCISSOR_TEST);
@@ -2426,7 +2823,7 @@
         // 2) Render Pass
         var viewTex = gpuCtx.getCurrentTexture().createView();
         var rp = enc.beginRenderPass({
-          colorAttachments: [{ view: viewTex, clearValue:{r:0.044,g:0.048,b:0.058,a:1}, loadOp:'clear', storeOp:'store' }],
+          colorAttachments: [{ view: viewTex, clearValue:{r:0.068,g:0.074,b:0.086,a:1}, loadOp:'clear', storeOp:'store' }],
           depthStencilAttachment: { view: wgpuState.depthTex.createView(), depthClearValue:1.0, depthLoadOp:'clear', depthStoreOp:'store' }
         });
         rp.setViewport(0, 0, W, H, 0, 1);
@@ -2435,7 +2832,7 @@
         var pv = mat4Mul(proj, view);
         var poolIdx = 0;
 
-        function drawGpuMesh(pass, pvMat, bufKey, modelM, texKey, tint4, isSkin, met, rough, cut, em, instCount){
+        function drawGpuMesh(pass, pvMat, bufKey, modelM, texKey, normKey, tint4, isSkin, met, rough, cut, em, instCount){
           var mg = wgpuState.meshesGPU[bufKey];
           if (!mg || mg.icount === 0 || poolIdx >= wgpuState.uniformPool.length) return;
           var ub = wgpuState.uniformPool[poolIdx++];
@@ -2444,14 +2841,15 @@
           uArr.set(tint4, 32);
           uArr.set([camEye[0], camEye[1], camEye[2], 1], 36);
           uArr.set([0.58, 0.72, 0.68, skinFinishCode], 40);
-          uArr.set([1.26, 1.06, 0.86, 0], 44);
-          uArr.set([0.12, 0.72, 0.90, 0], 48);
+          uArr.set([1.36, 1.24, 1.12, 0], 44);
+          uArr.set([0.92, 0.90, 0.86, normKey ? 1.0 : 0.0], 48);
           uArr.set([(texKey && texKey !== 'white') ? 1 : 0, isSkin, met, rough], 52);
           uArr.set([cut, em, instCount > 0 ? 1 : 0, cyberMaskBits], 56);
           gpuDevice.queue.writeBuffer(ub, 0, uArr);
 
           var tk = texKey || 'white';
-          var bgKey = poolIdx + '|' + tk;
+          var nk = normKey || 'flat_normal';
+          var bgKey = poolIdx + '|' + tk + '|' + nk;
           var bg = wgpuState.bgCache.get(bgKey);
           if (!bg){
             bg = gpuDevice.createBindGroup({
@@ -2459,7 +2857,8 @@
               entries: [
                 { binding:0, resource:{ buffer: ub } },
                 { binding:1, resource: wgpuState.sampler },
-                { binding:2, resource: (wgpuState.gpuTex[tk] || wgpuState.gpuTex.white).createView() }
+                { binding:2, resource: (wgpuState.gpuTex[tk] || wgpuState.gpuTex.white).createView() },
+                { binding:3, resource: (wgpuState.gpuTex[nk] || wgpuState.gpuTex.flat_normal).createView() }
               ]
             });
             wgpuState.bgCache.set(bgKey, bg);
@@ -2478,28 +2877,28 @@
 
         var idM = mat4Identity();
         if (tab === 'face' || tab === 'body' || tab === 'gear' || tab === 'hair'){
-          drawGpuMesh(rp, pv, 'prop_turntableDisk', idM, 'white', [0.06,0.07,0.09,1], 0, 0.55, 0.45, 0, 0.02, 0);
+          drawGpuMesh(rp, pv, 'prop_turntableDisk', idM, 'white', null, [0.10,0.11,0.13,1], 0, 0.50, 0.45, 0, 0.02, 0);
         } else if (tab === 'quarters'){
-          drawGpuMesh(rp, pv, 'prop_cabin', idM, 'white', [0.16,0.18,0.22,1], 0, 0.65, 0.36, 0, 0, 0);
+          drawGpuMesh(rp, pv, 'prop_cabin', idM, 'white', null, [0.16,0.18,0.22,1], 0, 0.65, 0.36, 0, 0, 0);
         } else if (tab === 'ramp'){
-          drawGpuMesh(rp, pv, 'prop_floorPlane', idM, 'white', [0.07,0.09,0.11,1], 0, 0.45, 0.25, 0, 0, 0);
-          drawGpuMesh(rp, pv, 'prop_ramp',  idM, 'white', [0.22,0.25,0.28,1], 0, 0.55, 0.45, 0, 0, 0);
-          drawGpuMesh(rp, pv, 'prop_ship',  idM, 'white', [0.26,0.30,0.34,1], 0, 0.60, 0.40, 0, 0, 0);
-          drawGpuMesh(rp, pv, 'prop_chair', idM, 'white', [0.32,0.34,0.38,1], 0, 0.72, 0.38, 0, 0, 0);
-          drawGpuMesh(rp, pv, 'prop_crate', idM, 'white', [0.28,0.32,0.26,1], 0, 0.35, 0.65, 0, 0, 0);
+          drawGpuMesh(rp, pv, 'prop_floorPlane', idM, 'white', null, [0.09,0.10,0.12,1], 0, 0.45, 0.25, 0, 0, 0);
+          drawGpuMesh(rp, pv, 'prop_ramp',  idM, 'white', null, [0.22,0.25,0.28,1], 0, 0.55, 0.45, 0, 0, 0);
+          drawGpuMesh(rp, pv, 'prop_ship',  idM, 'white', null, [0.26,0.30,0.34,1], 0, 0.60, 0.40, 0, 0, 0);
+          drawGpuMesh(rp, pv, 'prop_chair', idM, 'white', null, [0.32,0.34,0.38,1], 0, 0.72, 0.38, 0, 0, 0);
+          drawGpuMesh(rp, pv, 'prop_crate', idM, 'white', null, [0.28,0.32,0.26,1], 0, 0.35, 0.65, 0, 0, 0);
         } else if (tab === 'action'){
-          drawGpuMesh(rp, pv, 'prop_floorPlane', idM, 'white', [0.09,0.11,0.13,1], 0, 0.4, 0.5, 0, 0, 0);
-          drawGpuMesh(rp, pv, 'prop_corridor', idM, 'white', [0.22,0.26,0.30,1], 0, 0.5, 0.48, 0, 0, 0);
+          drawGpuMesh(rp, pv, 'prop_floorPlane', idM, 'white', null, [0.10,0.11,0.13,1], 0, 0.4, 0.5, 0, 0, 0);
+          drawGpuMesh(rp, pv, 'prop_corridor', idM, 'white', null, [0.22,0.26,0.30,1], 0, 0.5, 0.48, 0, 0, 0);
         }
         charDraws.forEach(function(d){
-          drawGpuMesh(rp, pv, d.mesh, stage.modelMat, d.tex, d.tint, d.isSkin, d.met, d.rough, d.cut, d.em, 0);
+          drawGpuMesh(rp, pv, d.mesh, stage.modelMat, d.tex, d.norm, d.tint, d.isSkin, d.met, d.rough, d.cut, d.em, 0);
         });
-        if (stage.showWeapon) drawGpuMesh(rp, pv, 'carbine_rifle', rifleMat, 'white', [0.22,0.25,0.28,1], 0, 0.78, 0.32, 0, 0, 0);
-        if (stage.showHolo) drawGpuMesh(rp, pv, 'prop_holoCard', holoMat, 'dyn_holo', [1,1,1,0.92], 0, 0, 1, 0, 1.4, 0);
+        if (stage.showWeapon) drawGpuMesh(rp, pv, 'carbine_rifle', rifleMat, 'white', null, [0.22,0.25,0.28,1], 0, 0.78, 0.32, 0, 0, 0);
+        if (stage.showHolo) drawGpuMesh(rp, pv, 'prop_holoCard', holoMat, 'dyn_holo', null, [1,1,1,0.92], 0, 0, 1, 0, 1.4, 0);
         if (crowdCount > 0){
           gpuDevice.queue.writeBuffer(wgpuState.instOffBuf, 0, instOffArr);
           gpuDevice.queue.writeBuffer(wgpuState.instColBuf, 0, instColArr);
-          drawGpuMesh(rp, pv, 'lod2', idM, 'white', [1,1,1,1], 0, 0.4, 0.5, 0, 0, crowdCount);
+          drawGpuMesh(rp, pv, 'lod2', idM, 'white', null, [1,1,1,1], 0, 0.4, 0.5, 0, 0, crowdCount);
         }
         rp.end();
 
@@ -2521,7 +2920,7 @@
           var cp2 = enc.beginComputePass();
           cp2.setPipeline(wgpuState.computePipe);
           pDrawsW.forEach(function(pd){
-            if (pd.mesh === 'jeans' || pd.mesh === 'boots' || pd.mesh === 'armor_belt_knees' || pd.mesh === 'briefs' || pd.mesh === 'panties' || pd.mesh === 'bra') return;
+            if (pd.mesh === 'jeans' || pd.mesh === 'trousers' || pd.mesh === 'cyborg_suit' || pd.mesh === 'boots' || pd.mesh === 'armor_belt_knees' || pd.mesh === 'briefs' || pd.mesh === 'panties' || pd.mesh === 'bra' || pd.mesh === 'skel_leg_l' || pd.mesh === 'skel_leg_r' || pd.mesh === 'cyber_leg_l' || pd.mesh === 'cyber_leg_r') return;
             var mg = wgpuState.meshesGPU[pd.mesh];
             if (mg && mg.pCompBG){ cp2.setBindGroup(0, mg.pCompBG); cp2.dispatchWorkgroups(Math.ceil(mg.vcount / 64)); }
           });
@@ -2534,11 +2933,11 @@
           rp2.setViewport(px, pyTop, pw, ph, 0, 1);
           rp2.setScissorRect(px, pyTop, pw, ph);
           rp2.setPipeline(wgpuState.renderPipe);
-          // Clear corner portrait scissor box cleanly with dark navy backdrop quad at z=0.998
-          drawGpuMesh(rp2, idM, 'prop_portraitBg', idM, 'white', [0.004,0.011,0.019,1], 0, 0, 1, 0, 1.0, 0);
+          // Clear corner portrait scissor box cleanly with neutral dark charcoal backdrop quad at z=0.998
+          drawGpuMesh(rp2, idM, 'prop_portraitBg', idM, 'white', null, [0.045,0.052,0.064,1], 0, 0, 1, 0, 1.0, 0);
           pDrawsW.forEach(function(pd){
-            if (pd.mesh === 'jeans' || pd.mesh === 'boots' || pd.mesh === 'armor_belt_knees' || pd.mesh === 'briefs' || pd.mesh === 'panties' || pd.mesh === 'bra') return;
-            drawGpuMesh(rp2, pPV, pd.mesh, idM, pd.tex, pd.tint, pd.isSkin, pd.met, pd.rough, pd.cut, pd.em, 0);
+            if (pd.mesh === 'jeans' || pd.mesh === 'trousers' || pd.mesh === 'cyborg_suit' || pd.mesh === 'boots' || pd.mesh === 'armor_belt_knees' || pd.mesh === 'briefs' || pd.mesh === 'panties' || pd.mesh === 'bra' || pd.mesh === 'skel_leg_l' || pd.mesh === 'skel_leg_r' || pd.mesh === 'cyber_leg_l' || pd.mesh === 'cyber_leg_r') return;
+            drawGpuMesh(rp2, pPV, pd.mesh, idM, pd.tex, pd.norm, pd.tint, pd.isSkin, pd.met, pd.rough, pd.cut, pd.em, 0);
           });
           rp2.end();
         }
