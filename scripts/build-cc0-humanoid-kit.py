@@ -26,9 +26,23 @@ OUT_BIN = "/home/user/assets/ev-humanoid-kit.bin"
 OUT_JS  = "/home/user/js/ev-humanoid-kit.js"
 
 KEEP_TARGETS = [
-    "gender_female", "gender_male", "age_old",
+    "gender_female", "gender_male", "age_old", "age_child",
     "weight_min", "weight_max", "muscle_min", "muscle_max",
-    "height_short", "height_tall", "proportions_ideal",
+    "height_short", "height_tall", "proportions_ideal", "proportions_uncommon",
+    "breast_cup_min", "breast_cup_max", "breast_firm_min", "breast_firm_max",
+    "bdet_breast_dist_decr", "bdet_breast_dist_incr",
+    "bdet_breast_point_decr", "bdet_breast_point_incr",
+    "bdet_breast_height_decr", "bdet_breast_height_incr",
+    "dyn_breast_up", "dyn_breast_down",
+    "dyn_breast_left", "dyn_breast_right",
+    "dyn_breast_fwd", "dyn_breast_back",
+    "corr_gender_female__age_old", "corr_gender_male__age_old",
+    "corr_gender_female__muscle_min", "corr_gender_female__muscle_max",
+    "corr_gender_male__muscle_min", "corr_gender_male__muscle_max",
+    "corr_gender_female__weight_min", "corr_gender_female__weight_max",
+    "corr_gender_male__weight_min", "corr_gender_male__weight_max",
+    "corr_breast_cup_min__breast_firm_min", "corr_breast_cup_min__breast_firm_max",
+    "corr_breast_cup_max__breast_firm_min", "corr_breast_cup_max__breast_firm_max",
     "face_nose_width_decr", "face_nose_width_incr",
     "face_nose_length_decr", "face_nose_length_incr",
     "face_nose_height_decr", "face_nose_height_incr",
@@ -340,8 +354,9 @@ def decimate_skinned_mesh(pos, norm, uv, joints, weights, indices, target_cell_s
         "indices": new_idx
     }
 
-def build_custom_hard_surface_meshes(body_pos, body_norm, body_joints, body_weights):
-    """Build original beveled sci-fi armor, 3-mode combat helmet, watch/gauntlet & carbine conformed to hm08."""
+def build_custom_hard_surface_meshes(body_pos, body_norm, body_joints, body_weights, body_morphs=None):
+    """Build original beveled sci-fi armor, 3-mode combat helmet, watch/gauntlet, carbine,
+    modular articulated humanoid skeleton / android endoskeleton modules, & morph-tracked piercings."""
     meshes = {}
 
     def nearest_skin(pts):
@@ -356,6 +371,27 @@ def build_custom_hard_surface_meshes(body_pos, body_norm, body_joints, body_weig
             out_j[i:i+256] = body_joints[nn]
             out_w[i:i+256] = body_weights[nn]
         return out_j, out_w
+
+    def copy_nearest_morphs(verts, target_keys=None):
+        if not body_morphs:
+            return {}
+        d2 = ((verts[:, None, :] - body_pos[None, :, :]) ** 2).sum(axis=2)
+        nn = np.argmin(d2, axis=1)
+        out_m = {}
+        keys = target_keys or list(body_morphs.keys())
+        for mk in keys:
+            if mk not in body_morphs:
+                continue
+            bidx, bdel = body_morphs[mk]
+            bmap = {int(vi): di for di, vi in enumerate(bidx)}
+            m_idx, m_del = [], []
+            for vi, b_vi in enumerate(nn):
+                if int(b_vi) in bmap:
+                    m_idx.append(vi)
+                    m_del.append(bdel[bmap[int(b_vi)]])
+            if m_idx:
+                out_m[mk] = (np.array(m_idx, dtype=np.uint16), np.array(m_del, dtype=np.int16))
+        return out_m
 
     def make_loft_shell(ring_list, closed_caps=True, uv_scale=(1.0, 1.0)):
         verts = []
@@ -527,49 +563,51 @@ def build_custom_hard_surface_meshes(body_pos, body_norm, body_joints, body_weig
     belt_parts.append(make_beveled_box(-0.142, 0.472, 0.100, 0.034, 0.038, 0.011, 0.004, bone_idx=None))
     meshes["armor_belt_knees"] = combine_parts(belt_parts)
 
-    # 2. CONSISTENT LEFT WRIST EMITTER DEVICES (Watch vs Full Gauntlet, exact same emitter point!)
-    # lowerarm_l = bone 7, bindPos=(0.331, 1.140, 0.020); hand_l = bone 8, bindPos=(0.453, 1.016, 0.183)
-    # Wrist point ~ 82% along lowerarm_l -> hand_l = (0.431, 1.038, 0.154)
-    wrist_c = np.array([0.431, 1.038, 0.154], dtype=np.float32)
-    # Watch: sleek forearm-hugging tactical strap + low-profile Titanium dial
+    # 2. CONSISTENT LEFT WRIST EMITTER DEVICES (Watch vs Full Gauntlet, centered & morph-tracked to forearm skin!)
+    p_lo = np.array([0.331, 1.140, 0.020], dtype=np.float32)
+    p_ha = np.array([0.453, 1.016, 0.183], dtype=np.float32)
+    ax_arm = p_ha - p_lo; ax_arm /= max(float(np.linalg.norm(ax_arm)), 1e-5)
+    ref_up = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+    u_arm = np.cross(ref_up, ax_arm); u_arm /= max(float(np.linalg.norm(u_arm)), 1e-5)
+    v_arm = np.cross(ax_arm, u_arm)
+    wrist_c = np.array([0.423, 1.047, 0.140], dtype=np.float32)
+
     w_band = []
-    w_p0 = np.array([0.415, 1.054, 0.133], dtype=np.float32)
-    w_p1 = np.array([0.443, 1.026, 0.170], dtype=np.float32)
-    for t in (0.0, 0.5, 1.0):
-        c = w_p0 * (1.0 - t) + w_p1 * t
+    for dt in (-0.013, 0.0, 0.013):
+        c = wrist_c + ax_arm * dt
         ring = []
         for si in range(14):
             a = 2.0 * math.pi * si / 14.0
-            ring.append(np.array([c[0]+math.cos(a)*0.032, c[1]+math.sin(a)*0.026, c[2]+math.sin(a)*0.018], dtype=np.float32))
+            ring.append(c + (math.cos(a) * u_arm * 0.032) + (math.sin(a) * v_arm * 0.029))
         w_band.append(ring)
     vwb, nwb, uwb, iwb = make_loft_shell(w_band, closed_caps=False)
     jwb = np.zeros((len(vwb), 4), dtype=np.uint8); jwb[:, 0] = 7
     wwb = np.zeros((len(vwb), 4), dtype=np.uint8); wwb[:, 0] = 255
+    dial_c = wrist_c + v_arm * 0.028
     watch_parts = [
         (vwb, nwb, uwb, iwb, jwb, wwb),
-        make_beveled_box(wrist_c[0]+0.012, wrist_c[1]+0.020, wrist_c[2]+0.012, 0.015, 0.005, 0.018, 0.002, bone_idx=7)
+        make_beveled_box(dial_c[0], dial_c[1], dial_c[2], 0.014, 0.005, 0.015, 0.002, bone_idx=7)
     ]
     meshes["wrist_watch"] = combine_parts(watch_parts)
+    meshes["wrist_watch"]["morphs"] = copy_nearest_morphs(meshes["wrist_watch"]["pos"].astype(np.float32) / 10000.0)
 
-    # Full Armored Gauntlet: wraps mid-forearm to wrist + armored top shield + same exact emitter crystal!
     gaunt_parts = []
     grings = []
-    p0 = np.array([0.345, 1.125, 0.040], dtype=np.float32)
-    p1 = np.array([0.438, 1.030, 0.163], dtype=np.float32)
-    for t, r_rad in [(0.0, 0.056), (0.35, 0.050), (0.78, 0.043), (1.0, 0.040)]:
-        c = p0 * (1.0 - t) + p1 * t
+    for t, ru, rv in [(0.18, 0.045, 0.041), (0.48, 0.040, 0.036), (0.76, 0.035, 0.031), (0.90, 0.033, 0.029)]:
+        c = p_lo * (1.0 - t) + p_ha * t
         ring = []
         for si in range(14):
             a = 2.0 * math.pi * si / 14.0
-            ring.append(np.array([c[0]+math.cos(a)*r_rad, c[1]+math.sin(a)*r_rad*0.85, c[2]+math.sin(a)*r_rad*0.5], dtype=np.float32))
+            ring.append(c + (math.cos(a) * u_arm * ru) + (math.sin(a) * v_arm * rv))
         grings.append(ring)
     vg, ng, ug, ig = make_loft_shell(grings, closed_caps=False)
     jg = np.zeros((len(vg), 4), dtype=np.uint8); jg[:, 0] = 7
     wg = np.zeros((len(vg), 4), dtype=np.uint8); wg[:, 0] = 255
     gaunt_parts.append((vg, ng, ug, ig, jg, wg))
-    # Dorsal projector housing matching EXACT watch emitter crystal coordinates
-    gaunt_parts.append(make_beveled_box(wrist_c[0]+0.012, wrist_c[1]+0.022, wrist_c[2]+0.014, 0.028, 0.012, 0.034, 0.004, bone_idx=7))
+    g_box_c = wrist_c + v_arm * 0.029 - ax_arm * 0.020
+    gaunt_parts.append(make_beveled_box(g_box_c[0], g_box_c[1], g_box_c[2], 0.024, 0.011, 0.030, 0.004, bone_idx=7))
     meshes["wrist_gauntlet"] = combine_parts(gaunt_parts)
+    meshes["wrist_gauntlet"]["morphs"] = copy_nearest_morphs(meshes["wrist_gauntlet"]["pos"].astype(np.float32) / 10000.0)
 
     # 3. 3-MODE COMBAT HELMET (Open Visor / Half-Visor / Sealed Visor) rigged to head bone (44)
     # Sleek modern high-cut EV-TAC MK.IV ballistic helmet: smooth continuous 360° profile with horizontal brow rim & high-cut ear arch!
@@ -718,6 +756,168 @@ def build_custom_hard_surface_meshes(body_pos, body_norm, body_joints, body_weig
     ]
     meshes["carbine_rifle"] = combine_parts(rifle_parts)
 
+    # 5. MODULAR ARTICULATED HUMANOID SKELETON / ANDROID ENDOSKELETON (6 anatomical rig modules!)
+    def make_limb_tube(p0, p1, r0, r1, bone_idx, n_seg=8):
+        p0 = np.array(p0, dtype=np.float32); p1 = np.array(p1, dtype=np.float32)
+        d = p1 - p0; dl = float(np.linalg.norm(d))
+        ax = d / max(dl, 1e-5)
+        ref = np.array([0.0, 1.0, 0.0], dtype=np.float32) if abs(ax[1]) < 0.92 else np.array([1.0, 0.0, 0.0], dtype=np.float32)
+        u = np.cross(ref, ax); u /= max(float(np.linalg.norm(u)), 1e-5)
+        v = np.cross(ax, u)
+        rings = []
+        for t, r in [(0.0, r0*0.85), (0.14, r0), (0.50, (r0+r1)*0.42), (0.86, r1), (1.0, r1*0.85)]:
+            c = p0 * (1.0 - t) + p1 * t
+            ring = []
+            for si in range(n_seg):
+                a = 2.0 * math.pi * si / n_seg
+                ring.append(c + (math.cos(a) * u + math.sin(a) * v) * r)
+            rings.append(ring)
+        va, na, ua, ia = make_loft_shell(rings, closed_caps=True)
+        ja = np.zeros((len(va), 4), dtype=np.uint8); ja[:, 0] = bone_idx
+        wa = np.zeros((len(va), 4), dtype=np.uint8); wa[:, 0] = 255
+        return va, na, ua, ia, ja, wa
+
+    def make_joint_sphere(c, rx, ry, rz, bone_idx):
+        c = np.array(c, dtype=np.float32)
+        rings = []
+        for ri in range(5):
+            phi = -math.pi * 0.42 + (math.pi * 0.84) * (ri / 4.0)
+            cp, sp = math.cos(phi), math.sin(phi)
+            ring = []
+            for si in range(8):
+                a = 2.0 * math.pi * si / 8.0
+                ring.append(c + np.array([math.cos(a)*cp*rx, sp*ry, math.sin(a)*cp*rz], dtype=np.float32))
+            rings.append(ring)
+        va, na, ua, ia = make_loft_shell(rings, closed_caps=True)
+        ja = np.zeros((len(va), 4), dtype=np.uint8); ja[:, 0] = bone_idx
+        wa = np.zeros((len(va), 4), dtype=np.uint8); wa[:, 0] = 255
+        return va, na, ua, ia, ja, wa
+
+    # 5A. skel_head: Sculpted Cranium + Cheek Zygoma + Brow Bridge + Hinged Mandible + Cervical Spine
+    sk_head = []
+    cran_rings = []
+    for y, rx, rz, zc in [
+        (1.505, 0.056, 0.072, 0.015), (1.545, 0.072, 0.088, 0.032),
+        (1.592, 0.078, 0.095, 0.036), (1.640, 0.074, 0.090, 0.030),
+        (1.680, 0.054, 0.068, 0.022), (1.702, 0.025, 0.034, 0.016)
+    ]:
+        ring = []
+        for si in range(14):
+            a = 2.0 * math.pi * si / 14.0
+            ca, sa = math.sin(a), math.cos(a)
+            # Carve orbital eye recesses on forward cheek face (y ~ 1.56..1.60, sa > 0.4)
+            orbit_dip = 0.016 * math.exp(-((abs(ca) - 0.34) / 0.18)**2) if (1.55 < y < 1.605 and sa > 0.35) else 0.0
+            ring.append(np.array([ca * rx, y, sa * (rz - orbit_dip) + zc], dtype=np.float32))
+        cran_rings.append(ring)
+    vc, nc, uc, ic = make_loft_shell(cran_rings, closed_caps=True)
+    jc = np.zeros((len(vc), 4), dtype=np.uint8); jc[:, 0] = 44
+    wc = np.zeros((len(vc), 4), dtype=np.uint8); wc[:, 0] = 255
+    sk_head.append((vc, nc, uc, ic, jc, wc))
+    # Maxilla / nasal bridge + articulated cyber mandible + jaw hinge pistons + 2 glowing eye cores!
+    sk_head.append(make_beveled_box(0.0, 1.505, 0.092, 0.026, 0.018, 0.024, 0.005, bone_idx=44))
+    sk_head.append(make_beveled_box(0.0, 1.442, 0.088, 0.034, 0.016, 0.026, 0.005, bone_idx=44))
+    sk_head.append(make_limb_tube((-0.056, 1.495, 0.048), (-0.034, 1.444, 0.086), 0.011, 0.009, 44, 6))
+    sk_head.append(make_limb_tube(( 0.056, 1.495, 0.048), ( 0.034, 1.444, 0.086), 0.011, 0.009, 44, 6))
+    sk_head.append(make_joint_sphere((-0.031, 1.584, 0.098), 0.014, 0.012, 0.012, 44))
+    sk_head.append(make_joint_sphere(( 0.031, 1.584, 0.098), 0.014, 0.012, 0.012, 44))
+    # Cervical spine vertebrae + flush neck base socket collar (bone 43)
+    for vy in (1.425, 1.455, 1.485):
+        sk_head.append(make_joint_sphere((0.0, vy, 0.012), 0.026, 0.012, 0.024, 43))
+    sk_head.append(make_limb_tube((0.0, 1.385, 0.014), (0.0, 1.422, 0.014), 0.052, 0.042, 43, 12))
+    meshes["skel_head"] = combine_parts(sk_head)
+
+    # 5B. skel_torso: Lumbar/Thoracic Spine + Sternum Core + 6 Rib Arch Pairs + Clavicles + Pelvis Frame
+    sk_torso = []
+    for vy, bi in [(0.91, 1), (0.955, 2), (1.00, 2), (1.045, 3), (1.095, 3), (1.155, 4), (1.220, 4), (1.285, 4), (1.350, 4)]:
+        sk_torso.append(make_joint_sphere((0.0, vy, -0.015), 0.028, 0.018, 0.026, bi))
+    # Sternum shock plate & spinal actuator column
+    sk_torso.append(make_beveled_box(0.0, 1.245, 0.096, 0.030, 0.092, 0.018, 0.006, bone_idx=4))
+    sk_torso.append(make_beveled_box(0.0, 1.240,-0.045, 0.026, 0.115, 0.018, 0.005, bone_idx=4))
+    # Curved anatomical/android ribs (6 symmetric pairs spanning spine -> sternum!)
+    for ry, rw, rd, bi in [(1.33, 0.120, 0.088, 4), (1.29, 0.136, 0.100, 4), (1.24, 0.144, 0.106, 4), (1.19, 0.140, 0.102, 4), (1.14, 0.128, 0.094, 3), (1.09, 0.110, 0.082, 3)]:
+        for sgn in (-1.0, 1.0):
+            p_back = (sgn * 0.024, ry + 0.014, -0.020)
+            p_mid  = (sgn * rw, ry, 0.026)
+            p_front= (sgn * 0.028, ry - 0.014, rd)
+            sk_torso.append(make_limb_tube(p_back, p_mid, 0.010, 0.011, bi, 6))
+            sk_torso.append(make_limb_tube(p_mid, p_front, 0.011, 0.009, bi, 6))
+    # Clavicles & Pelvis Iliac Chassis
+    sk_torso.append(make_limb_tube((0.022, 1.345, 0.032), (0.168, 1.322, 0.020), 0.013, 0.014, 5, 6))
+    sk_torso.append(make_limb_tube((-0.022, 1.345, 0.032), (-0.168, 1.322, 0.020), 0.013, 0.014, 24, 6))
+    sk_torso.append(make_beveled_box(0.0, 0.875, 0.012, 0.102, 0.042, 0.054, 0.012, bone_idx=1))
+    sk_torso.append(make_limb_tube((-0.085, 0.905, 0.018), (-0.102, 0.866, 0.006), 0.026, 0.022, 1, 8))
+    sk_torso.append(make_limb_tube(( 0.085, 0.905, 0.018), ( 0.102, 0.866, 0.006), 0.026, 0.022, 1, 8))
+    meshes["skel_torso"] = combine_parts(sk_torso)
+
+    # 5C. skel_arm_l & skel_arm_r (Flush Deltoid Prosthetic Socket Collar -> Shoulder Servo -> Humerus -> Elbow -> Forearm -> Hand)
+    for side, sgn, b_cl, b_up, b_lo, b_ha, f_base in [("l", 1.0, 5, 6, 7, 8, 9), ("r", -1.0, 24, 25, 26, 27, 28)]:
+        p_cl = (sgn * 0.140, 1.318, 0.016)
+        p_sh = (sgn * 0.170, 1.316, 0.019)
+        p_el = (sgn * 0.331, 1.140, 0.020)
+        p_wr = (sgn * 0.453, 1.016, 0.183)
+        p_kn = (sgn * 0.486, 0.968, 0.252)
+        arm_parts = [
+            make_limb_tube(p_cl, p_sh, 0.036, 0.038, b_cl, 10), # Flush shoulder socket cuff!
+            make_joint_sphere(p_sh, 0.040, 0.040, 0.040, b_up),
+            make_limb_tube(p_sh, p_el, 0.026, 0.021, b_up, 8),
+            make_limb_tube((p_sh[0]-sgn*0.012, p_sh[1]-0.02, p_sh[2]+0.018), (p_el[0]-sgn*0.008, p_el[1]+0.01, p_el[2]+0.015), 0.009, 0.008, b_up, 6),
+            make_joint_sphere(p_el, 0.025, 0.025, 0.025, b_lo),
+            make_limb_tube((p_el[0], p_el[1], p_el[2]+0.010), (p_wr[0], p_wr[1], p_wr[2]+0.008), 0.014, 0.011, b_lo, 6),
+            make_limb_tube((p_el[0], p_el[1], p_el[2]-0.010), (p_wr[0], p_wr[1], p_wr[2]-0.008), 0.014, 0.011, b_lo, 6),
+            make_joint_sphere(p_wr, 0.019, 0.017, 0.019, b_ha),
+            make_limb_tube(p_wr, p_kn, 0.021, 0.023, b_ha, 6),
+        ]
+        for fi, dz, b_off in [(0, 0.018, 3), (1, 0.0, 6), (2, -0.018, 9), (3, -0.032, 12)]:
+            fp0 = (p_kn[0] + sgn*0.004, p_kn[1] - 0.006, p_kn[2] + dz)
+            fp1 = (fp0[0] + sgn*0.010, fp0[1] - 0.048, fp0[2] + 0.014)
+            arm_parts.append(make_limb_tube(fp0, fp1, 0.006, 0.005, f_base + b_off, 6))
+        meshes[f"skel_arm_{side}"] = combine_parts(arm_parts)
+
+    # 5D. skel_leg_l & skel_leg_r (Flush Hip Socket Collar -> Femur + Actuator -> Knee Cap -> Dual Tibia/Fibula -> Foot Frame)
+    for side, sgn, b_th, b_ca, b_ft, b_bl in [("l", 1.0, 45, 46, 47, 48), ("r", -1.0, 49, 50, 51, 52)]:
+        p_pel= (sgn * 0.072, 0.905, 0.008)
+        p_hp = (sgn * 0.102, 0.866, 0.005)
+        p_kn = (sgn * 0.143, 0.474, 0.037)
+        p_ak = (sgn * 0.181, 0.069, 0.022)
+        p_bl = (sgn * 0.186, 0.022, 0.145)
+        leg_parts = [
+            make_limb_tube(p_pel, p_hp, 0.056, 0.048, 1, 10), # Flush hip socket cuff!
+            make_joint_sphere(p_hp, 0.042, 0.042, 0.042, b_th),
+            make_limb_tube(p_hp, p_kn, 0.034, 0.027, b_th, 8),
+            make_limb_tube((p_hp[0]+sgn*0.026, p_hp[1]-0.03, p_hp[2]+0.015), (p_kn[0]+sgn*0.020, p_kn[1]+0.03, p_kn[2]+0.018), 0.010, 0.009, b_th, 6),
+            make_joint_sphere(p_kn, 0.032, 0.032, 0.032, b_ca),
+            make_limb_tube((p_kn[0]-sgn*0.012, p_kn[1], p_kn[2]+0.008), (p_ak[0]-sgn*0.010, p_ak[1], p_ak[2]+0.006), 0.019, 0.015, b_ca, 8),
+            make_limb_tube((p_kn[0]+sgn*0.018, p_kn[1], p_kn[2]-0.010), (p_ak[0]+sgn*0.014, p_ak[1], p_ak[2]-0.008), 0.011, 0.009, b_ca, 6),
+            make_joint_sphere(p_ak, 0.024, 0.024, 0.024, b_ft),
+            make_limb_tube((p_ak[0], p_ak[1]-0.035, p_ak[2]-0.035), p_bl, 0.022, 0.026, b_ft, 6),
+            make_beveled_box(p_bl[0], 0.014, p_bl[2] + 0.035, 0.034, 0.012, 0.042, 0.004, bone_idx=b_bl),
+        ]
+        meshes[f"skel_leg_{side}"] = combine_parts(leg_parts)
+
+    # 6. MORPH-TRACKED 3D FACIAL PIERCINGS (Brow, Nostril, Lip, Ears — measured exact hm08 landmarks!)
+    def make_piercing_mesh(centers_radii):
+        parts = []
+        for c, rad in centers_radii:
+            parts.append(make_joint_sphere(c, rad, rad, rad, 44))
+        res = combine_parts(parts)
+        verts_f32 = res["pos"].astype(np.float32) / 10000.0
+        res["morphs"] = copy_nearest_morphs(verts_f32)
+        return res
+
+    meshes["piercing_brow"] = make_piercing_mesh([
+        ([0.047, 1.568, 0.129], 0.0024), ([0.049, 1.559, 0.130], 0.0022)
+    ])
+    meshes["piercing_nostril"] = make_piercing_mesh([
+        ([0.017, 1.518, 0.143], 0.0022)
+    ])
+    meshes["piercing_lip"] = make_piercing_mesh([
+        ([0.000, 1.462, 0.1425], 0.0024)
+    ])
+    meshes["piercing_ears"] = make_piercing_mesh([
+        ([0.072, 1.506, 0.049], 0.0032), ([-0.072, 1.506, 0.049], 0.0032),
+        ([0.081, 1.537, 0.030], 0.0025), ([-0.081, 1.537, 0.030], 0.0025),
+    ])
+
     return meshes
 
 def encode_webp_b64(img_bytes, max_size=512, quality=84, keep_alpha=False):
@@ -794,9 +994,10 @@ def main():
                 parents[node_to_joint[ch]] = ji
     ibm = read_acc(gltf_b, bin_b, skin["inverseBindMatrices"]).astype(np.float32)
 
-    # Compute exact Face UV Anchors from hm08 vertex coords for dynamic scars/stubble
+    # Compute exact Face UV, Fingernail UV & Body Tattoo UV Anchors from hm08
     bp = body["_pos_f32"]
     buv = body["uv"].astype(np.float32) / 65535.0
+    bjnt = body["joints"][:, 0]
     face_uv_island = buv[:, 0] > 0.72
     def uv_center(x0, x1, y0, y1, zmin=0.05):
         m = face_uv_island & (bp[:,0]>=x0)&(bp[:,0]<=x1)&(bp[:,1]>=y0)&(bp[:,1]<=y1)&(bp[:,2]>=zmin)
@@ -814,6 +1015,18 @@ def main():
         "rbrow":    uv_center(-0.048,-0.018, 1.535, 1.555, 0.11),
         "ljaw":     uv_center( 0.030, 0.068, 1.425, 1.470, 0.04),
         "rjaw":     uv_center(-0.068,-0.030, 1.425, 1.470, 0.04),
+    }
+    nail_uvs = []
+    for fji in [11, 14, 17, 20, 23, 30, 33, 36, 39, 42]:
+        fm = (bjnt == fji)
+        if np.any(fm):
+            fp = bp[fm]; fu = buv[fm]
+            tip = int(np.argmin(fp[:, 1]))
+            nail_uvs.append([round(float(fu[tip, 0]), 4), round(float(fu[tip, 1]), 4)])
+    tattoo_uv = {
+        "chest": [0.381, 0.297], "neck": [0.455, 0.087],
+        "arm_l": [0.606, 0.171], "arm_r": [0.155, 0.171],
+        "forearm_l": [0.708, 0.178], "face": [0.855, 0.415],
     }
 
     # Garments & Hair
@@ -845,6 +1058,7 @@ def main():
     extract_imgs(gltf_b, bin_b, "body", {
         "skin_albedo": (1024, 84, False),
         "skin_normal": (512,  92, False),
+        "ccRegions":   (256,  80, False),
         "eye":         (256,  86, False),
         "eyebrow":     (512,  86, True),
         "eyelash":     (512,  86, True),
@@ -859,8 +1073,8 @@ def main():
             key:                   (512, 84, True),
         })
 
-    # Custom Hard-Surface Armor / Helmet / Watch / Gauntlet / Carbine
-    custom = build_custom_hard_surface_meshes(body["_pos_f32"], body["_norm_f32"], body["joints"], body["weights"])
+    # Custom Hard-Surface Armor / Helmet / Watch / Gauntlet / Carbine / Skeleton / Piercings
+    custom = build_custom_hard_surface_meshes(body["_pos_f32"], body["_norm_f32"], body["joints"], body["weights"], body["morphs"])
 
     # LOD1 (~3,500 tris) & LOD2 (~750 tris) decimated clothed humanoids
     # Build combined clothed reference (jacket + jeans + boots + exposed head/hands of base) for realistic LOD silhouettes
@@ -941,10 +1155,10 @@ def main():
     lod1 = decimate_skinned_mesh(c_pos_p, c_nrm_p, c_uv, c_j, c_w, c_i, 0.036)
     lod2 = decimate_skinned_mesh(c_pos_p, c_nrm_p, c_uv, c_j, c_w, c_i, 0.095)
 
-    # Compact CC0 Animations (idle, walk, run — 15fps quantized int16 quaternions mapped to our 53 bones!)
+    # Compact CC0 Animations (idle, walk, run, strafe_left, strafe_right — 15fps quantized int16 quaternions mapped to our 53 bones!)
     anims = {}
     jname_to_idx = {jn: ji for ji, jn in enumerate(joint_names)}
-    for aname, afn in [("idle", "anim_idle.json"), ("walk", "anim_walk.json"), ("run", "anim_run.json")]:
+    for aname, afn in [("idle", "anim_idle.json"), ("walk", "anim_walk.json"), ("run", "anim_run.json"), ("strafe_left", "anim_strafe_left.json"), ("strafe_right", "anim_strafe_right.json")]:
         with open(f"{SRC_DIR}/{afn}") as f:
             aj = json.load(f)
         bmap = aj["boneMap"]
@@ -981,17 +1195,38 @@ def main():
         mesh_toc[k] = [len(mesh_blobs), len(mb)]
         mesh_blobs += mb
 
+    # Load CC0 base_body.joints.json world-space morph joint offsets for accurate pivot tracking
+    morph_joints = {}
+    jpath = f"{SRC_DIR}/base_body.joints.json"
+    if os.path.exists(jpath):
+        with open(jpath) as f:
+            jj = json.load(f)
+        jname_map = {jn: ji for ji, jn in enumerate(joint_names)}
+        for mk in KEEP_TARGETS:
+            jm = jj.get("morphs", {}).get(mk)
+            if not jm:
+                continue
+            entries = {}
+            for bn, dxyz in jm.items():
+                if bn in jname_map and (abs(dxyz[0]) > 1e-4 or abs(dxyz[1]) > 1e-4 or abs(dxyz[2]) > 1e-4):
+                    entries[str(jname_map[bn])] = [round(float(dxyz[0]), 5), round(float(dxyz[1]), 5), round(float(dxyz[2]), 5)]
+            if entries:
+                morph_joints[mk] = entries
+
     manifest = {
-        "version": "ev-humanoid-kit-1.0",
-        "license": "CC0-1.0 (MakeHuman/MPFB2/CharacterCreator assets) + MIT (Endless Vigil custom armor/props)",
+        "version": "ev-humanoid-kit-1.1",
+        "license": "CC0-1.0 (MakeHuman/MPFB2/CharacterCreator assets) + MIT (Endless Vigil custom armor/skeleton/props)",
         "bodyZones": BODY_ZONES,
         "faceUV": face_uv_anchors,
+        "nailUVs": nail_uvs,
+        "tattooUV": tattoo_uv,
         "skeleton": {
             "names": joint_names,
             "parents": parents,
             "restT": [[round(float(x), 6) for x in t] for t in rest_t],
             "restR": [[round(float(x), 6) for x in r] for r in rest_r],
             "ibmB64": base64.b64encode(ibm.astype("<f4").tobytes()).decode("ascii"),
+            "morphJoints": morph_joints,
         },
         "meshToc": mesh_toc,
         "anims": anims,

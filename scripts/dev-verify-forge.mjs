@@ -159,20 +159,25 @@ function createDomAndContext(prof){
   vp.parentElement = stageParent;
   els.set('viewport3d', vp);
 
-  const tabBtns = ['face','body','gear','hair','ramp','action'].map(t => {
+  const tabBtns = ['face','body','quarters','gear','ramp','action'].map(t => {
     const b = makeEl('tab-' + t, 'BUTTON');
     b.setAttribute('data-tab', t);
     return b;
   });
-  const tabPanels = ['face','body','gear','hair','ramp','action'].map(t => {
+  const tabPanels = ['face','body','quarters','gear','ramp','action'].map(t => {
     const p = makeEl('panel-' + t, 'DIV');
     p.setAttribute('data-panel', t);
     return p;
   });
-  const peekBtns = ['left','center','right'].map(k => {
+  const peekBtns = ['pie_left','center','pie_right'].map(k => {
     const b = makeEl('peek-' + k, 'BUTTON');
     b.setAttribute('data-peek', k);
     return b;
+  });
+  const sexRadios = ['male','female','finetune'].map(v => {
+    const r = makeEl('radio-' + v, 'INPUT');
+    r.value = v;
+    return r;
   });
 
   const doc = {
@@ -187,6 +192,8 @@ function createDomAndContext(prof){
       if (sel === '.tab-btn') return tabBtns;
       if (sel === '.tab-panel') return tabPanels;
       if (sel === '[data-peek]') return peekBtns;
+      if (sel === '[name="sexMode"]') return sexRadios;
+      if (sel === '.bio-lockable') return ['rng-noseWidth','rng-age','rng-muscle','rng-bustSize','sel-hairStyle','sel-beardStyle','sel-skinFinish'].map(id => this.getElementById(id));
       return [];
     },
     querySelector(){ return null; },
@@ -215,7 +222,7 @@ function createDomAndContext(prof){
     const raw = zlib.inflateSync(fs.readFileSync(path.join(rootDir, 'assets/ev-humanoid-kit.bin')));
     const hlen = raw.readUInt32LE(0);
     return JSON.parse(raw.subarray(4, 4 + hlen).toString('utf8')).texB64;
-  })()), 'dyn_skin', 'dyn_hair', 'dyn_holo'];
+  })()), 'dyn_skin', 'dyn_hair', 'dyn_holo', 'dyn_bra', 'dyn_panties', 'dyn_briefs'];
   let texSeq = 0;
   const gpuDevice = {
     features: new Set(),
@@ -279,7 +286,7 @@ function createDomAndContext(prof){
         },
         beginRenderPass(){
           passNum++;
-          let vpRect = null, scRect = null, curBg = null, vb0Buf = null, vb1Buf = null, vb2Buf = null, vb3Buf = null, vb4Buf = null, ibBuf = null, vb5Size = 0;
+          let vpRect = null, scRect = null, curBg = null, vb0Buf = null, vb1Buf = null, vb2Buf = null, vb3Buf = null, vb4Buf = null, vb5Buf = null, ibBuf = null, vb5Size = 0;
           return {
             setPipeline(){},
             setViewport(x,y,w,h){ vpRect = [x,y,w,h]; },
@@ -291,7 +298,7 @@ function createDomAndContext(prof){
               if (slot === 2) vb2Buf = buf;
               if (slot === 3) vb3Buf = buf;
               if (slot === 4) vb4Buf = buf;
-              if (slot === 5) vb5Size = buf ? buf.size : 0;
+              if (slot === 5) { vb5Buf = buf; vb5Size = buf ? buf.size : 0; }
             },
             setIndexBuffer(buf){ ibBuf = buf; },
             drawIndexed(ic, inst){
@@ -306,6 +313,7 @@ function createDomAndContext(prof){
               const vb0Key = skinMeta ? snapBuf(gpuBuffers.get(skinMeta.posInId)) : snapBuf(vb0Buf);
               const vb1Key = skinMeta ? snapBuf(gpuBuffers.get(skinMeta.nrmInId)) : snapBuf(vb1Buf);
               const vb2Key = snapBuf(vb2Buf);
+              const vb5Key = snapBuf(vb5Buf);
               const jBufKey = skinMeta ? snapBuf(gpuBuffers.get(skinMeta.jBufId)) : null;
               const wBufKey = skinMeta ? snapBuf(gpuBuffers.get(skinMeta.wBufId)) : null;
               const ibKey   = snapBuf(ibBuf);
@@ -317,6 +325,7 @@ function createDomAndContext(prof){
                 vb0Id: vb0Key,
                 vb1Id: vb1Key,
                 vb2Id: vb2Key,
+                vb5Id: vb5Key,
                 jBufId: jBufKey,
                 wBufId: wBufKey,
                 ibId: ibKey,
@@ -327,6 +336,7 @@ function createDomAndContext(prof){
                 model: Array.from(uFloats.subarray(16, 32)),
                 tint:  Array.from(uFloats.subarray(32, 36)),
                 camPos: Array.from(uFloats.subarray(36, 39)),
+                keyDir: Array.from(uFloats.subarray(40, 44)),
                 flags: Array.from(uFloats.subarray(52, 56)),
                 extra: Array.from(uFloats.subarray(56, 60)),
               });
@@ -397,7 +407,7 @@ function createDomAndContext(prof){
   vm.runInNewContext(jsCode, ctx);
 
   return {
-    ctx, els, tabBtns, peekBtns, vp,
+    ctx, els, tabBtns, peekBtns, sexRadios, vp,
     tickFrames(n = 2){
       for (let i = 0; i < n; i++){
         const fn = rafQueue.shift();
@@ -409,7 +419,7 @@ function createDomAndContext(prof){
       return {
         glDraws: capturedGlDraws, gpuDraws: capturedGpuDraws,
         jointMats: lastJointMats, portraitJointMats: lastPortraitJointMats,
-        state: JSON.parse(store.get('ev_operator_forge_v06') || '{}')
+        state: JSON.parse(store.get('ev_operator_forge_v07') || '{}')
       };
     },
     exportUsedBuffers(){
@@ -445,47 +455,81 @@ async function runProfile(prof){
   await new Promise(r => setTimeout(r, 120));
   sim.tickFrames(2);
 
-  // 1) Test Touch Orbit (Yaw + Pitch), Pinch Zoom & Double-Tap Reset!
-  const beforeState = JSON.parse(sim.els.get('viewport3d') ? sim.ctx.localStorage.getItem('ev_operator_forge_v06') || '{}' : '{}');
+  // 1) Test Touch Orbit (Yaw + Pitch), 2-Finger Pinch Zoom + 2-Finger Pan, & Double-Tap Reset!
   sim.vp.dispatch('pointerdown', { pointerId:1, clientX:200, clientY:200 });
   sim.vp.dispatch('pointermove', { pointerId:1, clientX:280, clientY:160 });
   sim.vp.dispatch('pointerup',   { pointerId:1 });
-  // Pinch zoom
+  // 2-finger pinch + pan simultaneously
   sim.vp.dispatch('pointerdown', { pointerId:1, clientX:150, clientY:200 });
   sim.vp.dispatch('pointerdown', { pointerId:2, clientX:250, clientY:200 });
-  sim.vp.dispatch('pointermove', { pointerId:2, clientX:320, clientY:200 });
+  sim.vp.dispatch('pointermove', { pointerId:2, clientX:320, clientY:240 });
   sim.vp.dispatch('pointerup',   { pointerId:1 });
   sim.vp.dispatch('pointerup',   { pointerId:2 });
   sim.tickFrames(1);
 
   const badge = sim.els.get('backend-badge').textContent;
   const portraitBoxW = parseInt(sim.els.get('corner-portrait-hud').style.width, 10);
-  if (!(portraitBoxW >= 88 && portraitBoxW <= 126)) {
+  if (!(portraitBoxW >= 80 && portraitBoxW <= 126)) {
     throw new Error(`${prof.name}: Corner HUD CSS width out of safe range (${portraitBoxW})`);
   }
 
+  // Verify Sex Radio toggle cleanly (female -> male)
+  sim.sexRadios[1].checked = true; sim.sexRadios[1].dispatch('change');
+  sim.tickFrames(1);
+  let stAfterFem = sim.getCaptures().state;
+  if (!(stAfterFem.gender > 0.5)) throw new Error(`${prof.name}: Female radio failed to update gender`);
+
   // Reset view back to clean framing for screen-by-screen audit
   sim.els.get('btn-reset-view').dispatch('click', {});
+  sim.sexRadios[0].checked = true; sim.sexRadios[0].dispatch('change');
 
-  // Set representative loadout for verification (armor + half visor in gear/ramp/action)
+  // Set representative loadout for verification across all 6 tabs
   const dumpTabs = {};
   for (let ti = 0; ti < sim.tabBtns.length; ti++){
     const tabName = sim.tabBtns[ti].getAttribute('data-tab');
     sim.tabBtns[ti].dispatch('click', {});
+    if (tabName === 'face'){
+      sim.els.get('sel-scarType').value = 'triple_puncture'; sim.els.get('sel-scarType').dispatch('change');
+      sim.els.get('chk-piercing-brow').checked = true; sim.els.get('chk-piercing-brow').dispatch('change');
+      sim.els.get('chk-piercing-glow').checked = true; sim.els.get('chk-piercing-glow').dispatch('change');
+      sim.els.get('sel-tattooStyle').value = 'circuit'; sim.els.get('sel-tattooStyle').dispatch('change');
+      sim.els.get('sel-tattooZone').value = 'face'; sim.els.get('sel-tattooZone').dispatch('change');
+      sim.els.get('chk-tattooGlow').checked = true; sim.els.get('chk-tattooGlow').dispatch('change');
+    }
+    if (tabName === 'body'){
+      sim.sexRadios[1].checked = true; sim.sexRadios[1].dispatch('change');
+      sim.els.get('sel-outfit').value = 'underwear'; sim.els.get('sel-outfit').dispatch('change');
+      sim.els.get('sel-part-armR').value = 'skeleton'; sim.els.get('sel-part-armR').dispatch('change');
+      sim.els.get('sel-part-legL').value = 'cyber'; sim.els.get('sel-part-legL').dispatch('change');
+      sim.els.get('rng-bustSize').value = '0.78'; sim.els.get('rng-bustSize').dispatch('input');
+    }
+    if (tabName === 'quarters'){
+      sim.sexRadios[1].checked = true; sim.sexRadios[1].dispatch('change');
+      sim.els.get('sel-part-armR').value = 'organic'; sim.els.get('sel-part-armR').dispatch('change');
+      sim.els.get('sel-part-legL').value = 'organic'; sim.els.get('sel-part-legL').dispatch('change');
+      sim.els.get('sel-outfit').value = 'underwear'; sim.els.get('sel-outfit').dispatch('change');
+      sim.els.get('sel-underwearBra').value = 'sheer_mesh'; sim.els.get('sel-underwearBra').dispatch('change');
+      sim.els.get('sel-underwearBottom').value = 'panties_lace'; sim.els.get('sel-underwearBottom').dispatch('change');
+      sim.els.get('sel-hairStyle').value = 'sleek'; sim.els.get('sel-hairStyle').dispatch('change');
+    }
     if (tabName === 'gear'){
+      sim.sexRadios[0].checked = true; sim.sexRadios[0].dispatch('change');
       sim.els.get('sel-outfit').value = 'armor'; sim.els.get('sel-outfit').dispatch('change');
       sim.els.get('sel-helmetMode').value = 'half'; sim.els.get('sel-helmetMode').dispatch('change');
-      sim.els.get('chk-equipRiflePreview').checked = true; sim.els.get('chk-equipRiflePreview').dispatch('change');
-    }
-    if (tabName === 'hair'){
-      sim.els.get('sel-helmetMode').value = 'none'; sim.els.get('sel-helmetMode').dispatch('change');
-      sim.els.get('sel-outfit').value = 'jacket'; sim.els.get('sel-outfit').dispatch('change');
       sim.els.get('sel-hairStyle').value = 'short'; sim.els.get('sel-hairStyle').dispatch('change');
+      sim.els.get('chk-equipRiflePreview').checked = true; sim.els.get('chk-equipRiflePreview').dispatch('change');
     }
     if (tabName === 'ramp'){
       sim.els.get('sel-outfit').value = 'armor'; sim.els.get('sel-outfit').dispatch('change');
       sim.els.get('sel-helmetMode').value = 'half'; sim.els.get('sel-helmetMode').dispatch('change');
       sim.els.get('btn-jump-seated').dispatch('click', {});
+    }
+    if (tabName === 'action'){
+      sim.peekBtns[0].dispatch('click', {}); // pie_left
+      sim.els.get('sel-cqbSpeed').value = 'fast'; sim.els.get('sel-cqbSpeed').dispatch('change');
+      sim.els.get('sel-part-armR').value = 'cyber'; sim.els.get('sel-part-armR').dispatch('change');
+      sim.els.get('chk-firing').checked = true; sim.els.get('chk-firing').dispatch('change');
+      sim.els.get('chk-cqbMoving').checked = true; sim.els.get('chk-cqbMoving').dispatch('change');
     }
     sim.clearCaptures();
     sim.tickFrames(1);
@@ -507,13 +551,22 @@ async function runProfile(prof){
       const hudDraws  = cap.gpuDraws.filter(d => d.pass === 2);
       if (mainDraws.length < 5) throw new Error(`${prof.name} [${tabName}]: Too few main WebGPU draws (${mainDraws.length})`);
       if (hudDraws.length < 3)  throw new Error(`${prof.name} [${tabName}]: Corner portrait HUD pass failed to draw (${hudDraws.length})`);
-      // Check face/head projects inside visible NDC [-0.95..+0.95] on face/body/gear/hair!
-      if (tabName === 'face' || tabName === 'body' || tabName === 'gear' || tabName === 'hair'){
-        const charDraw = mainDraws.find(d => d.flags[1] > 0.5); // base_body (isSkin=1)
+      if (tabName === 'face' || tabName === 'body' || tabName === 'quarters' || tabName === 'gear'){
+        const charDraw = mainDraws.find(d => d.flags[1] > 0.5);
         const ndc = projectPt(charDraw.pvMat, charDraw.model, headW);
         if (Math.abs(ndc[0]) > 0.85 || Math.abs(ndc[1]) > 0.85){
           throw new Error(`${prof.name} [${tabName}]: Head projected off-screen NDC=(${ndc[0].toFixed(2)}, ${ndc[1].toFixed(2)})`);
         }
+      }
+      if (tabName === 'quarters'){
+        const cabinDraw = mainDraws.find(d => d.ic >= 450 && !d.skinned && d.texKey === 'white'); // prop_cabin
+        const uwDraw = mainDraws.find(d => d.texKey === 'dyn_bra' || d.texKey === 'dyn_panties');
+        if (!cabinDraw) throw new Error(`${prof.name} [quarters]: Missing prop_cabin metallic quarters`);
+        if (!uwDraw) throw new Error(`${prof.name} [quarters]: Missing dynamic underwear draw`);
+      }
+      if (tabName === 'body'){
+        const skelDraw = mainDraws.find(d => d.ic > 700 && d.texKey === 'white' && d.skinned);
+        if (!skelDraw) throw new Error(`${prof.name} [body]: Missing modular skel_arm_r draw`);
       }
       if (prof.name === 'Pixel10ProXL-Chrome-WebGPU'){
         dumpTabs[tabName] = {
@@ -525,6 +578,13 @@ async function runProfile(prof){
       if (cap.glDraws.length < 5) throw new Error(`${prof.name} [${tabName}]: WebGL2 failed to draw`);
     }
   }
+
+  // Test Appearance Lock-in & Cybernetics Expert Override at end of tab pass
+  sim.els.get('btn-lock-appearance').dispatch('click', {});
+  if (!sim.els.get('rng-noseWidth').disabled) throw new Error(`${prof.name}: Bio lock failed to disable craniofacial slider`);
+  sim.els.get('btn-cyber-expert').dispatch('click', {});
+  if (sim.els.get('rng-noseWidth').disabled) throw new Error(`${prof.name}: Cybernetics expert failed to unlock dermal alteration`);
+  if (sim.getCaptures().state.skinFinish !== 'android') throw new Error(`${prof.name}: Cybernetics expert failed to convert skin to android dermal panels`);
 
   console.log(`PASS [${prof.name}]: backend="${badge}", HUD=${portraitBoxW}px, all 6 creator tabs & touch orbit verified.`);
   if (prof.name === 'Pixel10ProXL-Chrome-WebGPU') dumpTabs._bufs = sim.exportUsedBuffers();

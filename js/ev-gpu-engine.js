@@ -259,11 +259,13 @@
 
     return {
       manifest: manifest,
-      skeleton: { names: sk.names, parents: sk.parents, restT: sk.restT, restR: sk.restR, ibms: ibms, jNameToIdx: jNameToIdx },
+      skeleton: { names: sk.names, parents: sk.parents, restT: sk.restT, restR: sk.restR, ibms: ibms, jNameToIdx: jNameToIdx, morphJoints: sk.morphJoints || {} },
       anims: anims,
       meshes: meshes,
       bodyZones: manifest.bodyZones,
-      faceUV: manifest.faceUV
+      faceUV: manifest.faceUV,
+      nailUVs: manifest.nailUVs || [],
+      tattooUV: manifest.tattooUV || {}
     };
   }
 
@@ -383,18 +385,37 @@
       buildBeveledBox(-0.29, 0.22, 0.78, 0.016, 0.16, 0.16, 0.005),
       buildBeveledBox( 0.29, 0.22, 0.78, 0.016, 0.16, 0.16, 0.005),
     ];
-    // Ore Depot Corridor Modular Bay + Cover Crates + Deck
+    // Ore Depot Corridor Cutaway Tactical Walls + Cover Crates + CQB Corner Threshold Walls (clear overhead for Drone Camera!)
     var corrParts = [];
     for (var z = -6.0; z <= 12.0; z += 3.0){
-      corrParts.push(buildBeveledBox(-2.9, 1.5, z, 0.25, 1.5, 1.48, 0.04)); // L bulkhead
-      corrParts.push(buildBeveledBox( 2.9, 1.5, z, 0.25, 1.5, 1.48, 0.04)); // R bulkhead
-      corrParts.push(buildBeveledBox(-2.55, 1.5, z-1.45, 0.18, 1.55, 0.16, 0.03)); // L rib pillar
-      corrParts.push(buildBeveledBox( 2.55, 1.5, z-1.45, 0.18, 1.55, 0.16, 0.03)); // R rib pillar
-      corrParts.push(buildBeveledBox( 0.0, 2.95, z-1.45, 2.8, 0.14, 0.18, 0.03)); // overhead arch beam
+      corrParts.push(buildBeveledBox(-2.9, 1.05, z, 0.22, 1.05, 1.48, 0.04)); // L cutaway bulkhead
+      corrParts.push(buildBeveledBox( 2.9, 1.05, z, 0.22, 1.05, 1.48, 0.04)); // R cutaway bulkhead
+      corrParts.push(buildBeveledBox(-2.58, 1.05, z-1.45, 0.16, 1.08, 0.14, 0.03)); // L rib pillar
+      corrParts.push(buildBeveledBox( 2.58, 1.05, z-1.45, 0.16, 1.08, 0.14, 0.03)); // R rib pillar
     }
-    corrParts.push(buildBeveledBox(-1.15, 0.42, 3.2, 0.62, 0.42, 0.45, 0.04)); // L cover crate
-    corrParts.push(buildBeveledBox( 1.25, 0.45, 5.8, 0.58, 0.45, 0.48, 0.04)); // R cover crate
-    corrParts.push(buildBeveledBox( 0.15, 0.36, 7.6, 0.55, 0.36, 0.40, 0.04)); // mid cover crate
+    corrParts.push(buildBeveledBox(-1.25, 0.42, 4.8, 0.62, 0.42, 0.45, 0.04)); // L cover crate
+    corrParts.push(buildBeveledBox( 1.25, 0.45, 6.4, 0.58, 0.45, 0.48, 0.04)); // R cover crate
+    corrParts.push(buildBeveledBox( 0.15, 0.36, 8.2, 0.55, 0.36, 0.40, 0.04)); // mid cover crate
+    // CQB Breach Threshold Walls at z=+1.72 leaving wide center doorway [-0.68 .. +0.68] for corner-pie!
+    corrParts.push(buildBeveledBox(-1.74, 0.96, 1.72, 1.06, 0.96, 0.16, 0.03));
+    corrParts.push(buildBeveledBox( 1.74, 0.96, 1.72, 1.06, 0.96, 0.16, 0.03));
+
+    // Captain's Quarters Metallic Spaceship Cabin (Off-center doorway so operator silhouette reads against clean gunmetal wall!)
+    var cabinParts = [
+      buildBeveledBox( 0.0, -0.04, -0.25, 1.85, 0.04, 2.15, 0.02),  // ribbed cabin deck
+      buildBeveledBox(-1.80, 1.25, -0.25, 0.08, 1.28, 2.15, 0.02),  // port bulkhead
+      buildBeveledBox( 1.80, 1.25, -0.25, 0.08, 1.28, 2.15, 0.02),  // starboard bulkhead
+      buildBeveledBox( 0.0,  2.48, -0.25, 1.85, 0.08, 2.15, 0.02),  // low cabin ceiling
+      buildBeveledBox(-0.62, 1.25, -1.95, 1.22, 1.28, 0.10, 0.02),  // solid gunmetal wall behind operator
+      buildBeveledBox( 1.56, 1.25, -1.95, 0.28, 1.28, 0.10, 0.02),  // off-center starboard bulkhead (doorway at x=+0.94)
+      buildBeveledBox( 0.94, 2.22, -1.95, 0.36, 0.25, 0.10, 0.02),  // doorway lintel
+      // Built-in metallic bunk + storage locker + vanity counter along left/right walls (clear of center!)
+      buildBeveledBox(-1.38, 0.34, -0.55, 0.36, 0.34, 1.15, 0.03),  // captain bunk/locker
+      buildBeveledBox( 1.42, 0.42, -0.95, 0.34, 0.42, 0.72, 0.03),  // tactical gear console
+      // Overhead metallic structural ribs & mirror sconce bar
+      buildBeveledBox( 0.0,  2.36, -0.90, 1.72, 0.07, 0.09, 0.02),
+      buildBeveledBox( 0.0,  2.36,  0.45, 1.72, 0.07, 0.09, 0.02),
+    ];
 
     return {
       ramp: mergeStaticParts(rampParts),
@@ -402,6 +423,7 @@
       chair: mergeStaticParts(chairParts),
       crate: mergeStaticParts(crateParts),
       corridor: mergeStaticParts(corrParts),
+      cabin: mergeStaticParts(cabinParts),
       turntableDisk: (function(){
         // Sleek dark hexagonal/octagonal tactical stage pedestal (0.64m radius)
         var nSeg = 24, p = [], n = [], u = [], idx = [];
@@ -445,13 +467,12 @@
     };
   }
 
-  // --- Dynamic Face Skin & Hair Streak Texture Compositors (Exact MakeHuman UV Anchors!) ---
-  function createSkinCompositor(baseImg, faceUV){
+  // --- Dynamic Face/Body Skin, Nails, Scars, Tattoos & Hair Streak Compositors (Exact MakeHuman UV Anchors!) ---
+  function createSkinCompositor(baseImg, faceUV, nailUVs, tattooUV){
     var canvas = (typeof document !== 'undefined' && document.createElement) ? document.createElement('canvas') : null;
     if (!canvas) return null;
     canvas.width = 512; canvas.height = 512;
     var ctx = canvas.getContext('2d');
-    var dirty = true;
     return {
       canvas: canvas,
       update: function(state){
@@ -459,7 +480,7 @@
         if (baseImg && baseImg.width > 0) ctx.drawImage(baseImg, 0, 0, 512, 512);
         else { ctx.fillStyle = '#e8c4b0'; ctx.fillRect(0,0,512,512); }
 
-        // Apply rich warm skin pigmentation tint without washing out facial contrast
+        // Apply rich warm skin pigmentation tint (or cool metallic/synth tone when finish=android/metallic)
         var rgb = hexToRgb01(state.skinHex || '#cf9170');
         ctx.globalCompositeOperation = 'multiply';
         ctx.fillStyle = 'rgb('+Math.round(rgb[0]*255)+','+Math.round(rgb[1]*255)+','+Math.round(rgb[2]*255)+')';
@@ -467,15 +488,83 @@
 
         // Subtle cheek/nose/lip subsurface warmth boost on face UV island
         ctx.globalCompositeOperation = 'soft-light';
-        var nose = faceUV.nose || [0.87, 0.52];
+        var nose = (faceUV && faceUV.nose) || [0.87, 0.52];
         var grad = ctx.createRadialGradient(nose[0]*512, nose[1]*512, 8, nose[0]*512, nose[1]*512, 95);
-        grad.addColorStop(0, 'rgba(245,145,118,0.38)');
+        grad.addColorStop(0, 'rgba(245,145,118,0.42)');
         grad.addColorStop(1, 'rgba(245,145,118,0.0)');
         ctx.fillStyle = grad;
         ctx.fillRect(340, 120, 172, 280);
 
-        // Beard / Stubble / Goatee directly along jaw/chin/lip UV anchors
+        // Synthetic Android Seam Panel Lines across face/cheek/neck/collarbone when finish === 'android'
         ctx.globalCompositeOperation = 'source-over';
+        if (state.skinFinish === 'android'){
+          ctx.strokeStyle = 'rgba(22,32,42,0.58)';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.moveTo(410, 140); ctx.lineTo(432, 200); ctx.lineTo(445, 224); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(410, 370); ctx.lineTo(432, 310); ctx.lineTo(445, 286); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(155, 65); ctx.lineTo(205, 92); ctx.lineTo(255, 65); ctx.stroke();
+          ctx.fillStyle = 'rgba(0,224,255,0.68)';
+          ctx.fillRect(431, 198, 3, 3); ctx.fillRect(431, 309, 3, 3);
+        }
+
+        // Fingernail Polish across all 10 measured MakeHuman distal nailbed UVs (default = 'none')
+        if (state.nailColor && state.nailColor !== 'none' && nailUVs && nailUVs.length){
+          ctx.save();
+          ctx.fillStyle = state.nailColor;
+          for (var ni = 0; ni < nailUVs.length; ni++){
+            var nu = nailUVs[ni][0] * 512, nv = nailUVs[ni][1] * 512;
+            ctx.beginPath();
+            ctx.ellipse(nu, nv, 2.8, 3.6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.42)';
+            ctx.fillRect(nu - 0.8, nv - 1.5, 1.4, 1.6);
+            ctx.fillStyle = state.nailColor;
+          }
+          ctx.restore();
+        }
+
+        // Tattoos & Glowing Cyber Tattoos at verified body zone UV centers (default = 'none')
+        var tatStyle = state.tattooStyle || 'none';
+        if (tatStyle !== 'none'){
+          var tzKey = state.tattooZone || 'arm_l';
+          var tz = (tattooUV && tattooUV[tzKey]) || [0.606, 0.171];
+          var tx = tz[0] * 512, ty = tz[1] * 512;
+          var tatCol = state.tattooColor || '#131d28';
+          var tatGlow = !!state.tattooGlow;
+          ctx.save();
+          ctx.translate(tx, ty);
+          ctx.lineCap = 'round';
+          if (tatGlow){
+            ctx.shadowColor = tatCol;
+            ctx.shadowBlur = 6;
+            ctx.strokeStyle = tatCol;
+          } else {
+            ctx.strokeStyle = tatCol;
+            ctx.globalAlpha = 0.78;
+          }
+          ctx.lineWidth = 2.0;
+          if (tatStyle === 'circuit' || tatStyle === 'cyber'){
+            ctx.beginPath();
+            ctx.moveTo(-18,-10); ctx.lineTo(-6,-10); ctx.lineTo(0,0); ctx.lineTo(18,0);
+            ctx.moveTo(-14, 10); ctx.lineTo(-2,10); ctx.lineTo(6,2); ctx.lineTo(14,12);
+            ctx.stroke();
+            ctx.fillStyle = tatGlow ? '#ffffff' : tatCol;
+            ctx.beginPath(); ctx.arc(-18,-10,2.2,0,Math.PI*2); ctx.arc(18,0,2.4,0,Math.PI*2); ctx.arc(14,12,2.0,0,Math.PI*2); ctx.fill();
+          } else if (tatStyle === 'tribal'){
+            ctx.beginPath();
+            ctx.moveTo(-18,-14); ctx.quadraticCurveTo(0,-2, 18,-16);
+            ctx.moveTo(-16,  0); ctx.quadraticCurveTo(0,12, 16, -2);
+            ctx.moveTo( -8, 12); ctx.quadraticCurveTo(0,22,  8, 12);
+            ctx.stroke();
+          } else if (tatStyle === 'wing'){
+            for (var wi = -2; wi <= 2; wi++){
+              ctx.beginPath(); ctx.moveTo(0, wi*4); ctx.quadraticCurveTo(wi*6, wi*4-6, wi*11, wi*4-2); ctx.stroke();
+            }
+          }
+          ctx.restore();
+        }
+
+        // Beard / Stubble / Goatee directly along jaw/chin/lip UV anchors
         if (state.beardStyle && state.beardStyle !== 'clean'){
           var hrgb = hexToRgb01(state.hairHex || '#2a1f1a');
           var alpha = state.beardStyle === 'stubble' ? 0.34 : 0.72;
@@ -484,14 +573,12 @@
           var ulip = faceUV.ulip || [0.89, 0.51];
           var ljaw = faceUV.ljaw || [0.94, 0.42];
           var rjaw = faceUV.rjaw || [0.94, 0.60];
-          // Chin & goatee
           ctx.beginPath(); ctx.ellipse(chin[0]*512, chin[1]*512, 18, 28, 0, 0, Math.PI*2); ctx.fill();
           ctx.beginPath(); ctx.ellipse(ulip[0]*512, ulip[1]*512, 6, 18, 0, 0, Math.PI*2); ctx.fill();
           if (state.beardStyle !== 'goatee'){
             ctx.beginPath(); ctx.ellipse(ljaw[0]*512, ljaw[1]*512, 22, 34, 0.25, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.ellipse(rjaw[0]*512, rjaw[1]*512, 22, 34, -0.25, 0, Math.PI*2); ctx.fill();
           }
-          // Organic follicle grain
           ctx.fillStyle = 'rgba(20,14,12,0.18)';
           for (var fi = 0; fi < 160; fi++){
             var fx = (ulip[0] + ((fi*37)%100)/1000) * 512;
@@ -500,29 +587,139 @@
           }
         }
 
-        // Scars & Cybernetic Face Seams (carves skin crease + pale scar ridge!)
+        // Sci-Fi Scars (none, slash, triple_puncture, claw, plasma_burn) + Cybernetic Face Seams!
+        var scarType = state.scarType || (state.scars > 0.05 ? 'slash' : 'none');
         var scarPos = state.scarPos || { x: 0.5, y: 0.5, enabled: false };
-        if (state.scars > 0.05 || scarPos.enabled){
-          var nrm = faceUV.nose || [0.87, 0.52];
-          // Map normalized pad [0..1] across cheek/brow/jaw UV region
+        if (scarType !== 'none' || scarPos.enabled){
+          var effType = scarType === 'none' ? 'slash' : scarType;
           var sx = (0.79 + (scarPos.y - 0.5) * 0.16) * 512;
           var sy = (0.52 + (scarPos.x - 0.5) * 0.24) * 512;
-          ctx.strokeStyle = 'rgba(218,142,130,' + Math.min(0.9, 0.4 + (state.scars||0.4)*0.5) + ')';
-          ctx.lineWidth = 2.6;
-          ctx.beginPath(); ctx.moveTo(sx-12, sy-6); ctx.lineTo(sx+14, sy+8); ctx.stroke();
-          ctx.strokeStyle = 'rgba(255,220,210,0.45)';
-          ctx.lineWidth = 1.1;
-          ctx.beginPath(); ctx.moveTo(sx-12, sy-4); ctx.lineTo(sx+14, sy+10); ctx.stroke();
+          ctx.save();
+          if (effType === 'slash'){
+            ctx.strokeStyle = 'rgba(182,92,86,0.88)'; ctx.lineWidth = 2.6;
+            ctx.beginPath(); ctx.moveTo(sx-14, sy-7); ctx.lineTo(sx+15, sy+9); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,220,210,0.48)'; ctx.lineWidth = 1.0;
+            ctx.beginPath(); ctx.moveTo(sx-14, sy-5); ctx.lineTo(sx+15, sy+11); ctx.stroke();
+          } else if (effType === 'triple_puncture'){
+            // Three precision dermal neural/cyber port punctures with metallic titanium bezels!
+            for (var pi = -1; pi <= 1; pi++){
+              var px = sx + pi * 7.5, py = sy + pi * 3.5;
+              ctx.fillStyle = 'rgba(125,142,158,0.92)';
+              ctx.beginPath(); ctx.arc(px, py, 3.0, 0, Math.PI*2); ctx.fill();
+              ctx.fillStyle = 'rgba(18,22,28,0.98)';
+              ctx.beginPath(); ctx.arc(px, py, 1.6, 0, Math.PI*2); ctx.fill();
+              ctx.fillStyle = 'rgba(0,224,255,0.65)';
+              ctx.fillRect(px - 0.5, py - 0.5, 1.0, 1.0);
+            }
+          } else if (effType === 'claw'){
+            for (var ci = -1; ci <= 1; ci++){
+              ctx.strokeStyle = 'rgba(176,86,82,0.86)'; ctx.lineWidth = 2.0;
+              ctx.beginPath(); ctx.moveTo(sx-13, sy-9 + ci*5.5); ctx.quadraticCurveTo(sx, sy + ci*5.5 - 2, sx+14, sy+8 + ci*5.5); ctx.stroke();
+            }
+          } else if (effType === 'plasma_burn'){
+            var bg = ctx.createRadialGradient(sx, sy, 2, sx, sy, 18);
+            bg.addColorStop(0, 'rgba(92,48,46,0.86)');
+            bg.addColorStop(0.55, 'rgba(155,88,78,0.62)');
+            bg.addColorStop(1, 'rgba(185,112,96,0.0)');
+            ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(sx, sy, 18, 0, Math.PI*2); ctx.fill();
+          }
+          ctx.restore();
         }
         if (state.cyberFace > 0.15){
           ctx.strokeStyle = 'rgba(42,60,72,' + (0.45 + state.cyberFace*0.4) + ')';
           ctx.lineWidth = 1.6;
           ctx.beginPath(); ctx.moveTo(430, 185); ctx.lineTo(445, 225); ctx.lineTo(468, 228); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(430, 325); ctx.lineTo(445, 285); ctx.lineTo(468, 282); ctx.stroke();
-          ctx.fillStyle = 'rgba(0,229,255,0.65)';
+          ctx.fillStyle = 'rgba(0,229,255,0.75)';
           ctx.fillRect(443, 223, 3, 3); ctx.fillRect(443, 284, 3, 3);
         }
-        dirty = false;
+      }
+    };
+  }
+
+  function createUnderwearCompositor(braBaseImg, pantiesBaseImg, briefsBaseImg){
+    var mkC = function(){
+      if (typeof document === 'undefined' || !document.createElement) return null;
+      var c = document.createElement('canvas'); c.width = 256; c.height = 256; return c;
+    };
+    var cBra = mkC(), cPan = mkC(), cBrf = mkC();
+    if (!cBra || !cPan || !cBrf) return null;
+    return {
+      braCanvas: cBra, pantiesCanvas: cPan, briefsCanvas: cBrf,
+      update: function(state){
+        var col = state.underwearColor || '#1f2630';
+        var braStyle = state.underwearBra || 'sport';
+        var panStyle = state.underwearBottom || 'panties_classic';
+
+        // 1. Male / Unisex Boxers (briefs mesh: dark compression boxer-briefs + crisp stitched waistband)
+        var gx = cBrf.getContext('2d');
+        gx.clearRect(0,0,256,256);
+        if (briefsBaseImg && briefsBaseImg.width > 0) gx.drawImage(briefsBaseImg, 0, 0, 256, 256);
+        else { gx.fillStyle = '#28303b'; gx.fillRect(0,0,256,256); }
+        gx.globalCompositeOperation = 'multiply';
+        gx.fillStyle = (panStyle === 'boxers_olive') ? '#3b4a3d' : (panStyle === 'boxers_charcoal' ? '#242932' : col);
+        gx.fillRect(0,0,256,256);
+        gx.globalCompositeOperation = 'source-over';
+        // Crisp dark elastic waistband along upper rim & subtle seam stitch
+        gx.fillStyle = 'rgba(18,22,28,0.85)'; gx.fillRect(0, 0, 256, 28);
+        gx.fillStyle = 'rgba(160,185,205,0.35)'; gx.fillRect(0, 26, 256, 2);
+
+        // 2. Female Bra (cups v=0.08..0.55, band v=0.65..0.87 — supports sport, lace_delicate, sheer_mesh, strappy!)
+        var bx = cBra.getContext('2d');
+        bx.clearRect(0,0,256,256);
+        var cupAlpha = braStyle === 'sheer_mesh' ? 0.34 : (braStyle === 'lace_delicate' ? 0.64 : 0.96);
+        bx.fillStyle = col;
+        bx.globalAlpha = cupAlpha;
+        bx.fillRect(0, 0, 256, 256);
+        bx.globalAlpha = 1.0;
+        if (braStyle === 'lace_delicate'){
+          // Delicate scalloped lace filigree pattern across cup UV zone!
+          bx.strokeStyle = 'rgba(255,255,255,0.22)';
+          bx.lineWidth = 1.2;
+          for (var ly = 16; ly < 152; ly += 14){
+            for (var lx = 12; lx < 248; lx += 16){
+              bx.beginPath(); bx.arc(lx + ((ly/14)%2)*8, ly, 6, 0, Math.PI*2); bx.stroke();
+            }
+          }
+          // Punch micro-lace transparent eyelets via destination-out
+          bx.globalCompositeOperation = 'destination-out';
+          bx.fillStyle = 'rgba(0,0,0,0.48)';
+          for (var hy = 20; hy < 148; hy += 14){
+            for (var hx = 16; hx < 244; hx += 16){
+              bx.beginPath(); bx.arc(hx + ((hy/14)%2)*8, hy, 3.2, 0, Math.PI*2); bx.fill();
+            }
+          }
+          bx.globalCompositeOperation = 'source-over';
+        } else if (braStyle === 'sheer_mesh'){
+          // Crisp satin underwire & strap trim (opaque) framing delicate sheer mesh cups!
+          bx.fillStyle = col;
+          bx.fillRect(0, 148, 256, 28); // firm elastic band
+          bx.fillRect(0, 0, 256, 16);   // top trim edge
+        } else if (braStyle === 'strappy'){
+          bx.strokeStyle = '#00d8ff'; bx.lineWidth = 2.0;
+          bx.strokeRect(4, 152, 248, 16);
+        }
+
+        // 3. Female Panties (classic, lace, sheer)
+        var px = cPan.getContext('2d');
+        px.clearRect(0,0,256,256);
+        var panAlpha = panStyle === 'panties_sheer' ? 0.36 : (panStyle === 'panties_lace' ? 0.66 : 0.96);
+        px.fillStyle = col;
+        px.globalAlpha = panAlpha;
+        px.fillRect(0, 0, 256, 256);
+        px.globalAlpha = 1.0;
+        if (panStyle === 'panties_lace'){
+          px.globalCompositeOperation = 'destination-out';
+          px.fillStyle = 'rgba(0,0,0,0.42)';
+          for (var py2 = 24; py2 < 236; py2 += 16){
+            for (var px2 = 16; px2 < 240; px2 += 16){
+              px.beginPath(); px.arc(px2, py2, 3.0, 0, Math.PI*2); px.fill();
+            }
+          }
+          px.globalCompositeOperation = 'source-over';
+        }
+        // Firm satin waistband trim
+        px.fillStyle = col; px.fillRect(0, 0, 256, 18);
       }
     };
   }
@@ -594,8 +791,8 @@
     };
   }
 
-  // --- Skeletal Pose Solver (World-Space Overrides + CC0 Anim Clip Blender + 2-Bone Arm IK) ---
-  function evaluateSkeletonPose(kit, animName, animTime, worldOverrides, rootOffset, heightScale){
+  // --- Skeletal Pose Solver (World-Space Overrides + CC0 Anim Clip Blender + Morph-Joint Pivot & Skel Proportions!) ---
+  function evaluateSkeletonPose(kit, animName, animTime, worldOverrides, rootOffset, heightScale, morphWeights, skelProps){
     var sk = kit.skeleton;
     var n = sk.names.length;
     var anim = (animName && animName !== 'rest') ? (kit.anims[animName] || null) : null;
@@ -613,13 +810,43 @@
     var ovr = worldOverrides || {};
     var ro = rootOffset || [0,0,0];
     var hScale = heightScale || 1.0;
+    var sp = skelProps || {};
+
+    // Accumulate world-space morph joint offsets from CC0 base_body.joints.json
+    var mj = sk.morphJoints || {};
+    var dWorld = null;
+    if (morphWeights){
+      var mwKeys = Object.keys(morphWeights);
+      for (var mki = 0; mki < mwKeys.length; mki++){
+        var mk = mwKeys[mki], wval = morphWeights[mk];
+        if (!wval || !mj[mk]) continue;
+        if (!dWorld){ dWorld = new Float32Array(n * 3); }
+        var jmap = mj[mk];
+        var jkeys = Object.keys(jmap);
+        for (var jki = 0; jki < jkeys.length; jki++){
+          var bidx = parseInt(jkeys[jki], 10);
+          var dv = jmap[jkeys[jki]];
+          dWorld[bidx*3] += dv[0]*wval; dWorld[bidx*3+1] += dv[1]*wval; dWorld[bidx*3+2] += dv[2]*wval;
+        }
+      }
+    }
+
+    // Build bind worlds cleanly once to convert world-space morphJoint offsets to exact local shifts + morphed IBM
+    var baseWorlds = null;
+    if (dWorld){
+      baseWorlds = [];
+      for (var bi = 0; bi < n; bi++){
+        var bpi = sk.parents[bi];
+        var bloc = mat4FromQuat(sk.restR[bi], sk.restT[bi]);
+        baseWorlds.push(bpi >= 0 ? mat4Mul(baseWorlds[bpi], bloc) : bloc);
+      }
+    }
 
     for (var ji = 0; ji < n; ji++){
       var pi = sk.parents[ji];
       var jname = sk.names[ji];
       var t = sk.restT[ji];
       var r = sk.restR[ji];
-      // Apply clip delta only when not overridden (so worldOvr never double-stacks onto idle/walk arms!)
       if (anim && anim.tracks[ji] && !ovr[jname]){
         var tr = anim.tracks[ji];
         var q0 = [tr[f0*4], tr[f0*4+1], tr[f0*4+2], tr[f0*4+3]];
@@ -628,9 +855,29 @@
         r = quatMul(r, dq);
       }
       var tx = t[0], ty = t[1], tz = t[2];
-      if (ji === 0){
-        tx += ro[0]; ty += ro[1]; tz += ro[2];
+      if (dWorld){
+        // World delta relative to parent transformed by transpose(parent.R) -> exact local offset!
+        var dwx = dWorld[ji*3]   - (pi >= 0 ? dWorld[pi*3]   : 0);
+        var dwy = dWorld[ji*3+1] - (pi >= 0 ? dWorld[pi*3+1] : 0);
+        var dwz = dWorld[ji*3+2] - (pi >= 0 ? dWorld[pi*3+2] : 0);
+        if (pi >= 0){
+          var pw = baseWorlds[pi];
+          tx += pw[0]*dwx + pw[1]*dwy + pw[2]*dwz;
+          ty += pw[4]*dwx + pw[5]*dwy + pw[6]*dwz;
+          tz += pw[8]*dwx + pw[9]*dwy + pw[10]*dwz;
+        } else {
+          tx += dwx; ty += dwy; tz += dwz;
+        }
       }
+      // Skeleton / Android bone proportion adjustments (shoulderWidth, armLength, legLength, torsoWidth)
+      if (jname === 'upperarm_l' || jname === 'clavicle_l') tx += (sp.shoulderWidth || 0) * 0.045;
+      if (jname === 'upperarm_r' || jname === 'clavicle_r') tx -= (sp.shoulderWidth || 0) * 0.045;
+      if (jname === 'lowerarm_l' || jname === 'hand_l')     ty += (sp.armLength || 0) * 0.055;
+      if (jname === 'lowerarm_r' || jname === 'hand_r')     ty += (sp.armLength || 0) * 0.055;
+      if (jname === 'calf_l' || jname === 'calf_r')         ty -= (sp.legLength || 0) * 0.055;
+      if (jname === 'foot_l' || jname === 'foot_r')         ty -= (sp.legLength || 0) * 0.055;
+      if (ji === 0){ tx += ro[0]; ty += ro[1]; tz += ro[2]; }
+
       var loc = mat4FromQuat(r, [tx, ty, tz]);
       if (ji === 0 && hScale !== 1.0){
         loc[0]*=hScale; loc[1]*=hScale; loc[2]*=hScale;
@@ -638,7 +885,6 @@
         loc[8]*=hScale; loc[9]*=hScale; loc[10]*=hScale;
       }
       var wNoDelta = pi >= 0 ? mat4Mul(worlds[pi], loc) : loc;
-      var jname = sk.names[ji];
       if (ovr[jname]){
         var eu = ovr[jname];
         var Rw = mat4FromEulerXYZ(eu[0], eu[1], eu[2]);
@@ -650,14 +896,47 @@
       } else {
         worlds.push(wNoDelta);
       }
-      var sm = mat4Mul(worlds[ji], sk.ibms[ji]);
+      // Apply localized skeletal chassis scale (headSize, neckWidth, torsoWidth, calfBulk, footSize)
+      var wScaled = worlds[ji];
+      if (jname === 'head' && sp.headSize){
+        var sc = 1.0 + sp.headSize * 0.18;
+        wScaled = new Float32Array(wScaled);
+        for (var c=0;c<12;c++) if ((c&3)<3) wScaled[c] *= sc;
+      } else if (jname === 'spine_03' && sp.torsoWidth){
+        var ts = 1.0 + sp.torsoWidth * 0.16;
+        wScaled = new Float32Array(wScaled);
+        wScaled[0]*=ts; wScaled[1]*=ts; wScaled[2]*=ts; wScaled[8]*=ts; wScaled[9]*=ts; wScaled[10]*=ts;
+      } else if ((jname === 'thigh_l' || jname === 'thigh_r') && sp.hipWidth){
+        var hw = 1.0 + sp.hipWidth * 0.16;
+        wScaled = new Float32Array(wScaled);
+        wScaled[0]*=hw; wScaled[8]*=hw;
+      } else if ((jname === 'calf_l' || jname === 'calf_r') && sp.calfBulk){
+        var cb = 1.0 + sp.calfBulk * 0.18;
+        wScaled = new Float32Array(wScaled);
+        wScaled[0]*=cb; wScaled[8]*=cb;
+      } else if ((jname === 'foot_l' || jname === 'foot_r' || jname === 'ball_l' || jname === 'ball_r') && sp.footSize){
+        var fs = 1.0 + sp.footSize * 0.18;
+        wScaled = new Float32Array(wScaled);
+        for (var c2=0;c2<12;c2++) if ((c2&3)<3) wScaled[c2] *= fs;
+      }
+      // Adjust IBM translation cleanly if dWorld shifted this bind joint!
+      var ibmMat = sk.ibms[ji];
+      if (dWorld){
+        var m4 = new Float32Array(ibmMat);
+        var jdx = -dWorld[ji*3], jdy = -dWorld[ji*3+1], jdz = -dWorld[ji*3+2];
+        m4[12] += ibmMat[0]*jdx + ibmMat[4]*jdy + ibmMat[8]*jdz;
+        m4[13] += ibmMat[1]*jdx + ibmMat[5]*jdy + ibmMat[9]*jdz;
+        m4[14] += ibmMat[2]*jdx + ibmMat[6]*jdy + ibmMat[10]*jdz;
+        ibmMat = m4;
+      }
+      var sm = mat4Mul(wScaled, ibmMat);
       skinMats.set(sm, ji * 16);
     }
     return { worlds: worlds, skinMats: skinMats };
   }
 
-  // --- Shared Morph Target CPU/GPU Evaluator ---
-  function computeMorphWeights(state){
+  // --- Shared Morph Target CPU/GPU Evaluator (with 2D Bust Quad + Bra Lift + Damped Spring Jiggle!) ---
+  function computeMorphWeights(state, springDisp){
     var w = {};
     var g = Number(state.gender || 0.0); // -1 male .. +1 female
     if (g >= 0) w.gender_female = g; else w.gender_male = -g;
@@ -665,8 +944,68 @@
     if (mus >= 0.5) w.muscle_max = (mus - 0.5) * 2.0; else w.muscle_min = (0.5 - mus) * 2.0;
     var wt = Number(state.weight || 0.45);
     if (wt >= 0.5) w.weight_max = (wt - 0.5) * 2.0; else w.weight_min = (0.5 - wt) * 2.0;
-    // Note: height scaling is applied uniformly via Root bone hScale so armor, helmet & wrist gear never drift!
     w.age_old = Number(state.age || 0.15);
+
+    // 4-Corner Bust Archetype Quad Pad + Continuous Controls + Bra Lift & Upper Plump (when female!)
+    var femWeight = Math.max(0, Math.min(1, (g - 0.1) / 0.9));
+    if (femWeight > 0.01){
+      var bq = state.bustQuad || { x: 0.25, y: 0.25 }; // [-1..1, -1..1]
+      var ux = (Math.max(-1, Math.min(1, bq.x || 0)) + 1) * 0.5;
+      var uy = (Math.max(-1, Math.min(1, bq.y || 0)) + 1) * 0.5;
+      // 4 corners: TL(Teardrop), TR(Full Round), BL(Petite Athletic), BR(Wide Heavy)
+      var cupShift  = (1-ux)*(1-uy)*(-0.55) + ux*(1-uy)*(0.90) + (1-ux)*uy*(0.15) + ux*uy*(0.75);
+      var firmShift = (1-ux)*(1-uy)*( 0.40) + ux*(1-uy)*(-0.45) + (1-ux)*uy*(-0.20) + ux*uy*(0.65);
+      var hgtShift  = (1-ux)*(1-uy)*( 0.20) + ux*(1-uy)*(-0.35) + (1-ux)*uy*(-0.15) + ux*uy*(0.35);
+      var ptShift   = (1-ux)*(1-uy)*(-0.35) + ux*(1-uy)*(-0.10) + (1-ux)*uy*( 0.05) + ux*uy*(0.45);
+      var distShift = (1-ux)*(1-uy)*(-0.15) + ux*(1-uy)*( 0.60) + (1-ux)*uy*( 0.00) + ux*uy*(-0.10);
+
+      var cup  = Math.max(-1, Math.min(1, cupShift  + (Number(state.bustSize !== undefined ? state.bustSize : 0.5) - 0.5) * 1.4));
+      var firm = Math.max(-1, Math.min(1, firmShift + (Number(state.bustFirmness !== undefined ? state.bustFirmness : 0.5) - 0.5) * 1.4));
+      var hgt  = Math.max(-1, Math.min(1, hgtShift  + Number(state.bustHeight || 0) * 0.8));
+      var dist = Math.max(-1, Math.min(1, distShift + Number(state.bustSpacing || 0) * 0.9));
+      var pt   = Math.max(-1, Math.min(1, ptShift));
+
+      // Realistic Bra Support: lifts + gently plumps upper breast curve when wearing underwear bra!
+      var wearingBra = (state.outfit === 'underwear' && (state.underwearBra || 'sport') !== 'none') || (state.outfit !== 'underwear' && state.outfit !== 'none');
+      if (wearingBra){
+        var liftBoost = state.outfit === 'underwear' ? 0.34 : 0.20;
+        hgt  = Math.min(1, hgt + liftBoost);
+        firm = Math.min(1, firm + liftBoost * 0.75);
+        pt   = Math.min(1, pt + liftBoost * 0.45);
+      }
+
+      if (cup >= 0)  w.breast_cup_max  = cup * femWeight;  else w.breast_cup_min  = -cup * femWeight;
+      if (firm >= 0) w.breast_firm_max = firm * femWeight; else w.breast_firm_min = -firm * femWeight;
+      if (hgt >= 0)  w.bdet_breast_height_incr = hgt * femWeight; else w.bdet_breast_height_decr = -hgt * femWeight;
+      if (dist >= 0) w.bdet_breast_dist_incr   = dist * femWeight; else w.bdet_breast_dist_decr   = -dist * femWeight;
+      if (pt >= 0)   w.bdet_breast_point_incr  = pt * femWeight;  else w.bdet_breast_point_decr  = -pt * femWeight;
+
+      // Damped spring physics displacement mapped to CC0 dyn_breast_* 2cm targets!
+      if (springDisp){
+        var sx = Math.max(-1, Math.min(1, springDisp[0] / 0.012));
+        var sy = Math.max(-1, Math.min(1, springDisp[1] / 0.012));
+        var sz = Math.max(-1, Math.min(1, springDisp[2] / 0.012));
+        if (sy > 0.01) w.dyn_breast_up = sy * femWeight;    else if (sy < -0.01) w.dyn_breast_down = -sy * femWeight;
+        if (sx > 0.01) w.dyn_breast_left = sx * femWeight;  else if (sx < -0.01) w.dyn_breast_right = -sx * femWeight;
+        if (sz > 0.01) w.dyn_breast_fwd = sz * femWeight;   else if (sz < -0.01) w.dyn_breast_back = -sz * femWeight;
+      }
+    }
+
+    // Automatic corrective cross-morphs (prevents pinching across extreme gender/age/muscle/weight/bust combos!)
+    if (w.gender_female && w.age_old)    w.corr_gender_female__age_old    = w.gender_female * w.age_old;
+    if (w.gender_male   && w.age_old)    w.corr_gender_male__age_old      = w.gender_male   * w.age_old;
+    if (w.gender_female && w.muscle_max) w.corr_gender_female__muscle_max = w.gender_female * w.muscle_max;
+    if (w.gender_female && w.muscle_min) w.corr_gender_female__muscle_min = w.gender_female * w.muscle_min;
+    if (w.gender_male   && w.muscle_max) w.corr_gender_male__muscle_max   = w.gender_male   * w.muscle_max;
+    if (w.gender_male   && w.muscle_min) w.corr_gender_male__muscle_min   = w.gender_male   * w.muscle_min;
+    if (w.gender_female && w.weight_max) w.corr_gender_female__weight_max = w.gender_female * w.weight_max;
+    if (w.gender_female && w.weight_min) w.corr_gender_female__weight_min = w.gender_female * w.weight_min;
+    if (w.gender_male   && w.weight_max) w.corr_gender_male__weight_max   = w.gender_male   * w.weight_max;
+    if (w.gender_male   && w.weight_min) w.corr_gender_male__weight_min   = w.gender_male   * w.weight_min;
+    if (w.breast_cup_min && w.breast_firm_min) w.corr_breast_cup_min__breast_firm_min = w.breast_cup_min * w.breast_firm_min;
+    if (w.breast_cup_min && w.breast_firm_max) w.corr_breast_cup_min__breast_firm_max = w.breast_cup_min * w.breast_firm_max;
+    if (w.breast_cup_max && w.breast_firm_min) w.corr_breast_cup_max__breast_firm_min = w.breast_cup_max * w.breast_firm_min;
+    if (w.breast_cup_max && w.breast_firm_max) w.corr_breast_cup_max__breast_firm_max = w.breast_cup_max * w.breast_firm_max;
 
     var mapPair = function(val, decKey, incKey){
       var v = Number(val || 0);
@@ -741,11 +1080,17 @@
     'varying vec3 vWorldPos;\n' +
     'varying vec3 vNorm;\n' +
     'varying vec2 vUV;\n' +
-    'varying float vCyberArm;\n' +
+    'varying float vBodyPart;\n' +
     'void main(){\n' +
     '  vec4 lp = vec4(aPos, 1.0);\n' +
     '  vec3 ln = aNorm;\n' +
-    '  vCyberArm = (uUseSkin > 0.5 && aJoint.x >= 4.5 && aJoint.x <= 23.5 && aWeight.x > 0.35) ? 1.0 : 0.0;\n' +
+    '  float j = aJoint.x;\n' +
+    '  vBodyPart = 0.0;\n' +
+    '  if (j >= 5.5 && j <= 23.5) vBodyPart = 1.0;\n' +
+    '  else if (j >= 24.5 && j <= 42.5) vBodyPart = 2.0;\n' +
+    '  else if (j >= 42.5 && j <= 44.5) vBodyPart = 3.0;\n' +
+    '  else if (j >= 44.5 && j <= 48.5) vBodyPart = 4.0;\n' +
+    '  else if (j >= 48.5 && j <= 52.5) vBodyPart = 5.0;\n' +
     '  if (uUseSkin > 0.5){\n' +
     '    mat4 sm = uJointMats[int(aJoint.x)] * aWeight.x\n' +
     '            + uJointMats[int(aJoint.y)] * aWeight.y\n' +
@@ -792,7 +1137,7 @@
     'varying vec3 vWorldPos;\n' +
     'varying vec3 vNorm;\n' +
     'varying vec2 vUV;\n' +
-    'varying float vCyberArm;\n' +
+    'varying float vBodyPart;\n' +
     'uniform sampler2D uAlbedo;\n' +
     'uniform sampler2D uNormalMap;\n' +
     'uniform float uHasTex;\n' +
@@ -807,17 +1152,28 @@
     'uniform vec3 uKeyDir;\n' +
     'uniform vec3 uKeyCol;\n' +
     'uniform vec3 uRimCol;\n' +
-    'uniform float uCyberArmMask;\n' +
+    'uniform float uCyberMask;\n' +
+    'uniform float uSkinFinish;\n' +
     'vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14), 0.0, 1.0); }\n' +
     'void main(){\n' +
     '  vec4 tex = uHasTex > 0.5 ? texture2D(uAlbedo, vUV) : vec4(1.0);\n' +
     '  if (uAlphaCut > 0.01 && tex.a < uAlphaCut) discard;\n' +
     '  vec3 base = tex.rgb * uTint.rgb;\n' +
     '  float met = uMetallic; float rough = clamp(uRoughness, 0.08, 0.96); float skinW = uIsSkin; float emW = uEmissive;\n' +
-    '  if (uIsSkin > 0.5 && uCyberArmMask > 0.5 && vCyberArm > 0.5){\n' +
-    '    float seam = step(0.92, abs(sin(vUV.x * 160.0)) * abs(cos(vUV.y * 160.0)));\n' +
-    '    base = mix(vec3(0.32, 0.36, 0.42), vec3(0.05, 0.85, 0.96), seam * 0.65);\n' +
-    '    met = 0.86; rough = 0.24; skinW = 0.0; emW += seam * 0.45;\n' +
+    '  float bitDiv = pow(2.0, floor(vBodyPart + 0.5));\n' +
+    '  float isCyberPart = floor(mod(uCyberMask / bitDiv, 2.0));\n' +
+    '  if (uIsSkin > 0.5 && isCyberPart > 0.5){\n' +
+    '    float seam = step(0.92, abs(sin(vUV.x * 165.0)) * abs(cos(vUV.y * 165.0)));\n' +
+    '    base = mix(vec3(0.24, 0.28, 0.34), vec3(0.04, 0.85, 0.96), seam * 0.72);\n' +
+    '    met = 0.88; rough = 0.22; skinW = 0.0; emW += seam * 0.50;\n' +
+    '  } else if (uIsSkin > 0.5 && uSkinFinish > 0.5){\n' +
+    '    if (uSkinFinish < 1.5){ rough = 0.26; met = 0.08; }\n' +
+    '    else if (uSkinFinish < 2.5){ rough = 0.14; met = 0.88; skinW = 0.25; }\n' +
+    '    else {\n' +
+    '      float hexG = step(0.94, abs(sin(vUV.x * 210.0)) * abs(cos(vUV.y * 210.0)));\n' +
+    '      base = mix(base * vec3(0.92, 0.95, 1.02), vec3(0.14, 0.75, 0.92), hexG * 0.25);\n' +
+    '      rough = 0.26; met = 0.42; skinW = 0.20; emW += hexG * 0.16;\n' +
+    '    }\n' +
     '  }\n' +
     '  vec3 N = normalize(vNorm);\n' +
     '  if (uHasNormal > 0.5 && skinW > 0.5){\n' +
@@ -831,18 +1187,17 @@
     '  vec3 L = normalize(uKeyDir);\n' +
     '  vec3 H = normalize(L + V);\n' +
     '  float ndl = dot(N, L);\n' +
-    // Penner-inspired Pre-Integrated Subsurface Scattering wrap for realistic warm skin terminator!
-    '  float diff = skinW > 0.5 ? clamp((ndl + 0.35) / 1.35, 0.0, 1.0) : max(ndl, 0.0);\n' +
-    '  vec3 sssTint = skinW > 0.5 ? vec3(0.85, 0.28, 0.18) * smoothstep(-0.35, 0.25, ndl) * (1.0 - max(ndl, 0.0)) * 0.48 : vec3(0.0);\n' +
-    '  float specPow = mix(96.0, 8.0, rough);\n' +
-    '  float spec = pow(max(dot(N, H), 0.0001), specPow) * mix(0.28, 0.92, met);\n' +
-    '  float fres = pow(max(1.0 - max(dot(N, V), 0.0), 0.0001), 3.6);\n' +
-    '  vec3 rim = uRimCol * fres * 0.65;\n' +
-    '  vec3 hemi = mix(vec3(0.07, 0.09, 0.12), vec3(0.22, 0.27, 0.33), N.y * 0.5 + 0.5);\n' +
-    '  vec3 col = base * (hemi + uKeyCol * diff + sssTint) + vec3(spec) * mix(vec3(1.0), base, met) + rim;\n' +
+    '  float diff = skinW > 0.5 ? clamp((ndl + 0.38) / 1.38, 0.0, 1.0) : max(ndl, 0.0);\n' +
+    '  vec3 sssTint = skinW > 0.5 ? vec3(0.92, 0.34, 0.20) * smoothstep(-0.35, 0.25, ndl) * (1.0 - max(ndl, 0.0)) * 0.52 : vec3(0.0);\n' +
+    '  float specPow = mix(112.0, 8.0, rough);\n' +
+    '  float spec = pow(max(dot(N, H), 0.0001), specPow) * mix(0.30, 0.98, met);\n' +
+    '  float fres = pow(max(1.0 - max(dot(N, V), 0.0), 0.0001), 3.4);\n' +
+    '  vec3 rim = uRimCol * fres * mix(0.68, 1.15, met);\n' +
+    '  vec3 hemi = mix(vec3(0.09, 0.08, 0.09), vec3(0.24, 0.25, 0.28), N.y * 0.5 + 0.5);\n' +
+    '  vec3 col = base * (hemi + uKeyCol * diff + sssTint) + vec3(spec) * mix(vec3(1.0, 0.94, 0.88), base, met) + rim;\n' +
     '  col += base * emW;\n' +
-    '  if (uEmissive > 0.5){ col = aces(col); gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), tex.a * uTint.a); return; }\n' +
-    '  col = aces(col * 1.15);\n' +
+    '  if (uEmissive > 0.5 || uTint.a < 0.99 || tex.a < 0.98){ col = aces(col * 1.12); gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), tex.a * uTint.a); return; }\n' +
+    '  col = aces(col * 1.16);\n' +
     '  gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), uTint.a);\n' +
     '}\n';
 
@@ -898,21 +1253,27 @@
     '  model: mat4x4<f32>,\n' +
     '  tint: vec4<f32>,\n' +
     '  camPos: vec4<f32>,\n' +
-    '  keyDir: vec4<f32>,\n' +
+    '  keyDir: vec4<f32>, // xyz = dir, w = skinFinish\n' +
     '  keyCol: vec4<f32>,\n' +
     '  rimCol: vec4<f32>,\n' +
     '  flags: vec4<f32>, // x=hasTex, y=isSkin, z=metallic, w=roughness\n' +
-    '  extra: vec4<f32>, // x=alphaCut, y=emissive, z=instanced, w=cyberArmMask\n' +
+    '  extra: vec4<f32>, // x=alphaCut, y=emissive, z=instanced, w=cyberMask\n' +
     '};\n' +
     '@group(0) @binding(0) var<uniform> u: DrawU;\n' +
     '@group(0) @binding(1) var samp: sampler;\n' +
     '@group(0) @binding(2) var texAlbedo: texture_2d<f32>;\n' +
-    'struct VOut { @builtin(position) pos: vec4<f32>, @location(0) wp: vec3<f32>, @location(1) n: vec3<f32>, @location(2) uv: vec2<f32>, @location(3) tint: vec4<f32>, @location(4) cyber: f32 };\n' +
+    'struct VOut { @builtin(position) pos: vec4<f32>, @location(0) wp: vec3<f32>, @location(1) n: vec3<f32>, @location(2) uv: vec2<f32>, @location(3) tint: vec4<f32>, @location(4) partId: f32 };\n' +
     '@vertex fn vsMain(@location(0) p: vec3<f32>, @location(1) n: vec3<f32>, @location(2) uv: vec2<f32>, @location(3) iOff: vec4<f32>, @location(4) iCol: vec4<f32>, @location(5) jPk: u32) -> VOut {\n' +
     '  var o: VOut;\n' +
     '  var lp = p; var ln = n; var wp4 = u.model * vec4<f32>(lp, 1.0);\n' +
     '  let j0 = jPk & 255u;\n' +
-    '  o.cyber = select(0.0, 1.0, u.extra.w > 0.5 && j0 >= 5u && j0 <= 23u);\n' +
+    '  var pid = 0.0;\n' +
+    '  if (j0 >= 6u && j0 <= 23u) { pid = 1.0; }\n' +
+    '  else if (j0 >= 25u && j0 <= 42u) { pid = 2.0; }\n' +
+    '  else if (j0 == 43u || j0 == 44u) { pid = 3.0; }\n' +
+    '  else if (j0 >= 45u && j0 <= 48u) { pid = 4.0; }\n' +
+    '  else if (j0 >= 49u && j0 <= 52u) { pid = 5.0; }\n' +
+    '  o.partId = pid;\n' +
     '  if (u.extra.z > 0.5){\n' +
     '    let c = cos(iOff.w); let s = sin(iOff.w); let sp = p * iCol.w;\n' +
     '    wp4 = vec4<f32>(sp.x*c+sp.z*s+iOff.x, sp.y+iOff.y, -sp.x*s+sp.z*c+iOff.z, 1.0);\n' +
@@ -932,26 +1293,36 @@
     '  var base = select(vec3<f32>(1.0), t.rgb, u.flags.x > 0.5) * v.tint.rgb;\n' +
     '  if (u.extra.x > 0.01 && t.a < u.extra.x) { discard; }\n' +
     '  var met = u.flags.z; var rough = clamp(u.flags.w, 0.08, 0.96); var isSkin = u.flags.y; var em = u.extra.y;\n' +
-    '  if (isSkin > 0.5 && v.cyber > 0.5){\n' +
-    '    let seam = step(0.92, abs(sin(v.uv.x * 160.0)) * abs(cos(v.uv.y * 160.0)));\n' +
-    '    base = mix(vec3<f32>(0.32, 0.36, 0.42), vec3<f32>(0.05, 0.85, 0.96), seam * 0.65);\n' +
-    '    met = 0.86; rough = 0.24; isSkin = 0.0; em += seam * 0.45;\n' +
+    '  let bit = 1u << u32(round(v.partId));\n' +
+    '  let isCyberPart = (u32(round(u.extra.w)) & bit) != 0u;\n' +
+    '  if (isSkin > 0.5 && isCyberPart){\n' +
+    '    let seam = step(0.92, abs(sin(v.uv.x * 165.0)) * abs(cos(v.uv.y * 165.0)));\n' +
+    '    base = mix(vec3<f32>(0.24, 0.28, 0.34), vec3<f32>(0.04, 0.85, 0.96), seam * 0.72);\n' +
+    '    met = 0.88; rough = 0.22; isSkin = 0.0; em += seam * 0.50;\n' +
+    '  } else if (isSkin > 0.5 && u.keyDir.w > 0.5){\n' +
+    '    if (u.keyDir.w < 1.5){ rough = 0.26; met = 0.08; }\n' +
+    '    else if (u.keyDir.w < 2.5){ rough = 0.14; met = 0.88; isSkin = 0.25; }\n' +
+    '    else {\n' +
+    '      let hexG = step(0.94, abs(sin(v.uv.x * 210.0)) * abs(cos(v.uv.y * 210.0)));\n' +
+    '      base = mix(base * vec3<f32>(0.92, 0.95, 1.02), vec3<f32>(0.14, 0.75, 0.92), hexG * 0.25);\n' +
+    '      rough = 0.26; met = 0.42; isSkin = 0.20; em += hexG * 0.16;\n' +
+    '    }\n' +
     '  }\n' +
     '  let N = normalize(v.n); let V = normalize(u.camPos.xyz - v.wp); let L = normalize(u.keyDir.xyz); let H = normalize(L+V);\n' +
     '  let ndl = dot(N, L);\n' +
-    '  let diff = select(max(ndl, 0.0), clamp((ndl+0.35)/1.35, 0.0, 1.0), isSkin > 0.5);\n' +
-    '  let sss = select(vec3<f32>(0.0), vec3<f32>(0.85,0.28,0.18)*smoothstep(-0.35,0.25,ndl)*(1.0-max(ndl,0.0))*0.48, isSkin > 0.5);\n' +
-    '  let spPow = mix(96.0, 8.0, rough);\n' +
-    '  let sp = pow(max(dot(N, H), 0.0001), spPow) * mix(0.28, 0.92, met);\n' +
-    '  let fr = pow(max(1.0 - max(dot(N, V), 0.0), 0.0001), 3.6);\n' +
-    '  let hemi = mix(vec3<f32>(0.07,0.09,0.12), vec3<f32>(0.22,0.27,0.33), N.y*0.5+0.5);\n' +
-    '  var col = base*(hemi + u.keyCol.xyz*diff + sss) + vec3<f32>(sp)*mix(vec3<f32>(1.0), base, met) + u.rimCol.xyz*fr*0.65 + base*em;\n' +
+    '  let diff = select(max(ndl, 0.0), clamp((ndl+0.38)/1.38, 0.0, 1.0), isSkin > 0.5);\n' +
+    '  let sss = select(vec3<f32>(0.0), vec3<f32>(0.92,0.34,0.20)*smoothstep(-0.35,0.25,ndl)*(1.0-max(ndl,0.0))*0.52, isSkin > 0.5);\n' +
+    '  let spPow = mix(112.0, 8.0, rough);\n' +
+    '  let sp = pow(max(dot(N, H), 0.0001), spPow) * mix(0.30, 0.98, met);\n' +
+    '  let fr = pow(max(1.0 - max(dot(N, V), 0.0), 0.0001), 3.4);\n' +
+    '  let hemi = mix(vec3<f32>(0.09,0.08,0.09), vec3<f32>(0.24,0.25,0.28), N.y*0.5+0.5);\n' +
+    '  var col = base*(hemi + u.keyCol.xyz*diff + sss) + vec3<f32>(sp)*mix(vec3<f32>(1.0,0.94,0.88), base, met) + u.rimCol.xyz*fr*mix(0.68,1.15,met) + base*em;\n' +
     '  col = aces(col * 1.15);\n' +
-    '  return vec4<f32>(pow(col, vec3<f32>(1.0/2.2)), select(v.tint.a, t.a*v.tint.a, u.extra.y > 0.5));\n' +
+    '  return vec4<f32>(pow(col, vec3<f32>(1.0/2.2)), select(v.tint.a, t.a*v.tint.a, u.extra.y > 0.5 || v.tint.a < 0.99 || t.a < 0.98));\n' +
     '}\n';
 
   // --- Main Engine Factory ---
-  async function createEngine(canvas, kitPackB64){
+  async function createEngine(canvas, kitPackB64, forceBackend){
     var rawBytes = await inflateZlibBytes(b64ToBytes(kitPackB64));
     var kit = unpackHumanoidKit(rawBytes);
     var props = buildEnvironmentProps(0);
@@ -959,7 +1330,8 @@
     // Pre-context WebGPU detection (NEVER touch canvas.getContext before probing navigator.gpu!)
     var backend = 'webgl2';
     var gpuDevice = null, gpuCtx = null, gpuFmt = null;
-    if (typeof navigator !== 'undefined' && navigator.gpu && typeof navigator.gpu.requestAdapter === 'function'){
+    var allowGpu = (forceBackend !== 'webgl2' && forceBackend !== 'webgl1');
+    if (allowGpu && typeof navigator !== 'undefined' && navigator.gpu && typeof navigator.gpu.requestAdapter === 'function'){
       try {
         var adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
         if (adapter){
@@ -1002,7 +1374,8 @@
       });
     }));
 
-    var skinComp = createSkinCompositor(loadedImgs.body_skin_albedo, kit.faceUV);
+    var skinComp = createSkinCompositor(loadedImgs.body_skin_albedo, kit.faceUV, kit.nailUVs, kit.tattooUV);
+    var uwComp = createUnderwearCompositor(loadedImgs.bra_cloth_bra_albedo, loadedImgs.panties_cloth_panties_albedo, loadedImgs.briefs_cloth_briefs_albedo);
     var hairComp = createHairCompositor(loadedImgs.hair_short02_hair_short02);
     var holoComp = createHologramCanvas();
 
@@ -1069,6 +1442,9 @@
       texMap.dyn_skin = uploadGlTexture(skinComp ? skinComp.canvas : null, false);
       texMap.dyn_hair = uploadGlTexture(hairComp ? hairComp.canvas : null, true);
       texMap.dyn_holo = uploadGlTexture(holoComp ? holoComp.canvas : null, true);
+      texMap.dyn_bra = uploadGlTexture(uwComp ? uwComp.braCanvas : null, true);
+      texMap.dyn_panties = uploadGlTexture(uwComp ? uwComp.pantiesCanvas : null, true);
+      texMap.dyn_briefs = uploadGlTexture(uwComp ? uwComp.briefsCanvas : null, false);
       texMap.white = uploadGlTexture(null, true);
 
       glState = {
@@ -1087,7 +1463,8 @@
           uAlphaCut: gl.getUniformLocation(progSkin, 'uAlphaCut'), uEmissive: gl.getUniformLocation(progSkin, 'uEmissive'),
           uTint: gl.getUniformLocation(progSkin, 'uTint'), uCamPos: gl.getUniformLocation(progSkin, 'uCamPos'),
           uKeyDir: gl.getUniformLocation(progSkin, 'uKeyDir'), uKeyCol: gl.getUniformLocation(progSkin, 'uKeyCol'),
-          uRimCol: gl.getUniformLocation(progSkin, 'uRimCol'), uCyberArmMask: gl.getUniformLocation(progSkin, 'uCyberArmMask'),
+          uRimCol: gl.getUniformLocation(progSkin, 'uRimCol'), uCyberMask: gl.getUniformLocation(progSkin, 'uCyberMask'),
+          uSkinFinish: gl.getUniformLocation(progSkin, 'uSkinFinish'),
         },
         locInst: {
           aPos: gl.getAttribLocation(progInst, 'aPos'), aNorm: gl.getAttribLocation(progInst, 'aNorm'),
@@ -1191,6 +1568,9 @@
       gpuTex.dyn_skin = mkGpuTex(skinComp ? skinComp.canvas : null);
       gpuTex.dyn_hair = mkGpuTex(hairComp ? hairComp.canvas : null);
       gpuTex.dyn_holo = mkGpuTex(holoComp ? holoComp.canvas : null);
+      gpuTex.dyn_bra = mkGpuTex(uwComp ? uwComp.braCanvas : null);
+      gpuTex.dyn_panties = mkGpuTex(uwComp ? uwComp.pantiesCanvas : null);
+      gpuTex.dyn_briefs = mkGpuTex(uwComp ? uwComp.briefsCanvas : null);
 
       var depthTex = gpuDevice.createTexture({ size:[Math.max(1,canvas.width), Math.max(1,canvas.height)], format:'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT });
       var portraitJointMatBuf = gpuDevice.createBuffer({ size: 53 * 64, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
@@ -1233,24 +1613,69 @@
 
     if (backend === 'webgpu') initWebGPU(); else initGl();
 
-    // Track dirty states so we only re-evaluate morphs/textures when sliders change!
-    var lastMorphSig = '', lastWearSig = '', lastSkinSig = '', lastHairSig = '', lastHoloSig = '', lastShipSeed = 0;
+    // Track dirty states + damped spring bust oscillator + biomechanical recoil state
+    var lastMorphSig = '', lastWearSig = '', lastSkinSig = '', lastHairSig = '', lastHoloSig = '', lastUwSig = '', lastShipSeed = 0;
     var activeCulledBodyIdx = null;
     var activeCulledHairIdx = {};
     var lastCrowdCount = 0;
+    var bustSpring = { pos: [0,0,0], vel: [0,0,0], prevSpine: null };
+
+    function getPartMode(state, partKey){
+      var bp = state.bodyParts || {};
+      var mode = bp[partKey] || 'organic';
+      if (state.chassisMode === 'skeleton' || state.chassisMode === 'android'){
+        if (mode === 'organic') mode = 'skeleton';
+      }
+      if (partKey === 'armL' && state.cyberArm && mode === 'organic') mode = 'cyber';
+      return mode;
+    }
+    function getSkinFinishCode(state){
+      var f = state.skinFinish || 'matte';
+      if (f === 'shiny') return 1.0;
+      if (f === 'metallic') return 2.0;
+      if (f === 'android') return 3.0;
+      return 0.0;
+    }
+    function getCyberMaskBits(state){
+      var mask = 0;
+      if (getPartMode(state, 'torso') === 'cyber') mask |= 1;
+      if (getPartMode(state, 'armL')  === 'cyber') mask |= 2;
+      if (getPartMode(state, 'armR')  === 'cyber') mask |= 4;
+      if (getPartMode(state, 'head')  === 'cyber') mask |= 8;
+      if (getPartMode(state, 'legL')  === 'cyber') mask |= 16;
+      if (getPartMode(state, 'legR')  === 'cyber') mask |= 32;
+      return mask;
+    }
 
     function rebuildBodyCulledIndices(state){
       var bz = kit.bodyZones, m = kit.meshes.base_body;
       var hide = 0;
       var outfit = state.outfit || 'jacket';
-      if (state.gender >= 0.35) hide |= (bz.underwear_f | bz.bra);
-      else hide |= bz.underwear_m;
+      if (outfit !== 'underwear'){
+        if (state.gender >= 0.35) hide |= (bz.underwear_f | bz.bra);
+        else hide |= bz.underwear_m;
+      }
       if (outfit === 'tee' || outfit === 'armor'){ hide |= (bz.torso | bz.shirt | bz.hips | bz.legs | bz.feet | bz.boots); }
       else if (outfit === 'hoodie'){ hide |= (bz.hoodie | bz.torso | bz.shirt | bz.hips | bz.legs | bz.feet | bz.boots); }
       else if (outfit === 'jacket'){ hide |= (bz.torso | bz.shirt | bz.jacket | bz.hips | bz.legs | bz.feet | bz.boots); }
-      var raw = m.indices, ccz = m.cczone, out = [];
+
+      var skHead  = getPartMode(state, 'head')  === 'skeleton';
+      var skTorso = getPartMode(state, 'torso') === 'skeleton';
+      var skArmL  = getPartMode(state, 'armL')  === 'skeleton';
+      var skArmR  = getPartMode(state, 'armR')  === 'skeleton';
+      var skLegL  = getPartMode(state, 'legL')  === 'skeleton';
+      var skLegR  = getPartMode(state, 'legR')  === 'skeleton';
+
+      var raw = m.indices, ccz = m.cczone, jts = m.joints, out = [];
       for (var i = 0; i < raw.length; i += 3){
         var a = raw[i], b = raw[i+1], c = raw[i+2];
+        var ja = jts[a*4], jb = jts[b*4], jc = jts[c*4];
+        if (skHead  && (ja===43||ja===44) && (jb===43||jb===44) && (jc===43||jc===44)) continue;
+        if (skTorso && (ja<=5||ja===24) && (jb<=5||jb===24) && (jc<=5||jc===24)) continue;
+        if (skArmL  && (ja>=6&&ja<=23) && (jb>=6&&jb<=23) && (jc>=6&&jc<=23)) continue;
+        if (skArmR  && (ja>=25&&ja<=42) && (jb>=25&&jb<=42) && (jc>=25&&jc<=42)) continue;
+        if (skLegL  && (ja>=45&&ja<=48) && (jb>=45&&jb<=48) && (jc>=45&&jc<=48)) continue;
+        if (skLegR  && (ja>=49&&ja<=52) && (jb>=49&&jb<=52) && (jc>=49&&jc<=52)) continue;
         var hits = ((ccz[a] & hide) !== 0 ? 1 : 0) + ((ccz[b] & hide) !== 0 ? 1 : 0) + ((ccz[c] & hide) !== 0 ? 1 : 0);
         if (hits >= 2) continue;
         out.push(a, b, c);
@@ -1317,35 +1742,64 @@
       }
     }
 
-    function syncCharacterAssets(state){
+    function stepBustSpring(state, dtSec, spineWorldPos){
+      if ((state.gender || 0) <= 0.1 || !spineWorldPos) return [0,0,0];
+      var dt = Math.min(0.04, Math.max(0.004, dtSec || 0.016));
+      var prev = bustSpring.prevSpine || spineWorldPos;
+      var ax = (spineWorldPos[0] - prev[0]) / dt;
+      var ay = (spineWorldPos[1] - prev[1]) / dt;
+      var az = (spineWorldPos[2] - prev[2]) / dt;
+      bustSpring.prevSpine = [spineWorldPos[0], spineWorldPos[1], spineWorldPos[2]];
+
+      // 2.6 Hz damped harmonic oscillator + garment damping (bra=0.55, clothes=0.78, nude/sheer=0.28)
+      var firm = Number(state.bustFirmness !== undefined ? state.bustFirmness : 0.5);
+      var omega = 2 * Math.PI * (2.3 + firm * 0.9);
+      var braSupport = state.outfit === 'underwear' ? ((state.underwearBra === 'none' || state.underwearBra === 'sheer_mesh') ? 0.35 : 0.58) : 0.80;
+      var zeta = 0.32 + braSupport * 0.35;
+      var k = omega * omega, c = 2 * zeta * omega;
+      var gravY = state.outfit === 'underwear' && state.underwearBra === 'none' ? -0.0025 : 0.0;
+      var acc = [Math.max(-6, Math.min(6, -ax*0.18)), Math.max(-6, Math.min(6, -ay*0.18 + gravY*k)), Math.max(-6, Math.min(6, -az*0.18))];
+
+      for (var d = 0; d < 3; d++){
+        var f = -k * bustSpring.pos[d] - c * bustSpring.vel[d] + acc[d];
+        bustSpring.vel[d] += f * dt;
+        bustSpring.pos[d] = Math.max(-0.012, Math.min(0.012, bustSpring.pos[d] + bustSpring.vel[d] * dt));
+      }
+      return bustSpring.pos;
+    }
+
+    function syncCharacterAssets(state, springDisp){
       var morphSig = [
         state.gender, state.muscle, state.weight, state.height, state.age,
+        JSON.stringify(state.bustQuad), state.bustSize, state.bustFirmness, state.bustHeight, state.bustSpacing,
+        state.outfit, state.underwearBra,
         state.noseWidth, state.noseLength, state.noseHeight, state.jawWidth,
         state.chinSize, state.cheekbones, state.eyeSize, state.eyeSpacing, state.eyeTilt,
         state.lipSize, state.mouthWidth, state.earSize, state.forehead,
-        state.expression, state.blink, state.helmetMode
+        state.expression, state.blink, state.helmetMode,
+        springDisp ? Math.round(springDisp[0]*1000) + ',' + Math.round(springDisp[1]*1000) + ',' + Math.round(springDisp[2]*1000) : '0'
       ].join('|');
 
       var helmetOn = state.helmetMode && state.helmetMode !== 'none';
       if (morphSig !== lastMorphSig){
         lastMorphSig = morphSig;
-        var mw = computeMorphWeights(state);
-        var morphMeshes = ['base_body','eye_sclera','eye_iris','eye_cornea','eyebrows','eyelashes','briefs','bra','panties','tshirt','hoodie','jacket','jeans','boots','hair_short02','hair_short04','hair_braid01'];
+        var mw = computeMorphWeights(state, springDisp);
+        var morphMeshes = ['base_body','eye_sclera','eye_iris','eye_cornea','eyebrows','eyelashes','briefs','bra','panties','tshirt','hoodie','jacket','jeans','boots','hair_short02','hair_short04','hair_braid01','wrist_watch','wrist_gauntlet','piercing_brow','piercing_nostril','piercing_lip','piercing_ears'];
         morphMeshes.forEach(function(mk){
           var m = kit.meshes[mk];
           if (!m) return;
           var tuck = (mk.indexOf('hair_') === 0 && helmetOn) ? 1.0 : 0.0;
           var buf = applyMeshMorphsAndTuck(m, mw, tuck);
-          if (glState){
+          if (glState && glState.meshBufs[mk]){
             gl.bindBuffer(gl.ARRAY_BUFFER, glState.meshBufs[mk].bPos);
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, buf);
-          } else if (wgpuState){
+          } else if (wgpuState && wgpuState.meshesGPU[mk]){
             gpuDevice.queue.writeBuffer(wgpuState.meshesGPU[mk].posIn, 0, buf);
           }
         });
       }
 
-      var wearSig = [state.outfit, state.gender, state.helmetMode, state.hairStyle].join('|');
+      var wearSig = [state.outfit, state.gender, state.helmetMode, state.hairStyle, state.chassisMode, JSON.stringify(state.bodyParts), state.cyberArm].join('|');
       if (wearSig !== lastWearSig){
         lastWearSig = wearSig;
         rebuildBodyCulledIndices(state);
@@ -1354,7 +1808,7 @@
         });
       }
 
-      var skinSig = [state.skinHex, state.beardStyle, state.hairHex, state.scars, state.cyberFace, JSON.stringify(state.scarPos)].join('|');
+      var skinSig = [state.skinHex, state.skinFinish, state.beardStyle, state.hairHex, state.scars, state.scarType, state.cyberFace, state.nailColor, state.tattooStyle, state.tattooZone, state.tattooColor, state.tattooGlow, JSON.stringify(state.scarPos)].join('|');
       if (skinSig !== lastSkinSig && skinComp){
         lastSkinSig = skinSig;
         skinComp.update(state);
@@ -1363,6 +1817,21 @@
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, skinComp.canvas);
         } else if (wgpuState){
           gpuDevice.queue.copyExternalImageToTexture({ source: skinComp.canvas }, { texture: wgpuState.gpuTex.dyn_skin }, [512, 512]);
+        }
+      }
+
+      var uwSig = [state.underwearBra, state.underwearBottom, state.underwearColor].join('|');
+      if (uwSig !== lastUwSig && uwComp){
+        lastUwSig = uwSig;
+        uwComp.update(state);
+        if (glState){
+          gl.bindTexture(gl.TEXTURE_2D, glState.texMap.dyn_bra);     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, uwComp.braCanvas);
+          gl.bindTexture(gl.TEXTURE_2D, glState.texMap.dyn_panties); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, uwComp.pantiesCanvas);
+          gl.bindTexture(gl.TEXTURE_2D, glState.texMap.dyn_briefs);  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, uwComp.briefsCanvas);
+        } else if (wgpuState){
+          gpuDevice.queue.copyExternalImageToTexture({ source: uwComp.braCanvas },     { texture: wgpuState.gpuTex.dyn_bra },     [256, 256]);
+          gpuDevice.queue.copyExternalImageToTexture({ source: uwComp.pantiesCanvas }, { texture: wgpuState.gpuTex.dyn_panties }, [256, 256]);
+          gpuDevice.queue.copyExternalImageToTexture({ source: uwComp.briefsCanvas },  { texture: wgpuState.gpuTex.dyn_briefs },  [256, 256]);
         }
       }
 
@@ -1427,23 +1896,51 @@
       var eyeTint = hexToRgb01(state.eyeHex || '#3aa7d6');
       var browTint = [hairTint[0]*0.85, hairTint[1]*0.85, hairTint[2]*0.85];
 
+      var skHead  = getPartMode(state, 'head')  === 'skeleton';
+      var skTorso = getPartMode(state, 'torso') === 'skeleton';
       draws.push({ mesh:'base_body', tex:'dyn_skin', norm:'body_skin_normal', isSkin:1, tint:[1,1,1,1], met:0.04, rough:0.65, cut:0, em:0 });
-      if (!hideEyesInsideSealed){
+      if (!hideEyesInsideSealed && !skHead){
         draws.push({ mesh:'eye_sclera', tex:'body_eye', isSkin:0, tint:[1,1,1,1], met:0.05, rough:0.22, cut:0, em:0 });
         draws.push({ mesh:'eye_iris',   tex:'body_eye', isSkin:0, tint:[eyeTint[0], eyeTint[1], eyeTint[2], 1], met:0.08, rough:0.15, cut:0, em:0.05 });
         draws.push({ mesh:'eye_cornea', tex:'white',    isSkin:0, tint:[1,1,1,0.18], met:0.9, rough:0.06, cut:0, em:0 });
         draws.push({ mesh:'eyebrows',   tex:'body_eyebrow', isSkin:0, tint:[browTint[0],browTint[1],browTint[2],1], met:0.0, rough:0.85, cut:0.32, em:0 });
         draws.push({ mesh:'eyelashes',  tex:'body_eyelash', isSkin:0, tint:[0.08,0.06,0.06,1], met:0.0, rough:0.8, cut:0.35, em:0 });
       }
-      // Underwear renders only when outfit is 'underwear' so wider hip meshes never bleed through jeans
-      if (outfit === 'underwear'){
+      // Underwear renders only when outfit is 'underwear' & torso is not stripped to bare skeleton
+      if (outfit === 'underwear' && !skTorso){
         if (state.gender >= 0.35){
-          draws.push({ mesh:'panties', tex:'panties_cloth_panties_albedo', isSkin:0, tint:[0.85,0.85,0.88,1], met:0.0, rough:0.88, cut:0, em:0 });
-          draws.push({ mesh:'bra',     tex:'bra_cloth_bra_albedo',         isSkin:0, tint:[0.85,0.85,0.88,1], met:0.0, rough:0.88, cut:0, em:0 });
+          if (state.underwearBottom === 'boxers_fem'){
+            draws.push({ mesh:'briefs', tex:'dyn_briefs', isSkin:0, tint:[0.96,0.96,0.98,1], met:0.02, rough:0.86, cut:0, em:0 });
+          } else {
+            draws.push({ mesh:'panties', tex:'dyn_panties', isSkin:0, tint:[0.98,0.98,0.98,1], met:0.04, rough:0.78, cut:0, em:0 });
+          }
+          if ((state.underwearBra || 'sport') !== 'none'){
+            draws.push({ mesh:'bra', tex:'dyn_bra', isSkin:0, tint:[0.98,0.98,0.98,1], met:0.04, rough:0.78, cut:0, em:0 });
+          }
         } else {
-          draws.push({ mesh:'briefs',  tex:'briefs_cloth_briefs_albedo',   isSkin:0, tint:[0.85,0.88,0.92,1], met:0.0, rough:0.88, cut:0, em:0 });
+          draws.push({ mesh:'briefs', tex:'dyn_briefs', isSkin:0, tint:[0.96,0.96,0.98,1], met:0.02, rough:0.86, cut:0, em:0 });
         }
       }
+
+      // Modular Humanoid Skeleton / Android Chassis modules (independent per body part!)
+      var skCol = state.skelStyle === 'bone' ? [0.84, 0.80, 0.72, 1] : (state.skelStyle === 'carbon' ? [0.16, 0.19, 0.23, 1] : [0.58, 0.64, 0.70, 1]);
+      var skMet = state.skelStyle === 'bone' ? 0.08 : 0.88;
+      var skRgh = state.skelStyle === 'bone' ? 0.62 : 0.24;
+      if (getPartMode(state, 'head')  === 'skeleton') draws.push({ mesh:'skel_head',  tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.04 });
+      if (getPartMode(state, 'torso') === 'skeleton') draws.push({ mesh:'skel_torso', tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+      if (getPartMode(state, 'armL')  === 'skeleton') draws.push({ mesh:'skel_arm_l', tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+      if (getPartMode(state, 'armR')  === 'skeleton') draws.push({ mesh:'skel_arm_r', tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+      if (getPartMode(state, 'legL')  === 'skeleton') draws.push({ mesh:'skel_leg_l', tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+      if (getPartMode(state, 'legR')  === 'skeleton') draws.push({ mesh:'skel_leg_r', tex:'white', isSkin:0, tint:skCol, met:skMet, rough:skRgh, cut:0, em:0.02 });
+
+      // 3D Morph-Tracked Facial Piercings (default = none; supports glowing cyber or brushed metal!)
+      var prc = state.piercings || {};
+      var pTint = prc.glow ? hexToRgb01(prc.color || '#00e5ff').concat([1]) : (prc.metal === 'gold' ? [0.92, 0.72, 0.34, 1] : (prc.metal === 'obsidian' ? [0.16, 0.18, 0.22, 1] : [0.84, 0.88, 0.92, 1]));
+      var pEm = prc.glow ? 1.55 : 0.04;
+      if (prc.brow)    draws.push({ mesh:'piercing_brow',    tex:'white', isSkin:0, tint:pTint, met:0.92, rough:0.14, cut:0, em:pEm });
+      if (prc.nostril) draws.push({ mesh:'piercing_nostril', tex:'white', isSkin:0, tint:pTint, met:0.92, rough:0.14, cut:0, em:pEm });
+      if (prc.lip)     draws.push({ mesh:'piercing_lip',     tex:'white', isSkin:0, tint:pTint, met:0.92, rough:0.14, cut:0, em:pEm });
+      if (prc.ears)    draws.push({ mesh:'piercing_ears',    tex:'white', isSkin:0, tint:pTint, met:0.92, rough:0.14, cut:0, em:pEm });
 
       if (outfit !== 'underwear'){
         draws.push({ mesh:'jeans', tex:'jeans_cloth_jeans_albedo', isSkin:0, tint:[armorTint[0]*0.78+0.15, armorTint[1]*0.78+0.15, armorTint[2]*0.78+0.15, 1], met:0.04, rough:0.82, cut:0, em:0 });
@@ -1457,11 +1954,13 @@
           draws.push({ mesh:'armor_belt_knees', tex:'white', isSkin:0, tint:[0.36, 0.30, 0.24, 1], met:0.25, rough:0.65, cut:0, em:0 });
         }
       }
-      // Left wrist device (Watch vs Gauntlet — always present!)
-      draws.push({ mesh: state.wristDevice === 'gauntlet' ? 'wrist_gauntlet' : 'wrist_watch', tex:'white', isSkin:0, tint:[0.18,0.22,0.28,1], met:0.78, rough:0.28, cut:0, em:0.04 });
+      // Left wrist device (shown when wearing tactical gear or during Ramp briefing, omitted in underwear/skeleton)
+      if ((outfit !== 'underwear' && getPartMode(state, 'armL') !== 'skeleton') || state.tab === 'ramp'){
+        draws.push({ mesh: state.wristDevice === 'gauntlet' ? 'wrist_gauntlet' : 'wrist_watch', tex:'white', isSkin:0, tint:[0.18,0.22,0.28,1], met:0.78, rough:0.28, cut:0, em:0.04 });
+      }
 
-      // Hair style (except buzz/bald)
-      if (state.hairStyle !== 'bald' && state.hairStyle !== 'buzz'){
+      // Hair style (except buzz/bald or bare skel_head)
+      if (!skHead && state.hairStyle !== 'bald' && state.hairStyle !== 'buzz'){
         var hk = state.hairStyle === 'braids' ? 'hair_braid01' : (state.hairStyle === 'sleek' ? 'hair_short04' : 'hair_short02');
         draws.push({ mesh: hk, tex:'dyn_hair', isSkin:0, tint:[hairTint[0], hairTint[1], hairTint[2], 1], met:0.05, rough:0.68, cut:0.34, em:0 });
       }
@@ -1488,19 +1987,18 @@
       ovr.thumb_01_l = [-0.15,-0.25,  0.12]; ovr.thumb_02_l = [-0.20,-0.30,  0.15]; ovr.thumb_03_l = [-0.24,-0.35,  0.18];
     }
 
-    // --- Pose Selection & Transition Sequencer ---
-    function computeStageTransformAndPose(state, timeSec){
+    // --- Pose Selection, CQB Corner-Slicing & Biomechanical Cyber-Torque Sequencer ---
+    function computeStageTransformAndPose(state, timeSec, mw){
       var tab = state.tab || 'face';
       var anim = 'idle', animT = timeSec, worldOvr = {}, rootOff = [0,0,0], modelMat = mat4Identity();
       var showWeapon = false, showHolo = false, fadeAlpha = 0.0;
       var hScale = 0.94 + Number(state.height || 0.5) * 0.14;
 
       var yaw = Number(state.turntableYaw || 0);
-      if (tab === 'face' || tab === 'body' || tab === 'gear' || tab === 'hair'){
-        // Natural relaxed ready stance from clean bind rest (or two-handed carbine hold when rifle preview is on!)
+      if (tab === 'face' || tab === 'body' || tab === 'gear' || tab === 'hair' || tab === 'quarters'){
         anim = 'rest';
         var br = Math.sin(timeSec * 1.8) * 0.015;
-        if (tab === 'gear' && state.equipRiflePreview){
+        if ((tab === 'gear' || tab === 'quarters') && state.equipRiflePreview){
           showWeapon = true;
           worldOvr = {
             upperarm_r: [-0.46,  0.04, 0.46], lowerarm_r: [-0.84,  0.26, 0.0], hand_r: [0.0, 0.18, -0.24],
@@ -1517,10 +2015,8 @@
         }
         modelMat = mat4FromEulerXYZ(0, yaw, 0);
       } else if (tab === 'ramp'){
-        // Diegetic transition: 0..1.5s gun check, 1.5..2.9s walk to locker/ramp, 2.9..3.45s cinema fade, >=3.45s seated!
         var tp = Number(state.rampTimer || 4.0);
         if (tp < 1.5){
-          // Gun check inspection pose
           anim = 'rest'; showWeapon = true;
           worldOvr = {
             upperarm_r: [-0.55,  0.25, 0.42], lowerarm_r: [-0.95,  0.35, 0.0],
@@ -1529,7 +2025,6 @@
           };
           modelMat = mat4FromEulerXYZ(0, 0.35, 0);
         } else if (tp < 2.9){
-          // Walk toward ship locker & bay door
           var wt = (tp - 1.5) / 1.4;
           anim = 'walk'; animT = tp * 1.25; showWeapon = true;
           worldOvr = { upperarm_r: [-0.35, 0, 0.48], lowerarm_r: [-0.75, 0, 0], upperarm_l: [-0.25, 0, -0.52] };
@@ -1537,7 +2032,6 @@
           modelMat[14] = -wt * 1.65;
           if (tp > 2.35) fadeAlpha = (tp - 2.35) / 0.55;
         } else {
-          // Seated kicked-back on folding hangar chair on EV-74 Kestrel boarding ramp!
           if (tp < 3.45) fadeAlpha = 1.0 - (tp - 2.9) / 0.55;
           anim = 'rest'; showHolo = true;
           worldOvr = {
@@ -1552,28 +2046,60 @@
           rootOff = [0.0, -0.34, -0.04];
         }
       } else if (tab === 'action'){
-        // Sector 4 Ore Depot Corridor CQB: independent strideYaw vs aimYaw + Corner Peek!
-        anim = state.cqbMoving ? 'walk' : 'rest';
+        // @lastmaglab-inspired Drone-Angle CQB: Corner Slicing ("Pieing"), Outside-Foot Plant, Speed Lean, Aim Skill & Cyber-Arm Torque!
+        var cqbMode = state.cqbMode || state.peek || 'center';
+        var isFast = state.cqbSpeed === 'fast';
+        anim = state.cqbMoving ? (cqbMode === 'pie_left' ? 'strafe_left' : (cqbMode === 'pie_right' ? 'strafe_right' : 'walk')) : 'rest';
         showWeapon = true;
-        var peek = state.peek === 'left' ? -0.268 : (state.peek === 'right' ? 0.268 : 0.0);
-        var strideYaw = Number(state.strideYaw || 0.25);
-        var aimYaw = Number(state.aimYaw || -0.15);
+        var peekDir = (cqbMode === 'left' || cqbMode === 'pie_left') ? -1.0 : ((cqbMode === 'right' || cqbMode === 'pie_right') ? 1.0 : 0.0);
+        var leanScale = isFast ? 0.34 : 0.18;
+        var peekOffset = peekDir === 0 ? 0.0 : (peekDir * (isFast ? 0.24 : 0.18));
+        var strideYaw = Number(state.strideYaw !== undefined ? state.strideYaw : 0.22) - peekDir * 0.28;
+        var aimYaw = Number(state.aimYaw !== undefined ? state.aimYaw : -0.18) - peekDir * 0.42;
         var twist = aimYaw - strideYaw;
-        var recoil = Math.sin(timeSec * 14.0) * (state.firing ? 0.08 : 0.0);
-        var trem = state.suppressed ? Math.sin(timeSec * 29.0) * (state.veteran ? 0.025 : 0.09) : 0.0;
+
+        // Aim Skill steadiness (0.2 novice -> drift & kick, 0.95 veteran -> locked cheek weld)
+        var skill = Number(state.aimSkill !== undefined ? state.aimSkill : (state.veteran ? 0.90 : 0.40));
+        var driftAmp = (1.0 - skill) * 0.055 + (state.suppressed ? (1.0 - skill) * 0.075 : 0.0);
+        var driftY = Math.sin(timeSec * 3.1) * driftAmp + (state.suppressed ? Math.sin(timeSec * 27.0) * driftAmp * 0.55 : 0.0);
+        var driftP = Math.cos(timeSec * 2.4) * driftAmp * 0.65;
+        var recoil = state.firing ? Math.max(0, Math.sin(timeSec * 16.0)) * (0.04 + (1.0 - skill) * 0.09) : 0.0;
+
+        // Biomechanical Cyber-Arm Torque Physics: strong/fast cybernetic arm against unreinforced organic torso creates counter-twist & shoulder pull!
+        var hasCyberArm = (getPartMode(state, 'armR') !== 'organic') || (getPartMode(state, 'armL') !== 'organic');
+        var reinforcedTorso = getPartMode(state, 'torso') !== 'organic';
+        var torquePull = (hasCyberArm && !reinforcedTorso) ? (Math.sin(timeSec * 11.0) * (state.firing ? 0.22 : 0.04) + (isFast ? peekDir * 0.12 : 0.0)) : 0.0;
+
+        // Leg injury limp kinematics
+        var limpDrop = state.injuredLeg ? Math.abs(Math.sin(timeSec * 4.5)) * 0.065 : 0.0;
+        var limpTilt = state.injuredLeg ? Math.sin(timeSec * 4.5) * 0.14 : 0.0;
+
+        // Boxer stance outside-foot plant when slicing corners (eyes + muzzle clear edge while trailing foot & elbow stay tucked!)
         worldOvr = {
-          spine_02:   [0.10, twist * 0.45, peek * 0.45],
-          spine_03:   [0.08, twist * 0.35, peek * 0.35],
-          upperarm_r: [-0.84 + recoil, 0.12 + twist * 0.25, 0.30], lowerarm_r: [-1.02, 0.28, 0.0], hand_r: [0.0, 0.25, -0.18],
-          upperarm_l: [-0.92 + recoil,-0.22 + twist * 0.30,-0.28], lowerarm_l: [-0.52,-0.32, 0.0], hand_l: [0.0,-0.22,  0.18],
-          head:       [-0.08 + trem, twist * 0.25, peek * 0.15]
+          pelvis:     [0.06 + (state.injuredLeg ? 0.08 : 0.0), twist * 0.15, peekDir * 0.08 + limpTilt],
+          spine_02:   [0.10, twist * 0.45 - torquePull * 0.65, peekDir * leanScale * 0.72 + limpTilt * 0.5],
+          spine_03:   [0.08 + driftP * 0.5, twist * 0.35 - torquePull * 0.45, peekDir * leanScale * 0.55],
+          upperarm_r: [-0.84 + recoil + driftP, 0.12 + twist * 0.25 + driftY + torquePull, 0.30], lowerarm_r: [-1.02, 0.28, 0.0], hand_r: [0.0, 0.25, -0.18],
+          upperarm_l: [-0.92 + recoil + driftP,-0.22 + twist * 0.30 + driftY,-0.28], lowerarm_l: [-0.52,-0.32, 0.0], hand_l: [0.0,-0.22,  0.18],
+          head:       [-0.08 + driftP * 0.4, twist * 0.28 + driftY * 0.4, peekDir * 0.12]
         };
+        if (cqbMode === 'pie_left' || cqbMode === 'left'){
+          // Left outside foot steps wide and plants flat; right foot trails tucked behind cover!
+          worldOvr.thigh_l = [-0.28, 0.12, -0.26]; worldOvr.calf_l = [0.42, 0.0, 0.0];
+          worldOvr.thigh_r = [ 0.10,-0.08,  0.12]; worldOvr.calf_r = [0.24, 0.0, 0.0];
+        } else if (cqbMode === 'pie_right' || cqbMode === 'right'){
+          worldOvr.thigh_r = [-0.28,-0.12,  0.26]; worldOvr.calf_r = [0.42, 0.0, 0.0];
+          worldOvr.thigh_l = [ 0.10, 0.08, -0.12]; worldOvr.calf_l = [0.24, 0.0, 0.0];
+        }
+        if (state.injuredLeg){
+          worldOvr.thigh_r = [-0.14, 0.0, 0.10]; worldOvr.calf_r = [0.48, 0.0, 0.0];
+        }
         applyWeaponGripFingers(worldOvr);
         modelMat = mat4FromEulerXYZ(0, strideYaw, 0);
-        modelMat[12] = peek; modelMat[14] = 0.85;
+        modelMat[12] = peekOffset; modelMat[13] = -limpDrop; modelMat[14] = 1.12;
       }
 
-      var pose = evaluateSkeletonPose(kit, anim, animT, worldOvr, rootOff, hScale);
+      var pose = evaluateSkeletonPose(kit, anim, animT, worldOvr, rootOff, hScale, mw, state.skelProps);
       return {
         pose: pose, modelMat: modelMat, showWeapon: showWeapon, showHolo: showHolo,
         hScale: hScale, fadeAlpha: Math.max(0, Math.min(1, fadeAlpha))
@@ -1587,32 +2113,43 @@
     function renderFrame(state, dtSec, totalSec){
       frameCount++; fpsTimer += dtSec;
       if (fpsTimer >= 0.5){ lastFps = Math.round(frameCount / fpsTimer); frameCount = 0; fpsTimer = 0; }
-      syncCharacterAssets(state);
+      var springDisp = stepBustSpring(state, dtSec, bustSpring.prevSpine || [0,1.1,0]);
+      syncCharacterAssets(state, springDisp);
 
       var W = canvas.width || 960, H = canvas.height || 640;
       var aspect = W / Math.max(1, H);
-      var stage = computeStageTransformAndPose(state, totalSec);
+      var mw = computeMorphWeights(state, springDisp);
+      var stage = computeStageTransformAndPose(state, totalSec, mw);
+      if (stage.pose && stage.pose.worlds[4]){
+        bustSpring.prevSpine = [stage.pose.worlds[4][12], stage.pose.worlds[4][13], stage.pose.worlds[4][14]];
+      }
       var hs = stage.hScale || 1.0;
       var tab = state.tab || 'face';
-      var pitch = Math.max(-0.45, Math.min(0.58, Number(state.camPitch || 0)));
-      var zoom  = Math.max(0.62, Math.min(1.65, Number(state.camZoom || 1.0)));
+      var pitch = Math.max(-0.52, Math.min(0.64, Number(state.camPitch || 0)));
+      var zoom  = Math.max(0.45, Math.min(1.85, Number(state.camZoom || 1.0)));
+      var panX  = Math.max(-0.85, Math.min(0.85, Number(state.camPanX || 0)));
+      var panY  = Math.max(-0.85, Math.min(0.85, Number(state.camPanY || 0)));
 
-      // Responsive camera framing per creator screen + mobile portrait FOV scaling
+      // Responsive camera framing per creator screen + Captain's Quarters mirror POV + Drone-angle CQB!
       var baseEye = [0.16, 1.56 * hs, 0.82], camTgt = [0.0, 1.53 * hs, 0.04], fov = 28;
       if (tab === 'body' || tab === 'gear' || tab === 'hair'){
         baseEye = [0.36, 1.10 * hs, 2.50]; camTgt = [0.0, 0.88 * hs, 0.0]; fov = 42;
+      } else if (tab === 'quarters'){
+        // Mirror POV inside Captain's Quarters cabin framing head-to-boots + metallic cabin walls!
+        baseEye = [0.06, 1.08 * hs, 2.38]; camTgt = [0.0, 0.90 * hs, 0.0]; fov = 42;
       } else if (tab === 'ramp'){
         var tp = Number(state.rampTimer || 4.0);
         if (tp < 2.9){ baseEye = [1.45, 1.32 * hs, 2.35]; camTgt = [0.0, 1.02 * hs, -0.4]; fov = 44; }
         else { baseEye = [-1.45, 1.18, 1.85]; camTgt = [0.08, 0.78, 0.15]; fov = 40; }
       } else if (tab === 'action'){
-        // Isometric 3/4 Tactical Corridor View keeping hero prominent + 25-unit crowd visible!
-        baseEye = [3.45, 3.85, -1.65]; camTgt = [0.0, 0.95, 2.25]; fov = 44;
+        // @lastmaglab-inspired elevated Drone-Angle 3/4 CQB view clear through doorway gap!
+        baseEye = [2.15, 4.45, -1.55]; camTgt = [0.0, 0.95, 2.35]; fov = 42;
       }
+      camTgt = [camTgt[0] + panX, camTgt[1] + panY, camTgt[2]];
 
-      // Orbit pitch + zoom + stageOrbitYaw (for ramp/action camera orbit drag!)
-      var stageYaw = (tab === 'ramp' || tab === 'action') ? Number(state.stageOrbitYaw || 0) : 0;
-      var dx = baseEye[0] - camTgt[0], dy = baseEye[1] - camTgt[1], dz = baseEye[2] - camTgt[2];
+      // Orbit pitch + zoom + stageOrbitYaw (for ramp/action/quarters camera orbit drag!)
+      var stageYaw = (tab === 'ramp' || tab === 'action' || tab === 'quarters') ? Number(state.stageOrbitYaw || 0) : 0;
+      var dx = baseEye[0] - (camTgt[0]-panX), dy = baseEye[1] - (camTgt[1]-panY), dz = baseEye[2] - camTgt[2];
       var dist = Math.hypot(dx, dy, dz) * zoom;
       var horiz = Math.hypot(dx, dz) || 0.001;
       var baseYaw = Math.atan2(dx, dz) + stageYaw;
@@ -1623,9 +2160,8 @@
         camTgt[1] + Math.sin(basePitch) * dist,
         camTgt[2] + Math.cos(baseYaw) * ch
       ];
-      // Preserve horizontal framing cleanly on narrow portrait screens (e.g. Pixel 10 Pro XL)
       var effFovDeg = aspect < 1.0
-        ? Math.min(70, (2 * Math.atan(Math.tan((fov * Math.PI / 180) * 0.5) / Math.max(0.65, aspect))) * 180 / Math.PI)
+        ? Math.min(72, (2 * Math.atan(Math.tan((fov * Math.PI / 180) * 0.5) / Math.max(0.65, aspect))) * 180 / Math.PI)
         : fov;
 
       var proj = (backend === 'webgpu')
@@ -1634,6 +2170,8 @@
       var view = mat4LookAt(camEye, camTgt, [0,1,0]);
       var drawCalls = 0, trisDrawn = 0;
       var charDraws = buildDrawListForCharacter(state, true, state.helmetMode === 'sealed');
+      var skinFinishCode = getSkinFinishCode(state);
+      var cyberMaskBits = getCyberMaskBits(state);
 
       // Compute hand_r / hand_l palm sockets & two-handed rifle grip alignment!
       var handRWorld = mat4Mul(stage.modelMat, stage.pose.worlds[27]);
@@ -1704,7 +2242,7 @@
       if (backend === 'webgl2' || backend === 'webgl1'){
         gl.viewport(0, 0, W, H);
         gl.disable(gl.SCISSOR_TEST);
-        gl.clearColor(0.035, 0.055, 0.075, 1.0);
+        gl.clearColor(0.044, 0.048, 0.058, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.enable(gl.DEPTH_TEST);
 
@@ -1713,10 +2251,11 @@
         gl.uniformMatrix4fv(ls.uProj, false, proj);
         gl.uniformMatrix4fv(ls.uView, false, view);
         gl.uniform3fv(ls.uCamPos, camEye);
-        gl.uniform3f(ls.uKeyDir, 0.55, 0.75, 0.65);
-        gl.uniform3f(ls.uKeyCol, 1.15, 1.08, 1.00);
-        gl.uniform3f(ls.uRimCol, 0.14, 0.62, 0.80);
-        gl.uniform1f(ls.uCyberArmMask, state.cyberArm ? 1.0 : 0.0);
+        gl.uniform3f(ls.uKeyDir, 0.58, 0.72, 0.68);
+        gl.uniform3f(ls.uKeyCol, 1.26, 1.06, 0.86);
+        gl.uniform3f(ls.uRimCol, 0.12, 0.72, 0.90);
+        gl.uniform1f(ls.uCyberMask, cyberMaskBits);
+        gl.uniform1f(ls.uSkinFinish, skinFinishCode);
 
         function drawGlMesh(bufKey, modelM, useSkin, texKey, normKey, tint4, isSkin, met, rough, cut, em){
           var mb = glState.meshBufs[bufKey];
@@ -1759,7 +2298,9 @@
         // Environment Props
         var idMat = mat4Identity();
         if (tab === 'face' || tab === 'body' || tab === 'gear' || tab === 'hair'){
-          drawGlMesh('prop_turntableDisk', idMat, false, 'white', null, [0.04,0.06,0.09,1], 0, 0.45, 0.55, 0, 0.02);
+          drawGlMesh('prop_turntableDisk', idMat, false, 'white', null, [0.06,0.07,0.09,1], 0, 0.55, 0.45, 0, 0.02);
+        } else if (tab === 'quarters'){
+          drawGlMesh('prop_cabin', idMat, false, 'white', null, [0.16,0.18,0.22,1], 0, 0.65, 0.36, 0, 0);
         } else if (tab === 'ramp'){
           drawGlMesh('prop_floorPlane', idMat, false, 'white', null, [0.07,0.09,0.11,1], 0, 0.45, 0.25, 0, 0);
           drawGlMesh('prop_ramp',  idMat, false, 'white', null, [0.22,0.25,0.28,1], 0, 0.55, 0.45, 0, 0);
@@ -1771,13 +2312,14 @@
           drawGlMesh('prop_corridor', idMat, false, 'white', null, [0.22,0.26,0.30,1], 0, 0.5, 0.48, 0, 0);
         }
 
-        // Skinned Hero
+        // Skinned Hero (enable alpha blending automatically for sheer/lace bra & panties + sealed/half visor!)
         gl.uniformMatrix4fv(ls.uJointMats, false, stage.pose.skinMats);
         for (var di = 0; di < charDraws.length; di++){
           var d = charDraws[di];
-          if (d.tint[3] < 0.99){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); }
+          var isAlphaTex = (d.tex === 'dyn_bra' || d.tex === 'dyn_panties' || d.tint[3] < 0.99);
+          if (isAlphaTex){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); }
           drawGlMesh(d.mesh, stage.modelMat, true, d.tex, d.norm, d.tint, d.isSkin, d.met, d.rough, d.cut, d.em);
-          if (d.tint[3] < 0.99) gl.disable(gl.BLEND);
+          if (isAlphaTex) gl.disable(gl.BLEND);
         }
         if (stage.showWeapon){
           drawGlMesh('carbine_rifle', rifleMat, false, 'white', null, [0.22,0.25,0.28,1], 0, 0.78, 0.32, 0, 0);
@@ -1844,7 +2386,7 @@
           var pTgt = hm === 'half' ? [0.00, 1.575, 0.04] : [0.00, 1.550, 0.05];
           var pProj = mat4Perspective((hm === 'half' ? 30 : 28) * Math.PI / 180, 1.0, 0.05, 10.0);
           var pView = mat4LookAt(pEye, pTgt, [0,1,0]);
-          var pPose = evaluateSkeletonPose(kit, 'rest', totalSec, { head: [0, Math.sin(totalSec*0.9)*0.06, 0] }, [0,0,0], 1.0);
+          var pPose = evaluateSkeletonPose(kit, 'rest', totalSec, { head: [0, Math.sin(totalSec*0.9)*0.06, 0] }, [0,0,0], 1.0, mw, state.skelProps);
 
           gl.useProgram(glState.progSkin);
           gl.uniformMatrix4fv(ls.uProj, false, pProj);
@@ -1884,7 +2426,7 @@
         // 2) Render Pass
         var viewTex = gpuCtx.getCurrentTexture().createView();
         var rp = enc.beginRenderPass({
-          colorAttachments: [{ view: viewTex, clearValue:{r:0.035,g:0.055,b:0.075,a:1}, loadOp:'clear', storeOp:'store' }],
+          colorAttachments: [{ view: viewTex, clearValue:{r:0.044,g:0.048,b:0.058,a:1}, loadOp:'clear', storeOp:'store' }],
           depthStencilAttachment: { view: wgpuState.depthTex.createView(), depthClearValue:1.0, depthLoadOp:'clear', depthStoreOp:'store' }
         });
         rp.setViewport(0, 0, W, H, 0, 1);
@@ -1901,11 +2443,11 @@
           uArr.set(pvMat, 0); uArr.set(modelM, 16);
           uArr.set(tint4, 32);
           uArr.set([camEye[0], camEye[1], camEye[2], 1], 36);
-          uArr.set([0.55, 0.75, 0.65, 0], 40);
-          uArr.set([1.15, 1.08, 1.00, 0], 44);
-          uArr.set([0.14, 0.62, 0.80, 0], 48);
+          uArr.set([0.58, 0.72, 0.68, skinFinishCode], 40);
+          uArr.set([1.26, 1.06, 0.86, 0], 44);
+          uArr.set([0.12, 0.72, 0.90, 0], 48);
           uArr.set([(texKey && texKey !== 'white') ? 1 : 0, isSkin, met, rough], 52);
-          uArr.set([cut, em, instCount > 0 ? 1 : 0, state.cyberArm ? 1 : 0], 56);
+          uArr.set([cut, em, instCount > 0 ? 1 : 0, cyberMaskBits], 56);
           gpuDevice.queue.writeBuffer(ub, 0, uArr);
 
           var tk = texKey || 'white';
@@ -1936,7 +2478,9 @@
 
         var idM = mat4Identity();
         if (tab === 'face' || tab === 'body' || tab === 'gear' || tab === 'hair'){
-          drawGpuMesh(rp, pv, 'prop_turntableDisk', idM, 'white', [0.04,0.06,0.09,1], 0, 0.45, 0.55, 0, 0.02, 0);
+          drawGpuMesh(rp, pv, 'prop_turntableDisk', idM, 'white', [0.06,0.07,0.09,1], 0, 0.55, 0.45, 0, 0.02, 0);
+        } else if (tab === 'quarters'){
+          drawGpuMesh(rp, pv, 'prop_cabin', idM, 'white', [0.16,0.18,0.22,1], 0, 0.65, 0.36, 0, 0, 0);
         } else if (tab === 'ramp'){
           drawGpuMesh(rp, pv, 'prop_floorPlane', idM, 'white', [0.07,0.09,0.11,1], 0, 0.45, 0.25, 0, 0, 0);
           drawGpuMesh(rp, pv, 'prop_ramp',  idM, 'white', [0.22,0.25,0.28,1], 0, 0.55, 0.45, 0, 0, 0);
@@ -1970,7 +2514,7 @@
           var pProjW = mat4PerspectiveZO((hmW === 'half' ? 30 : 28) * Math.PI / 180, 1.0, 0.05, 10.0);
           var pViewW = mat4LookAt(pEyeW, pTgtW, [0,1,0]);
           var pPV = mat4Mul(pProjW, pViewW);
-          var pPoseW = evaluateSkeletonPose(kit, 'rest', totalSec, { head:[0, Math.sin(totalSec*0.9)*0.06, 0] }, [0,0,0], 1.0);
+          var pPoseW = evaluateSkeletonPose(kit, 'rest', totalSec, { head:[0, Math.sin(totalSec*0.9)*0.06, 0] }, [0,0,0], 1.0, mw, state.skelProps);
           gpuDevice.queue.writeBuffer(wgpuState.portraitJointMatBuf, 0, pPoseW.skinMats);
           var pDrawsW = buildDrawListForCharacter(state, true, hmW === 'sealed');
 

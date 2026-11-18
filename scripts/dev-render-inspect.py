@@ -32,6 +32,23 @@ _hdr.rectangle([34, 140, 220, 152], outline=(110, 245, 255, 200), width=2)
 _hdr.rectangle([36, 142, 188, 150], fill=(0, 229, 255, 230))
 tex_imgs["dyn_holo"] = np.asarray(_him, dtype=np.float32) / 255.0
 
+# Synthesize sheer mesh / delicate lace underwear preview textures matching createUnderwearCompositor()
+_bra_im = Image.new("RGBA", (256, 256), (26, 32, 42, 138))
+_bdr = ImageDraw.Draw(_bra_im)
+for y in range(0, 256, 4):
+    _bdr.line([0, y, 256, y], fill=(92, 125, 155, 200), width=1)
+for x in range(0, 256, 4):
+    _bdr.line([x, 0, x, 256], fill=(92, 125, 155, 175), width=1)
+_bdr.rectangle([0, 228, 256, 256], fill=(20, 24, 32, 245))
+tex_imgs["dyn_bra"] = np.asarray(_bra_im, dtype=np.float32) / 255.0
+
+_pan_im = Image.new("RGBA", (256, 256), (26, 32, 42, 215))
+_pdr = ImageDraw.Draw(_pan_im)
+for y in range(0, 256, 5):
+    _pdr.line([0, y, 256, y], fill=(98, 132, 162, 220), width=1)
+tex_imgs["dyn_panties"] = np.asarray(_pan_im, dtype=np.float32) / 255.0
+tex_imgs["dyn_briefs"] = np.asarray(Image.new("RGBA", (256, 256), (34, 40, 48, 255)), dtype=np.float32) / 255.0
+
 with open("/tmp/ev_dev_dump.json") as f:
     dump = json.load(f)
 
@@ -72,13 +89,22 @@ def raster_draws(draws, joint_mats, W=412, H=450, is_portrait=False):
     sm = np.array(joint_mats, dtype=np.float32).reshape(53, 4, 4).transpose(0, 2, 1)
     L = np.array([0.55, 0.75, 0.65], dtype=np.float32); L /= np.linalg.norm(L)
     skin_cache = {}
-    ordered_draws = [d for d in draws if float(d["tint"][3]) >= 0.99] + [d for d in draws if 0.25 <= float(d["tint"][3]) < 0.99]
+    def draw_is_alpha(d):
+        return float(d["tint"][3]) < 0.99 or d.get("texKey") in ("dyn_bra", "dyn_panties", "dyn_holo")
+    ordered_draws = [d for d in draws if not draw_is_alpha(d)] + [d for d in draws if draw_is_alpha(d)]
 
     for d in ordered_draws:
-        vb0 = d.get("vb0Id"); vb1 = d.get("vb1Id"); vb2 = d.get("vb2Id"); ib = d.get("ibId")
+        vb0 = d.get("vb0Id"); vb1 = d.get("vb1Id"); vb2 = d.get("vb2Id"); vb5 = d.get("vb5Id"); ib = d.get("ibId")
         if vb0 is None or vb1 is None or ib is None: continue
         pos = get_f32(vb0, 3); nrm = get_f32(vb1, 3); idx = get_u16(ib, d["ic"]).reshape(-1, 3)
         uv = get_f32(vb2, 2) if vb2 is not None else np.zeros((len(pos), 2), dtype=np.float32)
+        j0_ids = (np.frombuffer(raw_bufs[vb5], dtype="<u4", count=len(pos)) & 255) if vb5 is not None else np.zeros(len(pos), dtype=np.uint32)
+        part_ids = np.zeros(len(pos), dtype=np.uint32)
+        part_ids[(j0_ids >= 6)  & (j0_ids <= 23)] = 1
+        part_ids[(j0_ids >= 25) & (j0_ids <= 42)] = 2
+        part_ids[(j0_ids == 43) | (j0_ids == 44)] = 3
+        part_ids[(j0_ids >= 45) & (j0_ids <= 48)] = 4
+        part_ids[(j0_ids >= 49) & (j0_ids <= 52)] = 5
         pv = np.array(d["pvMat"], dtype=np.float32).reshape(4, 4).T
         mm = np.array(d["model"], dtype=np.float32).reshape(4, 4).T
         inst = max(1, int(d.get("inst", 1)))
@@ -86,8 +112,9 @@ def raster_draws(draws, joint_mats, W=412, H=450, is_portrait=False):
         tex = resolve_tex(tk)
         cut = float(d["extra"][0])
         em  = float(d["extra"][1])
+        cyber_mask = int(round(float(d["extra"][3])))
         tint_a = float(d["tint"][3])
-        is_blend = (tint_a < 0.99) or (tk == "dyn_holo")
+        is_blend = (tint_a < 0.99) or (tk in ("dyn_holo", "dyn_bra", "dyn_panties"))
 
         if d.get("skinned") and d.get("jBufId") and d.get("wBufId"):
             ck = (vb0, d["jBufId"])
@@ -102,6 +129,7 @@ def raster_draws(draws, joint_mats, W=412, H=450, is_portrait=False):
         base_tint = np.array(d["tint"][:3], dtype=np.float32)
         if d["flags"][1] > 0.5:
             base_tint = np.array([0.81, 0.57, 0.44], dtype=np.float32)
+        vert_cyber = ((cyber_mask >> part_ids) & 1) > 0 if cyber_mask > 0 and d["flags"][1] > 0.5 else np.zeros(len(pos), dtype=bool)
 
         for ii in range(inst):
             if inst > 1:
@@ -172,6 +200,8 @@ def raster_draws(draws, joint_mats, W=412, H=450, is_portrait=False):
                     nn /= np.maximum(np.linalg.norm(nn, axis=2, keepdims=True), 1e-6)
                     ndl = np.clip((nn * L).sum(axis=2), 0.24, 1.0)
                     col = np.clip(albedo * (0.38 + 0.76 * ndl[..., None]) + albedo * em, 0.0, 1.0)
+                    if vert_cyber[i0] or vert_cyber[i1] or vert_cyber[i2]:
+                        col = np.clip(np.array([0.22, 0.27, 0.33], dtype=np.float32) * (0.45 + 0.7 * ndl[..., None]) + np.array([0.0, 0.07, 0.12], dtype=np.float32), 0.0, 1.0)
                 if is_blend:
                     cur = fb[miny:maxy, minx:maxx]
                     blended = np.clip(col * eff_a + cur * (1.0 - eff_a), 0.0, 1.0)
@@ -181,7 +211,7 @@ def raster_draws(draws, joint_mats, W=412, H=450, is_portrait=False):
 
     return Image.fromarray((np.power(np.clip(fb, 0, 1), 1/2.2) * 255).astype(np.uint8))
 
-tabs = ["face", "body", "gear", "hair", "ramp", "action"]
+tabs = ["face", "body", "quarters", "gear", "ramp", "action"]
 for ti, t in enumerate(tabs, start=1):
     td = dump[t]
     im = raster_draws(td["mainDraws"], td["jointMats"], W=412, H=450)

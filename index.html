@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Endless Vigil // Vigil Hub Access Conduit</title>
   <!--
     @shard HUB / AUTH
@@ -157,11 +160,12 @@
       <div class="brand-mark">EV</div>
       <div class="brand-text">
         <div class="brand-title">Endless Vigil // Vigil Hub Conduit Gate</div>
-        <div class="brand-sub">v0.6.0-alpha · Creator × Ironscribe of the Endless Vigil</div>
+        <div class="brand-sub">v0.7.0-alpha · Creator × Ironscribe of the Endless Vigil</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
       <span class="pill lock" id="conduitPill">● CONDUIT LOCKED</span>
+      <button class="pill" style="cursor:pointer" id="btnHubPurgeCache" onclick="purgeSiteCache(this)" title="Clear this site's cached files & reload fresh without affecting other browser sites">↻ Purge Cache</button>
       <button class="pill" style="cursor:pointer" onclick="openLegalClickwrap()">⚖ Terms / Legal</button>
     </div>
   </header>
@@ -260,6 +264,32 @@ By clicking "I Acknowledge & Agree," you confirm you have read and agree to LEGA
     /* Zero script-close literals anywhere in JS */
     function esc(s) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function purgeSiteCache(btn) {
+      if (btn) btn.textContent = 'Purging...';
+      try {
+        if (typeof caches !== 'undefined' && caches.keys) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+        if (typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+        try {
+          localStorage.removeItem('ev_operator_forge_v06');
+          localStorage.removeItem('ev_operator_forge_v07');
+        } catch (_) {}
+        if (typeof fetch === 'function' && /^https?:/.test(location.protocol)) {
+          await Promise.all([
+            fetch(location.pathname, { cache: 'reload', headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' } }).catch(() => {}),
+            fetch('./operator-forge.html', { cache: 'reload', headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' } }).catch(() => {})
+          ]);
+        }
+      } catch (_) {}
+      const base = (location.href || '').split('?')[0].split('#')[0];
+      location.replace(base + '?ev_bust=' + Date.now());
     }
 
     const PROD_AUTHORITY_URL = 'https://ev-authority.ericautomates.workers.dev';
@@ -442,7 +472,7 @@ SESSION SEAL: ${esc(sealPreview)}
 WARMUP GUARD: <span id="warmupReadout">${remMs > 0 ? ('STABILIZING (' + (remMs / 1000).toFixed(1) + 's cooldown)') : 'CRITICAL OPS READY'}</span>
 CREDITS     : ${esc(ACTIVE_OPERATOR.credits)} cr (rev ${esc(ACTIVE_OPERATOR.rev || 1)})</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <a class="btn ok" href="./operator-forge.html">Launch 3D Operator Forge (v0.6a) ↗</a>
+              <a class="btn ok" href="./operator-forge.html?v=0.7.0-alpha">Launch 3D Operator Forge (v0.7a) ↗</a>
               <a class="btn primary" href="./cuff-slate.html">Vigil Cuff-Slate PDA ↗</a>
               <a class="btn" href="./temporal-lab.html">Temporal Lab ↗</a>
               <a class="btn" href="./continuum-monitor.html">Overwatch Monitor ↗</a>

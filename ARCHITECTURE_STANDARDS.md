@@ -202,15 +202,15 @@ Because **nothing is arbitrarily player-locked**, our data model treats all item
 
 ---
 
-## 9. CC0-1.0 3D Pipeline, Dual WebGPU/WebGL Runtime & Self-Contained Assembly (`v0.6.0-alpha+`)
+## 9. CC0-1.0 3D Pipeline, Dual WebGPU/WebGL Runtime & Self-Contained Assembly (`v0.7.0-alpha+`)
 
 1. **Zero-CDN Self-Contained HTML Shards (Single-Script Invariant):**
-   - `operator-forge.html` and every public Shard embed all kit binaries/textures (`js/ev-humanoid-kit.js`) and engine code (`js/ev-gpu-engine.js`) via `scripts/assemble-operator-forge.mjs` with **zero runtime network fetches** and **strictly 1 `<script>` / 1 `</script>` tag** so `content://`, offline Android DuckDuckGo/Chrome/Vivaldi, and sandboxed previews boot instantaneously.
+   - `operator-forge.html` and every public Shard embed all kit binaries/textures (`js/ev-humanoid-kit.js`) and engine code (`js/ev-gpu-engine.js`) via `scripts/assemble-operator-forge.mjs` with **zero runtime network fetches** and **strictly 1 `<script>` / 1 `</script>` tag** so `content://`, offline Android DuckDuckGo/Chrome/Vivaldi, and sandboxed previews boot instantaneously, inside a locked `100dvh` viewport with independent drawer scrolling and 2-finger pinch/pan navigation.
 2. **Binary Humanoid Kit (`assets/ev-humanoid-kit.bin` & `scripts/build-cc0-humanoid-kit.py`):**
-   - Compiles CC0-1.0 MakeHuman `hm08` & `CharacterCreator` meshes (`base_body` with 41 sparse morphs, 53-bone rig, 19 WebP textures, garment `_CCZONE` vertex masks, `LOD1`, tactical combat-posed `LOD2`, high-cut tactical `helmet_shell` / `helmet_half_visor` / `helmet_sealed_visor`, `armor_*`, `wrist_watch` / `wrist_gauntlet`, and `carbine_rifle`) into a compact zlib-compressed binary pack (`2,369 KB`).
+   - Compiles CC0-1.0 MakeHuman `hm08` & `CharacterCreator` meshes (`base_body` with 73 sparse morphs, 53-bone rig + `morphJoints` world pivot deltas, 20 WebP textures incl. `ccRegions`, `nailUVs`, `tattooUV`, `strafe_left`/`strafe_right`, garment `_CCZONE` vertex masks, `LOD1`, `LOD2`, `helmet_*`, `armor_*`, `wrist_*`, `carbine_rifle`, 6 modular `skel_*` limbs/chassis, and 4 morph-tracked `piercing_*` meshes) into a compact zlib-compressed binary pack (`3,436 KB`).
 3. **Dual WebGPU Compute Skinning + WebGL2/WebGL1 PBR Fallback (`js/ev-gpu-engine.js`):**
    - Probes `navigator.gpu` *before* touching `canvas.getContext(...)` (preventing browser multi-context errors).
-   - Executes 53-bone GPU compute skinning (`@workgroup_size(64)`) + ACES PBR + subsurface skin warmth on WebGPU, falling back seamlessly to WebGL2/WebGL1 hardware skinning & instanced `LOD2` crowd rendering, plus a live scissored 3D Corner Status Portrait synchronized to `helmetMode`.
+   - Executes 53-bone GPU compute skinning (`@workgroup_size(64)`) + ACES PBR + skin finish modes (`matte`/`shiny`/`metallic`/`android`) + procedural tattoos/scars/nail polish + delicate/sheer/lace underwear compositors + 2.6 Hz bust spring physics + modular skeleton/cybernetic part swaps (packed into 256B `DrawU`) + Captain's Quarters mirror bay + drone-angle CQB corner-pie/cyber-torque/injury kinematics + live 3D Corner Status Portrait synchronized to `helmetMode`.
 4. **Permanent Automated Verification & Visual Pixel-Inspection Shield (`scripts/audit-3d-quality.mjs`, `scripts/dev-verify-forge.mjs`, `scripts/dev-render-inspect.py`):**
    - `audit-graph.mjs` + `audit-3d-quality.mjs` enforce topology, LOD ratio (`30.2x`), Design Vault SHA-256 provenance (`data/design-vault.json`), zero banned public wording, and responsive CSS containment across `320px–1920px`.
    - `dev-verify-forge.mjs` + `dev-render-inspect.py` emulate Pixel 10 Pro XL (`412x915, dpr=3`) Chrome WebGPU, DuckDuckGo WebGL2, Vivaldi WebGPU, and Desktop (`1440x900`), exporting live GPU buffers to rasterize all 6 creator tabs + the Corner Portrait HUD for pixel-accurate inspection before release.

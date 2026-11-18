@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
-const versionTag = process.argv[2] || 'v0.6.0-alpha';
+const versionTag = process.argv[2] || 'v0.7.0-alpha';
 
 // 1. Run structural, wording, HTML safety, zero-dev-leak, & resolution audit first
 execFileSync('node', [path.join(__dirname, 'audit-graph.mjs')], { cwd: rootDir, stdio: 'inherit' });
