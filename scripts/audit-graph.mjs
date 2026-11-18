@@ -9,6 +9,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -241,4 +242,9 @@ if (
   process.exitCode = 1;
 } else {
   console.log('STRUCTURAL, HTML & RESOLUTION AUDIT: PASS (0 errors, HTML synced, 320px-1920px safe, RMP size compliant)');
+  try {
+    execFileSync(process.execPath, [path.join(__dirname, 'audit-3d-quality.mjs')], { stdio: 'inherit' });
+  } catch {
+    process.exitCode = 1;
+  }
 }

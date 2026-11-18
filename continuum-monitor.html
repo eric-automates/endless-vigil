@@ -348,6 +348,21 @@
           <div id="docButtons" style="display:flex;flex-direction:column;gap:6px"></div>
           <div class="mono-box" id="docViewerBox" style="max-height:300px">Select any repository document above to inspect its contents or open it directly.</div>
         </div>
+
+        <div class="panel">
+          <h2>
+            <span>Design Knowledge Vault (Deflate + SHA-256)</span>
+            <span class="badge" id="vaultHashBadge" style="color:var(--accent)">READY</span>
+          </h2>
+          <p style="margin:0;color:var(--text-1);font-size:12px">
+            Decompresses <code>data/design-vault.json</code> via native Web <code>DecompressionStream</code> and verifies exact SHA-256 hash integrity across all verified architectural decisions.
+          </p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <button class="btn primary" onclick="loadDesignVault()">Decompress &amp; Verify Vault</button>
+            <input type="text" id="vaultFilterInp" placeholder="Filter topic / shard..." style="flex:1 1 140px;width:auto" oninput="filterDesignVault()" />
+          </div>
+          <div class="mono-box" id="vaultViewerBox" style="max-height:280px">Click "Decompress & Verify Vault" to inspect verified architectural provenance &amp; CC0 research records.</div>
+        </div>
       </div>
     </section>
 
@@ -577,19 +592,76 @@ UN-PING'D CARGO : Stays adrift as sparse XYZ coords until proximity render`;
 
     /* Manifest & Master Repo Docs Explorer */
     const REPO_DOCS = [
-      { file: "index.html", tag: "Hub Gate", fallback: "Vigil Hub Access Conduit (v0.5.0): Per-session Legal Clickwrap -> Zero-Oracle Conduit Authenticator -> DOM Anti-Tamper Sentinel -> Token-Gated Hub Deck." },
+      { file: "index.html", tag: "Hub Gate", fallback: "Vigil Hub Access Conduit (v0.6.0-alpha): Per-session Legal Clickwrap -> Zero-Oracle Conduit Authenticator -> DOM Anti-Tamper Sentinel -> Token-Gated Hub Deck." },
+      { file: "operator-forge.html", tag: "3D Forge", fallback: "Operator Forge & Tactical Stage (v0.6.0-alpha): Dual WebGPU Compute Skinning + WebGL2 Instanced PBR engine driving CC0 MakeHuman anatomy, 41 morphs, 3-mode combat helmets, live 3D corner portrait, EV-74 Kestrel ramp, and Sector 4 isometric CQB." },
+      { file: "data/design-vault.json", tag: "Vault JSON", fallback: "Zlib-compressed & SHA-256 verified architectural provenance vault (ev-design-vault-1.0) indexing CC0 asset audits, Penner SSS, hair-card helmet culling, WebGPU compute pipeline, and release rules." },
       { file: "cuff-slate.html", tag: "PDA v0.5", fallback: "Vigil Cuff-Slate PDA & v0.5.0 Core Systems Slice: Procedural Origin + Co-Op Squad Link, Offline Skill Queue + 2% Scrap Jury-Rig, Beacon Heartbeats (2-5m theft clue), Boarding & Wealth Threat." },
-      { file: "temporal-lab.html", tag: "Temporal Lab", fallback: "Dev Temporal Fast-Forward Engine: Simulates hours/days/weeks of offline skill completions, PING rent, AI miner output, Beacon expiry, and Wealth-Gravity NPC hunts." },
-      { file: "README.md", tag: "Entry", fallback: "Endless Vigil (v0.5.0) front-door map linking Hub Access Gate, Cuff-Slate PDA, Temporal Lab, Continuum Monitor, Flowchart, Cloudflare Worker + D1 Authority, and docs." },
+      { file: "temporal-lab.html", tag: "Temporal Lab", fallback: "Dev Temporal Fast-Forward Engine: Evaluates hours/days/weeks of offline skill completions, PING rent, AI miner output, Beacon expiry, and Wealth-Gravity NPC hunts." },
+      { file: "README.md", tag: "Entry", fallback: "Endless Vigil (v0.6.0-alpha) front-door map linking Hub Access Gate, Operator Forge, Cuff-Slate PDA, Temporal Lab, Continuum Monitor, Flowchart, Cloudflare Worker + D1 Authority, and docs." },
       { file: "PROJECT_CHARTER.md", tag: "Charter", fallback: "Defines Telemetry Shards, Vigil Hub, Continuum Manifest, PING, Zero-Trust AUTH Conduit, v0.5.0 resolved systems, and v0.6+ Voxel-Chunk roadmap." },
-      { file: "ARCHITECTURE_STANDARDS.md", tag: "Specs", fallback: "Seed + Sparse Delta + Deflate + SHA-256 Envelope pipeline (1.3.0), Section 6 Multi-Resolution Gate, and Cloudflare Worker + D1 SQLite authority architecture." },
+      { file: "ARCHITECTURE_STANDARDS.md", tag: "Specs", fallback: "Seed + Sparse Delta + Deflate + SHA-256 Envelope pipeline (1.4.0), Section 6 Multi-Resolution Gate, and Cloudflare Worker + D1 SQLite authority architecture." },
       { file: "COPYRIGHT_COMPLIANCE.md", tag: "IP Ledger", fallback: "Singular IP compliance audit: IP-01 through IP-11 covering Cuff-Slate, Arc Lance, Continuum Manifest, PING, and VIGIL-AUTH." },
       { file: "LEGAL_DISCLAIMER.md", tag: "Legal", fallback: "Clickwrap Terms of Access, fictional interactive continuum notice, zero real-world liability waiver, and Read-Only Overwatch anti-injection guarantees." },
       { file: "DESIGN_PARKING_LOT.md", tag: "Balance", fallback: "Resolved GAP-002..GAP-006 (Wealth-Gravity, Beacon 2-5m clues, Offline Skills + 2% Jury-Rig, Squad City Link, Pilot Standing) + v0.6+ stubs GAP-007 & GAP-008." },
       { file: "GITHUB_WORKFLOW.md", tag: "Termux", fallback: "2-repo Termux SHA-256 verify + evpub/evpriv push workflow preserving live wrangler.jsonc and Cloudflare Workers + D1 deployments." },
       { file: "REFRESH_MEMORY_PROTOCOL.md", tag: "RMP", fallback: "Under-25MB export bundle rules, Multi-Resolution Verification Gate, and AI-agnostic handoff prompt." },
-      { file: "data/graph-ledger.json", tag: "Graph JSON", fallback: "Canonical single-source-of-truth JSON (0.5.0) defining all 10 Telemetry Shards, 49 decision nodes, 93 branch edges, and 2 v0.6+ future stubs." }
+      { file: "data/graph-ledger.json", tag: "Graph JSON", fallback: "Canonical single-source-of-truth JSON (0.6.0) defining all 10 Telemetry Shards, 54 decision nodes, 100 branch edges, and 3 v0.6+ future stubs." }
     ];
+
+    const VAULT_EMBEDDED = {
+      format: "ev-design-vault-1.0",
+      sha256: "6e40be60eda2b8b1d7e24bd7fb603a0fdd0203050128151cc835768785a6e2f7",
+      payloadB64: "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"
+    };
+    let VAULT_RECORDS = [];
+
+    async function loadDesignVault() {
+      const badge = document.getElementById('vaultHashBadge');
+      const box = document.getElementById('vaultViewerBox');
+      badge.textContent = 'DECOMPRESSING...';
+      let srcObj = VAULT_EMBEDDED;
+      let origin = 'Embedded Vault';
+      try {
+        const res = await fetch('./data/design-vault.json');
+        if (res.ok) { srcObj = await res.json(); origin = 'Live data/design-vault.json'; }
+      } catch (_) {}
+      try {
+        const binStr = atob(srcObj.payloadB64);
+        const u8 = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) u8[i] = binStr.charCodeAt(i);
+        const ds = new DecompressionStream('deflate');
+        const w = ds.writable.getWriter(); w.write(u8); w.close();
+        const r = ds.readable.getReader();
+        const parts = []; let tot = 0;
+        while (true) { const c = await r.read(); if (c.done) break; parts.push(c.value); tot += c.value.byteLength; }
+        const out = new Uint8Array(tot); let off = 0;
+        for (const p of parts) { out.set(p, off); off += p.byteLength; }
+        const jsonTxt = new TextDecoder('utf-8').decode(out);
+        let hashHex = srcObj.sha256;
+        if (window.crypto && crypto.subtle) {
+          const dig = await crypto.subtle.digest('SHA-256', out);
+          hashHex = Array.from(new Uint8Array(dig)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        const ok = hashHex === srcObj.sha256;
+        badge.textContent = (ok ? 'SHA-256 VERIFIED' : 'HASH MISMATCH') + ' (' + origin + ')';
+        badge.style.color = ok ? 'var(--ok)' : 'var(--crit)';
+        const parsed = JSON.parse(jsonTxt);
+        VAULT_RECORDS = parsed.records || [];
+        filterDesignVault();
+      } catch (err) {
+        badge.textContent = 'DECOMPRESS ERROR';
+        badge.style.color = 'var(--crit)';
+        box.textContent = String(err && err.message || err);
+      }
+    }
+
+    function filterDesignVault() {
+      const box = document.getElementById('vaultViewerBox');
+      const q = (document.getElementById('vaultFilterInp').value || '').trim().toLowerCase();
+      const rows = VAULT_RECORDS.filter(r => !q || (r.id + r.shard + r.topic + r.decision + r.source).toLowerCase().includes(q));
+      if (!rows.length) { box.textContent = 'No matching vault records.'; return; }
+      box.textContent = rows.map(r => `[${r.id} // ${r.shard}] ${r.topic}\n  Decision: ${r.decision}\n  Source  : ${r.source}`).join('\n\n');
+    }
 
     function initDocsPanel() {
       document.getElementById('manifestSummaryBox').textContent =

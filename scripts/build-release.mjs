@@ -43,9 +43,16 @@ const publicTargets = [
   'REFRESH_MEMORY_PROTOCOL.md',
   'conglomerate-flowchart.html',
   'continuum-monitor.html',
+  'assets/ev-humanoid-kit.bin',
   'data/graph-ledger.json',
   'data/state-envelope.schema.json',
+  'data/design-vault.json',
+  'js/ev-humanoid-kit.js',
+  'js/ev-gpu-engine.js',
   'scripts/audit-graph.mjs',
+  'scripts/audit-3d-quality.mjs',
+  'scripts/assemble-operator-forge.mjs',
+  'scripts/build-cc0-humanoid-kit.py',
   'scripts/build-release.mjs',
   'scripts/termux-push.sh'
 ].filter((item) => fs.existsSync(path.join(rootDir, item)));

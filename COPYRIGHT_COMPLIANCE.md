@@ -53,5 +53,9 @@ Before shipping any Shard publicly for monetization:
 
 | Asset / Package | Version / Source | License | Used In Shard(s) | Commercial Safe? |
 | :--- | :--- | :--- | :--- | :--- |
-| Native Web APIs (`CompressionStream`, `SubtleCrypto`, `IndexedDB`, `SVG`) | Browser Standard | Standard / Unencumbered | All (`v0.1` Prototype) | **Yes** |
-| Node.js Test/Audit Script (`scripts/audit-graph.mjs`) | Original Code (`v0.1`) | Project Owner / MIT-compatible | Tooling | **Yes** |
+| Native Web APIs (`WebGPU`, `WebGL2`, `CompressionStream`, `SubtleCrypto`, `IndexedDB`, `SVG`) | Browser Standard | Standard / Unencumbered | All (`v0.1`–`v0.6.0-alpha`) | **Yes** |
+| MakeHuman `hm08` Base Mesh, Facial Features (`eye_sclera`, `eye_iris`, `eye_cornea`, `eyebrows`, `eyelashes`), 41 Morph Targets, Hair (`short02`, `short04`, `braid01`), Clothing & PBR WebP Textures | `makehumancommunity` / `mpfb2` & `kblood/CharacterCreator` (`output/assets/*`) | **CC0-1.0 (Public Domain Dedication)** | `operator-forge.html`, `assets/ev-humanoid-kit.bin`, `js/ev-humanoid-kit.js` | **Yes (CC0-1.0)** |
+| 53-Bone Humanoid Rig & Retargeted `idle` / `walk` / `run` Skeletal Clips | `kblood/CharacterCreator` (`output/animations/*`) | **CC0-1.0 (Public Domain Dedication)** | `operator-forge.html`, `assets/ev-humanoid-kit.bin`, `js/ev-humanoid-kit.js` | **Yes (CC0-1.0)** |
+| Original Hard-Surface Tactical Gear (`helmet_shell`, visors, `armor_cuirass`, `armor_pauldrons`, `armor_belt_knees`, `wrist_watch`, `wrist_gauntlet`, `carbine_rifle`), `EV-74 Kestrel` Ramp Props & `EVGPUEngine` WGSL/GLSL Shaders | Original Code & Procedural Lofts (`v0.6.0-alpha`) | Project Owner / Original Clean-Room | `scripts/build-cc0-humanoid-kit.py`, `js/ev-gpu-engine.js`, `operator-forge.html` | **Yes** |
+| Node.js Structural, 3D Quality & Bundle Tooling (`audit-graph.mjs`, `audit-3d-quality.mjs`, `assemble-operator-forge.mjs`, `build-release.mjs`) | Original Code (`v0.1`–`v0.6.0-alpha`) | Project Owner / MIT-compatible | Tooling | **Yes** |
+
